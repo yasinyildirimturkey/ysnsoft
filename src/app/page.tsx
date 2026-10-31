@@ -1,69 +1,155 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import Navbar from '@/components/Navbar';
+import Hero from '@/components/Hero';
+import ProductBentoGrid from '@/components/ProductBentoGrid';
+import LiveSiteShowcase from '@/components/LiveSiteShowcase';
+import InteractiveSandbox from '@/components/InteractiveSandbox';
+import CaseStudies from '@/components/CaseStudies';
+import WorkProcess from '@/components/WorkProcess';
+import ProjectCalculator from '@/components/ProjectCalculator';
+import ArchitectureBlueprint from '@/components/ArchitectureBlueprint';
+import CodeRadar from '@/components/CodeRadar';
+import ComparisonTable from '@/components/ComparisonTable';
+import RoiCalculator from '@/components/RoiCalculator';
+import MeetingScheduler from '@/components/MeetingScheduler';
+import TechStack from '@/components/TechStack';
+import Testimonials from '@/components/Testimonials';
+import FaqSection from '@/components/FaqSection';
+import Footer from '@/components/Footer';
+import ProductModal from '@/components/ProductModal';
+import ContactModal from '@/components/ContactModal';
+import FloatingActions from '@/components/FloatingActions';
+import AiAssistant from '@/components/AiAssistant';
+import { Product, PRODUCTS } from '@/data/products';
 
 export default function Home() {
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [prefilledContactProduct, setPrefilledContactProduct] = useState<string>('');
+
+  const handleOpenContact = (productName?: string) => {
+    setPrefilledContactProduct(productName || '');
+    setContactModalOpen(true);
+  };
+
+  const handleSelectProductById = (productId: string) => {
+    const prod = PRODUCTS.find(p => p.id === productId);
+    if (prod) {
+      setSelectedProduct(prod);
+    }
+  };
+
+  const handleConfigureSubmit = (summary: string) => {
+    setPrefilledContactProduct(summary);
+    setContactModalOpen(true);
+  };
+
+  const handleScrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] selection:bg-[#0071E3] selection:text-white">
+      {/* 1. Frosted Glass Sticky Navbar */}
+      <Navbar 
+        onOpenContact={handleOpenContact}
+        onScrollTo={handleScrollTo}
+      />
+
+      {/* 2. Apple Studio Display Hero Section */}
+      <Hero 
+        onOpenContact={handleOpenContact}
+        onScrollTo={handleScrollTo}
+        onSelectProduct={handleSelectProductById}
+      />
+
+      {/* 3. Real Product Bento Grid (KGLEX, HaritaPlan, Panelde, Flamantyou, Samatya, Bodrum) */}
+      <ProductBentoGrid 
+        onSelectProduct={setSelectedProduct}
+        onOpenContact={handleOpenContact}
+      />
+
+      {/* 4. Canlı Web Siteleri İstasyonu & Cihaz Konsolu */}
+      <LiveSiteShowcase />
+
+      {/* 4. Live Interactive Experience Simulator */}
+      <InteractiveSandbox />
+
+      {/* 5. Documented Case Studies & Real Results */}
+      <div id="cases">
+        <CaseStudies onOpenContact={handleOpenContact} />
+      </div>
+
+      {/* 6. 4-Step Agile Work & Delivery Process */}
+      <WorkProcess onOpenContact={() => handleOpenContact('İş Süreci & Proje Başlatma')} />
+
+      {/* 7. Interactive Scope & Cost Configurator */}
+      <ProjectCalculator 
+        onConfigureSubmit={handleConfigureSubmit}
+      />
+
+      {/* 8. 5-Layer Enterprise Cloud Architecture & Security */}
+      <div id="architecture">
+        <ArchitectureBlueprint />
+      </div>
+
+      {/* 9. Engineering Code Radar */}
+      <CodeRadar />
+
+      {/* 10. Comparison Matrix: Traditional Software vs YSNSOFT */}
+      <ComparisonTable />
+
+      {/* 11. Interactive Financial ROI Simulator */}
+      <RoiCalculator 
+        onOpenContact={handleOpenContact}
+      />
+
+      {/* 12. 30-Minute Live 1-on-1 Google Meet Scheduler */}
+      <MeetingScheduler />
+
+      {/* 13. Technology Stack & Modern Tooling */}
+      <TechStack />
+
+      {/* 14. Client Stories & Ratings */}
+      <Testimonials />
+
+      {/* 15. FAQ Accordion */}
+      <FaqSection 
+        onOpenContact={() => handleOpenContact('Genel Danışmanlık')}
+      />
+
+      {/* 16. Footer & High-Conversion Banner */}
+      <Footer 
+        onOpenContact={handleOpenContact}
+        onScrollTo={handleScrollTo}
+      />
+
+      {/* 17. Product Details Sheet Modal */}
+      <ProductModal 
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onRequestQuote={handleOpenContact}
+      />
+
+      {/* 18. Fast Lead Capture Modal */}
+      <ContactModal 
+        isOpen={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
+        prefilledProduct={prefilledContactProduct}
+      />
+
+      {/* 19. Floating Fast Action Bar (WhatsApp & Fast Quote) */}
+      <FloatingActions 
+        onOpenContact={() => handleOpenContact()}
+      />
+
+      {/* 20. Apple Intelligence AI Assistant Widget */}
+      <AiAssistant />
+    </main>
   );
 }
