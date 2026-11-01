@@ -449,6 +449,84 @@ export function saveSmtpSettings(settings: SmtpSettings) {
   localStorage.setItem('ysn_smtp_settings', JSON.stringify(settings));
 }
 
+import { PRODUCTS, Product } from '@/data/products';
+
+export interface GeoSettings {
+  city: string;
+  district: string;
+  regionCode: string;
+  position: string;
+  icbm: string;
+  postalCode: string;
+  phone: string;
+  companyName: string;
+}
+
+export const DEFAULT_GEO_SETTINGS: GeoSettings = {
+  city: 'İstanbul',
+  district: 'Pendik',
+  regionCode: 'TR-34',
+  position: '40.8795;29.2578',
+  icbm: '40.8795, 29.2578',
+  postalCode: '34890',
+  phone: '+90 532 725 50 98',
+  companyName: 'YSNSOFT Bilişim Teknolojileri A.Ş.'
+};
+
+// Site & Product Storage Functions
+export function getStoredProducts(): Product[] {
+  if (typeof window === 'undefined') return PRODUCTS;
+  const data = localStorage.getItem('ysn_admin_products');
+  if (!data) {
+    localStorage.setItem('ysn_admin_products', JSON.stringify(PRODUCTS));
+    return PRODUCTS;
+  }
+  try {
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : PRODUCTS;
+  } catch {
+    return PRODUCTS;
+  }
+}
+
+export function saveProduct(product: Product) {
+  if (typeof window === 'undefined') return;
+  const current = getStoredProducts();
+  const exists = current.some(p => p.id === product.id);
+  const updated = exists 
+    ? current.map(p => p.id === product.id ? product : p)
+    : [product, ...current];
+  localStorage.setItem('ysn_admin_products', JSON.stringify(updated));
+}
+
+export function deleteProduct(id: string) {
+  if (typeof window === 'undefined') return;
+  const current = getStoredProducts();
+  const filtered = current.filter(p => p.id !== id);
+  localStorage.setItem('ysn_admin_products', JSON.stringify(filtered));
+}
+
+export function resetProductsToDefault() {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('ysn_admin_products', JSON.stringify(PRODUCTS));
+}
+
+// Geo Settings Storage
+export function getStoredGeoSettings(): GeoSettings {
+  if (typeof window === 'undefined') return DEFAULT_GEO_SETTINGS;
+  const data = localStorage.getItem('ysn_geo_settings');
+  if (!data) {
+    localStorage.setItem('ysn_geo_settings', JSON.stringify(DEFAULT_GEO_SETTINGS));
+    return DEFAULT_GEO_SETTINGS;
+  }
+  try { return JSON.parse(data); } catch { return DEFAULT_GEO_SETTINGS; }
+}
+
+export function saveGeoSettings(geo: GeoSettings) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('ysn_geo_settings', JSON.stringify(geo));
+}
+
 // System Settings Storage
 export function getStoredSystemSettings(): SystemSettings {
   if (typeof window === 'undefined') return DEFAULT_SYSTEM_SETTINGS;
