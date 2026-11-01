@@ -1,0 +1,103 @@
+{
+  "auditedAt": "2026-11-01T06:24:19.504Z",
+  "averageScore": 76,
+  "totalSites": 8,
+  "sites": [
+    {
+      "domain": "ysnsoft.com",
+      "name": "YSNSOFT Kurumsal Bilişim",
+      "status": 200,
+      "latencyMs": 2995,
+      "latency": "2995ms",
+      "ssl": "✓ SSL OK",
+      "geo": "✓ GEO OK",
+      "schema": "✓ Schema.org",
+      "score": "100/100",
+      "scoreNum": 100
+    },
+    {
+      "domain": "kglex.com",
+      "name": "KGLEX LegalTech AI (Hukuk & UYAP)",
+      "status": 200,
+      "latencyMs": 2780,
+      "latency": "2780ms",
+      "ssl": "✓ SSL OK",
+      "geo": "⚠ Eksik",
+      "schema": "✓ Schema.org",
+      "score": "95/100",
+      "scoreNum": 95
+    },
+    {
+      "domain": "haritaplan.com",
+      "name": "HaritaPlan 3D CBS & 3194 Md. 18",
+      "status": 200,
+      "latencyMs": 2860,
+      "latency": "2860ms",
+      "ssl": "✓ SSL OK",
+      "geo": "⚠ Eksik",
+      "schema": "⚠ Eksik",
+      "score": "85/100",
+      "scoreNum": 85
+    },
+    {
+      "domain": "hgavukatlik.com",
+      "name": "HG Avukatlık Bürosu",
+      "status": "HATA",
+      "latencyMs": 3509,
+      "latency": "3509ms",
+      "ssl": "✗ Hata",
+      "geo": "✗",
+      "schema": "✗",
+      "score": "20/100",
+      "scoreNum": 20
+    },
+    {
+      "domain": "acikellaw.com",
+      "name": "Açıkel Law Danışmanlık",
+      "status": 200,
+      "latencyMs": 2984,
+      "latency": "2984ms",
+      "ssl": "✓ SSL OK",
+      "geo": "⚠ Eksik",
+      "schema": "✓ Schema.org",
+      "score": "95/100",
+      "scoreNum": 95
+    },
+    {
+      "domain": "panelde.com",
+      "name": "Panelde Multi-Tenant SaaS",
+      "status": 200,
+      "latencyMs": 3341,
+      "latency": "3341ms",
+      "ssl": "✓ SSL OK",
+      "geo": "⚠ Eksik",
+      "schema": "✓ Schema.org",
+      "score": "95/100",
+      "scoreNum": 95
+    },
+    {
+      "domain": "flamantyou.com",
+      "name": "Flamantyou Kozmetik (AI)",
+      "status": 200,
+      "latencyMs": 2993,
+      "latency": "2993ms",
+      "ssl": "✓ SSL OK",
+      "geo": "⚠ Eksik",
+      "schema": "✓ Schema.org",
+      "score": "95/100",
+      "scoreNum": 95
+    },
+    {
+      "domain": "tarihisamatyamezecisi.com",
+      "name": "Tarihi Samatya Mezecisi",
+      "status": "HATA",
+      "latencyMs": 3505,
+      "latency": "3505ms",
+      "ssl": "✗ Hata",
+      "geo": "✗",
+      "schema": "✗",
+      "score": "20/100",
+      "scoreNum": 20
+    }
+  ]
+}

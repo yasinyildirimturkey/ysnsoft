@@ -497,6 +497,13 @@ export function saveProduct(product: Product) {
     ? current.map(p => p.id === product.id ? product : p)
     : [product, ...current];
   localStorage.setItem('ysn_admin_products', JSON.stringify(updated));
+
+  // Sync to server-side DB
+  fetch('/api/sites', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(product)
+  }).catch(() => {});
 }
 
 export function deleteProduct(id: string) {
@@ -504,6 +511,11 @@ export function deleteProduct(id: string) {
   const current = getStoredProducts();
   const filtered = current.filter(p => p.id !== id);
   localStorage.setItem('ysn_admin_products', JSON.stringify(filtered));
+
+  // Sync to server-side DB
+  fetch(`/api/sites?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+  }).catch(() => {});
 }
 
 export function resetProductsToDefault() {

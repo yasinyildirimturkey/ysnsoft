@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getStoredSites } from '@/lib/server-db';
 
 interface SeoAuditResult {
   domain: string;
@@ -33,9 +34,34 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const targetDomain = searchParams.get('domain');
 
-  const targetsToAudit = targetDomain 
-    ? [{ domain: targetDomain, url: targetDomain.startsWith('http') ? targetDomain : `https://${targetDomain}` }]
-    : DEFAULT_TARGETS;
+  let targetsToAudit: { domain: string; url: string }[] = [];
+
+  if (targetDomain) {
+    targetsToAudit = [{
+      domain: targetDomain.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+      url: targetDomain.startsWith('http') ? targetDomain : `https://${targetDomain}`
+    }];
+  } else {
+    try {
+      const stored = getStoredSites();
+      const combined = [
+        { domain: 'ysnsoft.com', url: 'https://ysnsoft.com' },
+        ...stored.map(s => ({
+          domain: s.domain,
+          url: s.liveUrl || `https://${s.domain}`
+        }))
+      ];
+      // Deduplicate by domain
+      const seen = new Set<string>();
+      targetsToAudit = combined.filter(item => {
+        if (seen.has(item.domain)) return false;
+        seen.add(item.domain);
+        return true;
+      });
+    } catch {
+      targetsToAudit = DEFAULT_TARGETS;
+    }
+  }
 
   const auditDomain = async (t: { domain: string; url: string }): Promise<SeoAuditResult> => {
     const start = Date.now();

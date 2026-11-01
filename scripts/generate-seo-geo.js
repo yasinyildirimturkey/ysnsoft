@@ -3,16 +3,16 @@
  * YSNSOFT — OTOMATIK SEO & GEO VE SCHEMA YAPILANDIRMA BETİĞİ
  * 
  * Bu betik:
- * 1. Tüm YSNSOFT sitelerinin canlı SEO, GEO, SSL ve Schema.org sağlık durumunu denetler.
- * 2. İlçe, İl ve Koordinat (TR-34, Pendik vb.) parametrelerine göre otomatik Next.js metadata,
- *    Schema JSON-LD, sitemap.xml ve robots.txt üretir.
- * 3. Terminalden doğrudan çalıştırılabilir: `node scripts/generate-seo-geo.js`
+ * 1. data/sites.json ve varsayılan YSNSOFT portföyünü dinamik olarak okur.
+ * 2. Eşzamanlı (concurrent) olarak tüm siteleri pingler, SSL, Meta Başlık, GEO ve Schema.org durumunu denetler.
+ * 3. data/seo-reports/ klasörüne JSON formatında denetim raporu kaydeder.
+ * 4. Terminalden doğrudan çalıştırılabilir: `node scripts/generate-seo-geo.js`
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const TARGETS = [
+const DEFAULT_TARGETS = [
   { domain: 'ysnsoft.com', name: 'YSNSOFT Kurumsal Bilişim', url: 'https://ysnsoft.com' },
   { domain: 'kglex.com', name: 'KGLEX LegalTech AI (Hukuk & UYAP)', url: 'https://www.kglex.com' },
   { domain: 'haritaplan.com', name: 'HaritaPlan 3D CBS & 3194 Md. 18', url: 'https://www.haritaplan.com' },
@@ -22,6 +22,34 @@ const TARGETS = [
   { domain: 'flamantyou.com', name: 'Flamantyou Kozmetik (AI)', url: 'https://www.flamantyou.com' },
   { domain: 'tarihisamatyamezecisi.com', name: 'Tarihi Samatya Mezecisi', url: 'https://www.tarihisamatyamezecisi.com' }
 ];
+
+function getDynamicTargets() {
+  const sitesPath = path.join(__dirname, '..', 'data', 'sites.json');
+  if (fs.existsSync(sitesPath)) {
+    try {
+      const sites = JSON.parse(fs.readFileSync(sitesPath, 'utf-8'));
+      if (Array.isArray(sites) && sites.length > 0) {
+        const combined = [
+          { domain: 'ysnsoft.com', name: 'YSNSOFT Kurumsal Bilişim', url: 'https://ysnsoft.com' },
+          ...sites.map(s => ({
+            domain: s.domain,
+            name: s.name,
+            url: s.liveUrl || `https://${s.domain}`
+          }))
+        ];
+        const seen = new Set();
+        return combined.filter(t => {
+          if (seen.has(t.domain)) return false;
+          seen.add(t.domain);
+          return true;
+        });
+      }
+    } catch (e) {
+      // fallback
+    }
+  }
+  return DEFAULT_TARGETS;
+}
 
 const GEO_CONFIG = {
   city: 'İstanbul',
@@ -36,12 +64,18 @@ const GEO_CONFIG = {
 
 async function auditDomain(target) {
   const start = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
+
   try {
     const res = await fetch(target.url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) YSNSOFT-SeoAudit/2.6'
-      }
+      },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
     const latency = Date.now() - start;
     const html = await res.text();
 
@@ -61,22 +95,27 @@ async function auditDomain(target) {
       domain: target.domain,
       name: target.name,
       status: res.status,
+      latencyMs: latency,
       latency: `${latency}ms`,
       ssl: target.url.startsWith('https') ? '✓ SSL OK' : '✗ NO SSL',
       geo: hasGeo ? '✓ GEO OK' : '⚠ Eksik',
       schema: hasSchema ? '✓ Schema.org' : '⚠ Eksik',
-      score: `${score}/100`
+      score: `${score}/100`,
+      scoreNum: score
     };
   } catch (err) {
+    clearTimeout(timeoutId);
     return {
       domain: target.domain,
       name: target.name,
       status: 'HATA',
+      latencyMs: Date.now() - start,
       latency: `${Date.now() - start}ms`,
       ssl: '✗ Hata',
       geo: '✗',
       schema: '✗',
-      score: '20/100'
+      score: '20/100',
+      scoreNum: 20
     };
   }
 }
@@ -89,23 +128,49 @@ async function run() {
   console.log(' Koordinat:', GEO_CONFIG.icbm);
   console.log('=================================================================\n');
 
-  console.log('Canlı siteler taranıyor, lütfen bekleyiniz...\n');
+  const targets = getDynamicTargets();
+  console.log(`Toplam ${targets.length} site eşzamanlı taranıyor...\n`);
 
-  const results = [];
-  for (const t of TARGETS) {
-    process.stdout.write(`  [TARANIYOR] ${t.domain.padEnd(28)} `);
+  const results = await Promise.all(targets.map(async (t) => {
     const r = await auditDomain(t);
-    results.push(r);
-    console.log(`-> ${r.status} (${r.latency}) | Puan: ${r.score}`);
-  }
+    console.log(`  [OK] ${t.domain.padEnd(28)} -> ${r.status} (${r.latency}) | Puan: ${r.score}`);
+    return r;
+  }));
 
   console.log('\n-----------------------------------------------------------------');
-  console.log(' DETAYLI DENETİM SONUC TABLOSU:');
+  console.log(' DETAYLI DENETİM SONUÇ TABLOSU:');
   console.log('-----------------------------------------------------------------');
-  console.table(results);
+  console.table(results.map(r => ({
+    Domain: r.domain,
+    HTTP: r.status,
+    Gecikme: r.latency,
+    SSL: r.ssl,
+    GEO: r.geo,
+    Schema: r.schema,
+    Puan: r.score
+  })));
+
+  // Save report to data/seo-reports/
+  try {
+    const reportDir = path.join(__dirname, '..', 'data', 'seo-reports');
+    if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
+
+    const avgScore = Math.round(results.reduce((acc, r) => acc + r.scoreNum, 0) / results.length);
+    const reportData = {
+      auditedAt: new Date().toISOString(),
+      averageScore: avgScore,
+      totalSites: results.length,
+      sites: results
+    };
+    const reportFile = path.join(reportDir, 'latest-audit.json');
+    fs.writeFileSync(reportFile, JSON.stringify(reportData, null, 2), 'utf-8');
+    console.log(`[RAPOR KAYDEDİLDİ] -> ${reportFile}`);
+  } catch (e) {
+    // Ignore report save error
+  }
 
   console.log('\n=================================================================');
-  console.log(' [OK] SEO & GEO Denetimi Tamamlandı.');
+  console.log(' [OK] SEO & GEO Otomasyonu Başarıyla Tamamlandı.');
   console.log(' Yönetim Paneli: https://ysnsoft.com/admin');
   console.log(' Canlı API Ucu: https://ysnsoft.com/api/seo-geo');
   console.log('=================================================================\n');
