@@ -321,6 +321,22 @@ export function saveLead(lead: Omit<Lead, 'id' | 'status' | 'date'>) {
     date: new Date().toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   };
   localStorage.setItem('ysn_admin_leads_v2', JSON.stringify([newLead, ...current]));
+  try {
+    fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: newLead.name,
+        email: newLead.email,
+        phone: newLead.phone,
+        company: newLead.company,
+        budget: newLead.budget,
+        projectType: newLead.product,
+        message: newLead.message,
+        source: 'Website Form'
+      })
+    }).catch(() => {});
+  } catch(e) {}
 }
 
 export function updateLeadStatus(id: string, newStatus: Lead['status']) {
@@ -349,6 +365,22 @@ export function saveAppointment(apt: Omit<Appointment, 'id' | 'status'>) {
     status: 'Onaylandı'
   };
   localStorage.setItem('ysn_admin_appointments', JSON.stringify([newApt, ...current]));
+  try {
+    fetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: newApt.name,
+        email: newApt.email,
+        phone: '',
+        date: newApt.dateStr,
+        time: newApt.timeStr,
+        projectFocus: newApt.topic,
+        notes: newApt.company,
+        status: 'confirmed'
+      })
+    }).catch(() => {});
+  } catch(e) {}
 }
 
 export function getStoredTeamMembers(): TeamMember[] {

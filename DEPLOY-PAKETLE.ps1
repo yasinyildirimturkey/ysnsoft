@@ -65,21 +65,24 @@ if (Test-Path "$WwwKlasoru\.next") {
 Expand-Archive -Path $ZipDosyasi -DestinationPath $WwwKlasoru -Force
 Write-Host "  [OK] Dosyalar açıldı." -ForegroundColor Green
 
-# Bağımlılıkları kur
-Push-Location $WwwKlasoru
-Write-Host "2. Bağımlılıklar güncelleniyor (npm ci --omit=dev)..." -ForegroundColor Yellow
-npm ci --omit=dev
-Pop-Location
+# Bagimliliklar kontrol
+if (-not (Test-Path "$WwwKlasoru\node_modules\next")) {
+  Push-Location $WwwKlasoru
+  Write-Host "2. Bagimliliklar kuruluyor (npm install)..." -ForegroundColor Yellow
+  npm install --omit=dev
+  Pop-Location
+} else {
+  Write-Host "2. Bagimliliklar hazir (node_modules mevcut)." -ForegroundColor Green
+}
 
-# IIS Havuzunu yeniden başlat
+# IIS Havuzunu yeniden baslat
 Write-Host "3. IIS Uygulama Havuzu yenileniyor..." -ForegroundColor Yellow
 try {
-  Import-Module WebAdministration -ErrorAction SilentlyContinue
-  Restart-WebAppPool -Name 'ysnsoft.com' -ErrorAction SilentlyContinue
-  Write-Host "  [OK] IIS Havuzu (ysnsoft.com) yeniden başlatıldı." -ForegroundColor Green
-} catch {
-  Write-Host "  [BILGI] Havuz IIS üzerinden veya web.config touch ile yenilenebilir." -ForegroundColor Gray
+  Stop-Process -Name node -Force -ErrorAction SilentlyContinue
   (Get-Item "$WwwKlasoru\web.config").LastWriteTime = Get-Date
+  Write-Host "  [OK] IIS node yenilendi ve web.config guncellendi." -ForegroundColor Green
+} catch {
+  Write-Host "  [BILGI] Havuz IIS uzerinden veya web.config touch ile yenilenebilir." -ForegroundColor Gray
 }
 
 Write-Host "`n=== [TEBRİKLER] YSNSOFT CANLIDA AKTİF! ===" -ForegroundColor Green
