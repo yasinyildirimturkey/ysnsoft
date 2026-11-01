@@ -33,6 +33,26 @@ const DEFAULT_TARGETS = [
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const targetDomain = searchParams.get('domain');
+  const getLatestReport = searchParams.get('report') === 'latest';
+
+  // Fast path: return cached/latest audit report
+  if (getLatestReport) {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const reportPath = path.join(process.cwd(), 'data', 'seo-reports', 'latest-audit.json');
+      if (fs.existsSync(reportPath)) {
+        const raw = fs.readFileSync(reportPath, 'utf-8');
+        return NextResponse.json({
+          success: true,
+          cached: true,
+          data: JSON.parse(raw)
+        });
+      }
+    } catch (e) {
+      // fallback to live audit below
+    }
+  }
 
   let targetsToAudit: { domain: string; url: string }[] = [];
 

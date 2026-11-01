@@ -22,8 +22,14 @@ if (Test-Path public) {
   robocopy public _deploy\www\public /E /XD cache .cache /XF *.map *.log *.tmp* /NFL /NDL /NJH /NJS /NP | Out-Null
 }
 
-# Gerekli kök dosyaları ekle
+# Gerekli kök dosyaları ve klasörleri ekle
 Copy-Item package.json, package-lock.json, next.config.ts, start.js, web.config _deploy\www\
+if (Test-Path data) {
+  robocopy data _deploy\www\data /E /NFL /NDL /NJH /NJS /NP | Out-Null
+}
+if (Test-Path scripts) {
+  robocopy scripts _deploy\www\scripts /E /NFL /NDL /NJH /NJS /NP | Out-Null
+}
 if (Test-Path .env.local) {
   Copy-Item .env.local _deploy\www\.env.production
 }
