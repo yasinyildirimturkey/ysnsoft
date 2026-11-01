@@ -141,7 +141,7 @@ export default function AdminDashboardPage() {
       const isAuth = sessionStorage.getItem('ysn_admin_auth');
       if (isAuth !== 'true') {
         setIsAuthenticated(false);
-        router.push('/admin/login');
+        router.replace('/admin/login');
         return;
       }
       setIsAuthenticated(true);
@@ -340,24 +340,14 @@ export default function AdminDashboardPage() {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(val);
   };
 
-  if (isAuthenticated === null || isAuthenticated === false) {
+  if (isAuthenticated !== true) {
     return (
       <div className="min-h-screen bg-[#F5F5F7] flex flex-col items-center justify-center p-6 text-[#1D1D1F]">
-        <div className="apple-card bg-white p-8 rounded-3xl border border-black/[0.08] text-center max-w-sm w-full shadow-lg">
-          <div className="w-12 h-12 rounded-2xl bg-[#1D1D1F] text-white flex items-center justify-center mx-auto mb-4 shadow-sm">
-            <Lock className="w-6 h-6 text-white" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-[#1D1D1F] text-white flex items-center justify-center shadow-sm animate-pulse">
+            <Lock className="w-5 h-5 text-white" />
           </div>
-          <h2 className="text-lg font-bold">Yönetici Girişi Gerekli</h2>
-          <p className="text-xs text-[#86868B] mt-1 mb-6">
-            Lütfen YSNSOFT yönetim paneline erişmek için oturum açınız.
-          </p>
-          <a
-            href="/admin/login"
-            className="w-full apple-pill-btn py-2.5 text-xs font-semibold flex items-center justify-center gap-2 shadow-sm"
-          >
-            <span>Giriş Sayfasına Git</span>
-            <ArrowRight className="w-4 h-4" />
-          </a>
+          <p className="text-xs font-semibold text-[#86868B]">Yönetici oturumu kontrol ediliyor, yönlendiriliyorsunuz...</p>
         </div>
       </div>
     );
