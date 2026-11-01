@@ -10,28 +10,28 @@ interface FaqItem {
 
 const FAQS: FaqItem[] = [
   {
-    question: 'Mevcut muhasebe/ERP sistemimizden (Logo, Mikro, Zirve vb.) veri aktarımı yapıyor musunuz?',
-    answer: 'Evet. Uzman veri mühendislerimiz, mevcut sisteminizdeki tüm cari hesapları, stok kartlarını, geçmiş faturaları ve müşteri verilerini hiçbir kayıp yaşamadan PulseERP veya özel yazılımınıza 24-48 saat içinde aktarır.'
+    question: 'KGLEX UYAP robotu hukuk büromuzun dava ve icra takiplerini nasıl otomatikleştirir?',
+    answer: 'KGLEX, T.C. Adalet Bakanlığı UYAP Avukat Portalı ile entegre çalışan akıllı arka plan robot servislerine sahiptir. Dava ve icra dosyalarınızdaki tensip zabıtlarını, yeni evrakları, tebligatları ve duruşma günlerini gece ve gündüz otomatik tarar; süre kaçırma riskini sıfıra indirir ve müvekkil portalı ile anlık SMS/E-Posta bilgilendirmesi yapar.'
   },
   {
-    question: 'Yazılımları kendi şirket sunucumuzda (On-Premise) barındırabilir miyiz?',
-    answer: 'Kesinlikle. SaaS çözümlerimiz standart olarak yüksek güvenlikli bulut altyapımızda (AWS / DigitalOcean / Cloudflare) barındırılır; ancak talep eden kurumsal müşterilerimiz için Docker ve Kubernetes konteynerleri ile şirket içi sunucularınıza (On-Premise) özel kurulum gerçekleştirebiliyoruz.'
+    question: 'HaritaPlan 3194 Sayılı Kanun Madde 18 DOP ve parselasyon hesaplamalarını nasıl yapar?',
+    answer: 'HaritaPlan, Netcad (.ncn) ve AutoCAD (.dxf) dosyalarını doğrudan web tarayıcısına sürükleyerek okur. 3194 Sayılı İmar Kanunu Madde 18 kapsamında maksimum %45 Düzenleme Ortaklık Payı (DOP) hesaplarını milisaniyeler içinde tamamlar, tapu dağıtım cetvellerini ve resmi kadastro raporlarını A3/A4 vektörel PDF olarak üretir.'
   },
   {
-    question: 'Kurulum ve şirkete uyarlama süreci ne kadar sürer?',
-    answer: 'Hazır SaaS ürünlerimiz (PulseERP Suite ve NovaCommerce) aynı gün içinde canlıya alınabilir. Şirketinize özel entegrasyonlar ve veri aktarımı içeren projeler genellikle 1 ila 2 hafta; sıfırdan geliştirilen özel mobil ve web yazılımları ise 4 ila 8 hafta arasında teslim edilir.'
+    question: 'Yazılımları kendi şirket sunucumuzda (On-Premise / Özel Bulut) barındırabilir miyiz?',
+    answer: 'Kesinlikle. Çözümlerimiz standart olarak yüksek güvenlikli bulut altyapımızda (IIS, Docker, Kubernetes, Cloudflare) barındırılır; ancak talep eden kurumsal hukuk ofisleri, belediyeler ve işletmeler için On-Premise (şirket içi sunucu) kurulumu ve özel veri tabanı izolasyonu sağlıyoruz.'
   },
   {
-    question: 'Şirketimize özel ek modüller veya süreç değişiklikleri geliştirilebilir mi?',
-    answer: 'Evet. YSNSOFT olarak en büyük avantajımız bir yazılım evi olmamızdır. İş süreçlerinize özel ek raporlar, yeni pazaryeri entegrasyonları, yapay zeka ajanları veya özel arayüz talepleriniz hızla geliştirilip sisteme eklenir.'
+    question: 'Tarihi Samatya Mezecisi QR menü ve restoran POS sistemi mevcut fiş yazıcılarıyla uyumlu mu?',
+    answer: 'Evet. Tarihi Samatya Mezecisi için geliştirdiğimiz restoran otomasyonu; masadan cep telefonu kamerasıyla QR menü siparişi, mutfak ve bar ekranı (KDS), garson el terminali ve piyasadaki tüm standart ESC/POS termal fiş yazıcılarıyla çift yönlü WebSocket entegrasyonuna sahiptir.'
   },
   {
-    question: 'Veri güvenliği ve KVKK / ISO 27001 standartları nasıl sağlanıyor?',
-    answer: 'Tüm verileriniz dinlenme ve iletim halinde AES-256 ve TLS 1.3 protokolleri ile şifrelenir. Günlük otomatik yedekleme farklı coğrafi bölgelere dağıtılır ve tüm altyapımız KVKK & GDPR mevzuatlarına tam uyumludur.'
+    question: 'Veri güvenliği, KVKK ve 256-bit SSL şifreleme nasıl sağlanıyor?',
+    answer: 'Tüm YSNSOFT altyapısı TLS 1.3 ve 256-bit SSL şifrelemeyle korunur. Veritabanlarımızda Row-Level Security (RLS) uygulanır, günlük otomatik yedekleme coğrafi olarak izole edilir ve tüm sistemlerimiz KVKK & GDPR mevzuatlarına %100 uyumludur.'
   },
   {
-    question: 'Satış sonrası teknik destek ve SLA şartları nelerdir?',
-    answer: 'Tüm müşterilerimize 7/24 kesintisiz e-posta, WhatsApp ve telefon desteği sunuyoruz. Kritik kurumsal süreçler için %99.99 çalışma garantisi (SLA) ve 30 dakika içinde teknik müdahale taahhüdü veriyoruz.'
+    question: 'Satış sonrası teknik destek, SLA garantisi ve acil müdahale şartları nelerdir?',
+    answer: 'Tüm kurumsal müşterilerimize 7/24 kesintisiz telefon (+90 532 725 50 98), WhatsApp ve e-posta desteği sunuyoruz. Kritik kurumsal süreçler için %99.99 çalışma garantisi (SLA) ve 15 dakika içinde çözüm mimarı müdahalesi taahhüt ediyoruz.'
   }
 ];
 

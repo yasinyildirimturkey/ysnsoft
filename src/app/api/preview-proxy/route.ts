@@ -99,6 +99,24 @@ export async function GET(request: Request) {
                 return origOpen.call(this, method, url, ...rest);
               };
             }
+
+            // Route dynamic script injection (e.g. Next.js / webpack chunk loading)
+            const origCreate = document.createElement;
+            document.createElement = function(tagName, ...args) {
+              const el = origCreate.call(document, tagName, ...args);
+              if (tagName && tagName.toLowerCase() === 'script') {
+                const origSet = el.setAttribute;
+                el.setAttribute = function(name, val) {
+                  if (name === 'src' && typeof val === 'string' && val.startsWith('/') && !val.startsWith('//')) {
+                    val = targetOrigin + val;
+                  }
+                  return origSet.call(el, name, val);
+                };
+              }
+              return el;
+            };
+          } catch(e) {}
+            }
           } catch(e) {}
 
           // Safely catch pushState / replaceState errors

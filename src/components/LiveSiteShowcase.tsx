@@ -30,7 +30,7 @@ import {
 export default function LiveSiteShowcase() {
   const [selectedProduct, setSelectedProduct] = useState<Product>(PRODUCTS[0]);
   const [deviceView, setDeviceView] = useState<'desktop' | 'mobile'>('desktop');
-  const [viewMode, setViewMode] = useState<'proxy' | 'interactive'>('proxy');
+  const [viewMode, setViewMode] = useState<'interactive' | 'proxy'>('interactive');
   const [iframeKey, setIframeKey] = useState(0);
 
   // Interactive Simulator States
@@ -116,20 +116,21 @@ export default function LiveSiteShowcase() {
                 {/* Mode toggle */}
                 <div className="flex items-center bg-white p-1 rounded-lg border border-black/[0.06] text-[11px] font-semibold">
                   <button
-                    onClick={() => setViewMode('proxy')}
-                    className={`px-2.5 py-1 rounded-md transition-all ${
-                      viewMode === 'proxy' ? 'bg-[#0071E3] text-white shadow-2xs' : 'text-[#86868B]'
-                    }`}
-                  >
-                    Canlı Site
-                  </button>
-                  <button
                     onClick={() => setViewMode('interactive')}
-                    className={`px-2.5 py-1 rounded-md transition-all ${
+                    className={`px-3 py-1 rounded-md transition-all flex items-center gap-1 ${
                       viewMode === 'interactive' ? 'bg-[#0071E3] text-white shadow-2xs' : 'text-[#86868B]'
                     }`}
                   >
-                    İnteraktif Görünüm
+                    <Sparkles className="w-3 h-3" />
+                    <span>İnteraktif Konsol</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('proxy')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      viewMode === 'proxy' ? 'bg-[#0071E3] text-white shadow-2xs' : 'text-[#86868B]'
+                    }`}
+                  >
+                    Canlı Site (Web)
                   </button>
                 </div>
 
@@ -174,11 +175,28 @@ export default function LiveSiteShowcase() {
               <div className="relative rounded-2xl overflow-hidden border border-black/[0.1] bg-white shadow-inner h-[560px]">
                 {viewMode === 'proxy' ? (
                   <div className="relative w-full h-full">
+                    {/* Security notice hint */}
+                    <div className="absolute top-2 left-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg border border-black/[0.06] shadow-xs flex items-center justify-between text-[11px] text-[#6E6E73] z-10">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#0071E3] shrink-0" />
+                        <span className="truncate">Same-Origin & CSP Korumalı Canlı Görünüm</span>
+                      </div>
+                      <a
+                        href={selectedProduct.liveUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#0071E3] font-semibold hover:underline flex items-center gap-0.5 shrink-0 ml-2"
+                      >
+                        <span>Yeni Sekmede Aç</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+
                     <iframe
                       key={`${selectedProduct.id}-${iframeKey}`}
                       src={proxyUrl}
                       title={selectedProduct.name}
-                      className="w-full h-full border-0 bg-white"
+                      className="w-full h-full border-0 bg-white pt-9"
                       loading="eager"
                     />
                     
