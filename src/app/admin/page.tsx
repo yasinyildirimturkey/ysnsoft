@@ -2082,9 +2082,44 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               {/* Live Audit Results Table */}
               {seoAuditResults.length > 0 && (
                 <div className="mt-4 border border-black/[0.06] rounded-2xl overflow-hidden text-xs">
-                  <div className="bg-[#F5F5F7] px-4 py-3 font-bold text-[#1D1D1F] flex items-center justify-between">
-                    <span>Canlı SEO & GEO Tarama Raporu</span>
-                    <span className="text-[11px] text-[#86868B] font-normal">{seoAuditResults.length} Domain Doğrulandı</span>
+                  <div className="bg-[#F5F5F7] px-4 py-3 font-bold text-[#1D1D1F] flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span>Canlı SEO & GEO Tarama Raporu</span>
+                      <span className="text-[11px] text-[#86868B] font-normal">({seoAuditResults.length} Domain Doğrulandı)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const jsonStr = JSON.stringify(seoAuditResults, null, 2);
+                          const blob = new Blob([jsonStr], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `ysnsoft-seo-audit-${new Date().toISOString().split('T')[0]}.json`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="px-2.5 py-1 bg-white hover:bg-gray-100 border border-black/[0.08] text-gray-700 rounded-lg text-[11px] font-semibold flex items-center gap-1 shadow-2xs transition-colors"
+                      >
+                        <Download className="w-3 h-3 text-[#0071E3]" />
+                        <span>JSON Raporu İndir</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const summary = seoAuditResults.map(r => 
+                            `${r.domain}: Skor ${r.score}/100 | SSL: ${r.hasSsl ? 'OK' : 'Yok'} | GEO: ${r.hasGeoTags ? 'OK' : 'Eksik'} | Schema: ${r.hasSchemaOrg ? 'OK' : 'Eksik'} | Gecikme: ${r.latencyMs}ms`
+                          ).join('\n');
+                          navigator.clipboard.writeText(summary);
+                          alert('Özet denetim raporu panoya kopyalandı!');
+                        }}
+                        className="px-2.5 py-1 bg-white hover:bg-gray-100 border border-black/[0.08] text-gray-700 rounded-lg text-[11px] font-semibold flex items-center gap-1 shadow-2xs transition-colors"
+                      >
+                        <Copy className="w-3 h-3 text-[#10B981]" />
+                        <span>Özeti Kopyala</span>
+                      </button>
+                    </div>
                   </div>
                   <div className="divide-y divide-black/[0.04] overflow-x-auto">
                     {seoAuditResults.map((r, i) => (

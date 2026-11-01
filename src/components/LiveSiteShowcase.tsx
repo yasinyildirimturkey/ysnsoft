@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PRODUCTS, Product } from '@/data/products';
 import { 
   Globe, 
@@ -28,10 +28,49 @@ import {
 } from 'lucide-react';
 
 export default function LiveSiteShowcase() {
+  const [allProducts, setAllProducts] = useState<Product[]>(PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState<Product>(PRODUCTS[0]);
   const [deviceView, setDeviceView] = useState<'desktop' | 'mobile'>('desktop');
   const [viewMode, setViewMode] = useState<'interactive' | 'proxy'>('interactive');
   const [iframeKey, setIframeKey] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/sites')
+      .then(res => res.json())
+      .then(json => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const mapped: Product[] = json.data.map((s: any) => {
+            const existing = PRODUCTS.find(p => p.displayDomain === s.domain || p.id === s.id);
+            if (existing) {
+              return { ...existing, ...s, displayDomain: s.domain };
+            }
+            return {
+              id: s.id,
+              name: s.name,
+              tagline: s.tagline || s.name,
+              category: 'saas' as any,
+              categoryLabel: s.category || 'Web & SaaS',
+              badge: s.status === 'active' ? 'Canlıda Yayında' : 'Geliştiriliyor',
+              shortDesc: s.description || s.tagline,
+              longDesc: s.description || s.tagline,
+              metrics: [
+                { label: 'Uptime', value: s.stats?.uptime || '%99.9' },
+                { label: 'Gecikme', value: s.stats?.latency || '35ms' }
+              ],
+              features: s.features || [],
+              techStack: ['Next.js 16', 'TypeScript', 'Tailwind CSS'],
+              accentColor: '#0071E3',
+              previewType: 'portal' as any,
+              liveUrl: s.liveUrl || `https://${s.domain}`,
+              displayDomain: s.domain,
+              liveStats: { uptime: s.stats?.uptime || '%99.9', speed: s.stats?.latency || '35ms' }
+            };
+          });
+          setAllProducts(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Interactive Simulator States
   const [activeTab, setActiveTab] = useState<'dashboard' | 'modules' | 'stats'>('dashboard');
@@ -65,7 +104,7 @@ export default function LiveSiteShowcase() {
 
           {/* Product Selectors */}
           <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
-            {PRODUCTS.map(prod => (
+            {allProducts.map(prod => (
               <button
                 key={prod.id}
                 onClick={() => {
