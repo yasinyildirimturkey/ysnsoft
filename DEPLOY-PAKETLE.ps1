@@ -25,7 +25,9 @@ if (Test-Path public) {
 # Gerekli kök dosyaları ve klasörleri ekle
 Copy-Item package.json, package-lock.json, next.config.ts, start.js, web.config _deploy\www\
 if (Test-Path data) {
-  robocopy data _deploy\www\data /E /NFL /NDL /NJH /NJS /NP | Out-Null
+  # Canlı veritabanı dosyaları pakete girmez: sunucudaki gerçek talepler, randevular,
+  # faturalar ve site listesi yerel kopyalarla ezilmesin. (Yoksa sunucu varsayılanları üretir.)
+  robocopy data _deploy\www\data /E /XF leads.json appointments.json invoices.json sites.json geo-settings.json /NFL /NDL /NJH /NJS /NP | Out-Null
 }
 if (Test-Path scripts) {
   robocopy scripts _deploy\www\scripts /E /NFL /NDL /NJH /NJS /NP | Out-Null
