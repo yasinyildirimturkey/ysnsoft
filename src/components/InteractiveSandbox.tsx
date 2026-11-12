@@ -108,20 +108,20 @@ export default function InteractiveSandbox() {
   };
 
   return (
-    <section id="sandbox" className="py-24 bg-white border-b border-black/[0.06]">
+    <section id="sandbox" className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Gerçek Ürün Simülatörü</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Ürünlerimizi şimdi <br />
-            <span className="text-[#0071E3]">canlı olarak test edin.</span>
+            <span>canlı olarak test edin.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             KGLEX UYAP robotu, HaritaPlan DOP hesap motoru ve Flamantyou AI cilt analizi laboratuvarı burada. İstediğiniz modülü seçip canlı kod üzerinde deneyin.
           </p>
 
@@ -131,7 +131,7 @@ export default function InteractiveSandbox() {
               <button
                 onClick={() => setActiveTab('kglex')}
                 className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-xl transition-all ${
-                  activeTab === 'kglex' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                  activeTab === 'kglex' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#515154] hover:text-[#1D1D1F]'
                 }`}
               >
                 KGLEX UYAP Robotu
@@ -139,7 +139,7 @@ export default function InteractiveSandbox() {
               <button
                 onClick={() => setActiveTab('harita')}
                 className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-xl transition-all ${
-                  activeTab === 'harita' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                  activeTab === 'harita' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#515154] hover:text-[#1D1D1F]'
                 }`}
               >
                 HaritaPlan 3194 Md. 18
@@ -147,7 +147,7 @@ export default function InteractiveSandbox() {
               <button
                 onClick={() => setActiveTab('hg')}
                 className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-xl transition-all ${
-                  activeTab === 'hg' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                  activeTab === 'hg' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#515154] hover:text-[#1D1D1F]'
                 }`}
               >
                 HG & Açıkel Hukuk
@@ -155,7 +155,7 @@ export default function InteractiveSandbox() {
               <button
                 onClick={() => setActiveTab('flamant')}
                 className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-xl transition-all ${
-                  activeTab === 'flamant' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                  activeTab === 'flamant' ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#515154] hover:text-[#1D1D1F]'
                 }`}
               >
                 Flamantyou AI Cilt Analizi
@@ -166,14 +166,14 @@ export default function InteractiveSandbox() {
               <button
                 onClick={() => setDeviceMode('desktop')}
                 title="Masaüstü"
-                className={`p-2 rounded-lg transition-all ${deviceMode === 'desktop' ? 'bg-white text-[#0071E3] shadow-xs' : 'text-[#86868B]'}`}
+                className={`p-2 rounded-lg transition-all ${deviceMode === 'desktop' ? 'bg-white text-[#0071E3] shadow-xs' : 'text-[#6E6E73]'}`}
               >
                 <Monitor className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setDeviceMode('mobile')}
                 title="Mobil"
-                className={`p-2 rounded-lg transition-all ${deviceMode === 'mobile' ? 'bg-white text-[#0071E3] shadow-xs' : 'text-[#86868B]'}`}
+                className={`p-2 rounded-lg transition-all ${deviceMode === 'mobile' ? 'bg-white text-[#0071E3] shadow-xs' : 'text-[#6E6E73]'}`}
               >
                 <Smartphone className="w-4 h-4" />
               </button>
@@ -191,7 +191,7 @@ export default function InteractiveSandbox() {
                 <span className="w-3 h-3 rounded-full bg-[#FF5F56]" />
                 <span className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
                 <span className="w-3 h-3 rounded-full bg-[#27C93F]" />
-                <span className="ml-2 text-xs font-medium text-[#86868B]">
+                <span className="ml-2 text-xs font-medium text-[#6E6E73]">
                   {activeTab === 'kglex' && 'kglex-uyap-robot.live.ysnsoft.com'}
                   {activeTab === 'harita' && 'haritaplan-geoplan.live.ysnsoft.com'}
                   {activeTab === 'flamant' && 'flamantyou-ai-skin.live.ysnsoft.com'}
@@ -212,7 +212,7 @@ export default function InteractiveSandbox() {
                       <Scale className="w-4 h-4 text-[#0071E3]" />
                       <span>KGLEX Otonom UYAP Taraması & Dava Takip Masası</span>
                     </h5>
-                    <p className="text-xs text-[#86868B]">Arka plan Python botu UYAP portallarına bağlanıp yeni evrakları otomatik listeler.</p>
+                    <p className="text-xs text-[#6E6E73]">Arka plan Python botu UYAP portallarına bağlanıp yeni evrakları otomatik listeler.</p>
                   </div>
                   <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-3 py-1 rounded-full">
                     UYAP v4.8 Uyumlu
@@ -252,13 +252,13 @@ export default function InteractiveSandbox() {
                       <div>
                         <div className="flex items-center gap-2 font-semibold text-[#1D1D1F]">
                           <span>{c.no}</span>
-                          <span className="text-[10px] text-[#86868B] font-normal">({c.court})</span>
+                          <span className="text-[11px] text-[#6E6E73] font-normal">({c.court})</span>
                         </div>
-                        <span className="text-[#6E6E73] mt-0.5 block">Müvekkil: {c.client}</span>
+                        <span className="text-[#515154] mt-0.5 block">Müvekkil: {c.client}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-[#0071E3] font-semibold block">{c.status}</span>
-                        <span className="text-[10px] text-[#10B981] flex items-center gap-1 justify-end mt-0.5">
+                        <span className="text-[11px] text-[#10B981] flex items-center gap-1 justify-end mt-0.5">
                           <CheckCircle2 className="w-3 h-3" /> UYAP Eşitlendi
                         </span>
                       </div>
@@ -277,7 +277,7 @@ export default function InteractiveSandbox() {
                       <Compass className="w-4 h-4 text-[#10B981]" />
                       <span>HaritaPlan 3194 Sayılı Kanun Madde 18 & DOP Hesap Motoru</span>
                     </h5>
-                    <p className="text-xs text-[#86868B]">Düzenleme Ortaklık Payı, ifraz/tevhid ve resmi dağıtım cetveli üretimi.</p>
+                    <p className="text-xs text-[#6E6E73]">Düzenleme Ortaklık Payı, ifraz/tevhid ve resmi dağıtım cetveli üretimi.</p>
                   </div>
                   <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-3 py-1 rounded-full">
                     HKMO 2026 Tarifesi
@@ -329,15 +329,15 @@ export default function InteractiveSandbox() {
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="bg-white p-3.5 rounded-lg border border-black/[0.04]">
-                        <span className="text-[11px] text-[#86868B]">DOP Oranı (Kanuni Sınır: %45)</span>
+                        <span className="text-[11px] text-[#6E6E73]">DOP Oranı (Kanuni Sınır: %45)</span>
                         <h6 className="text-lg font-bold text-[#0071E3] mt-1">%{dopResult.dopRatio.toFixed(1)}</h6>
                       </div>
                       <div className="bg-white p-3.5 rounded-lg border border-black/[0.04]">
-                        <span className="text-[11px] text-[#86868B]">Kamuya Terk (DOP Alanı)</span>
+                        <span className="text-[11px] text-[#6E6E73]">Kamuya Terk (DOP Alanı)</span>
                         <h6 className="text-lg font-bold text-[#F59E0B] mt-1">{dopResult.dopArea.toLocaleString('tr-TR')} m²</h6>
                       </div>
                       <div className="bg-white p-3.5 rounded-lg border border-black/[0.04]">
-                        <span className="text-[11px] text-[#86868B]">Malike Verilecek Net İmar Parseli</span>
+                        <span className="text-[11px] text-[#6E6E73]">Malike Verilecek Net İmar Parseli</span>
                         <h6 className="text-lg font-bold text-[#10B981] mt-1">{dopResult.netArea.toLocaleString('tr-TR')} m²</h6>
                       </div>
                     </div>
@@ -355,7 +355,7 @@ export default function InteractiveSandbox() {
                       <Scale className="w-4 h-4 text-[#0071E3]" />
                       <span>HG & Açıkel Hukuk Çok Dilli Müvekkil Portalı & Vekalet Ücret Motoru</span>
                     </h5>
-                    <p className="text-xs text-[#86868B]">
+                    <p className="text-xs text-[#6E6E73]">
                       Uluslararası tahkim, şirket danışmanlığı, online vekalet sözleşmesi ve Sanal POS harç tahsilatı
                     </p>
                   </div>
@@ -367,7 +367,7 @@ export default function InteractiveSandbox() {
                         key={lang}
                         onClick={() => setHgLang(lang)}
                         className={`px-3 py-1 rounded-lg transition-all ${
-                          hgLang === lang ? 'bg-white text-[#0071E3] shadow-xs' : 'text-[#6E6E73]'
+                          hgLang === lang ? 'bg-white text-[#0071E3] shadow-xs' : 'text-[#515154]'
                         }`}
                       >
                         {lang}
@@ -402,7 +402,7 @@ export default function InteractiveSandbox() {
                           key={c}
                           onClick={() => setHgFeeCurrency(c)}
                           className={`px-2.5 py-1 text-xs rounded-lg font-mono font-bold transition-all ${
-                            hgFeeCurrency === c ? 'bg-[#1D1D1F] text-white shadow-2xs' : 'bg-white text-[#6E6E73] border border-black/[0.06]'
+                            hgFeeCurrency === c ? 'bg-[#1D1D1F] text-white shadow-2xs' : 'bg-white text-[#515154] border border-black/[0.06]'
                           }`}
                         >
                           {c}
@@ -413,7 +413,7 @@ export default function InteractiveSandbox() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[11px] text-[#6E6E73] block mb-1">Dava / Danışmanlık Türü</label>
+                      <label className="text-[11px] text-[#515154] block mb-1">Dava / Danışmanlık Türü</label>
                       <select className="w-full px-3 py-2 text-xs bg-white rounded-xl border border-black/[0.08] font-medium">
                         <option>Ticari Dava & Tahkim Sözleşmesi</option>
                         <option>Yabancı Sermaye & Şirket Kuruluşu</option>
@@ -423,7 +423,7 @@ export default function InteractiveSandbox() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#6E6E73] block mb-1">Baz Danışmanlık Tutarı</label>
+                      <label className="text-[11px] text-[#515154] block mb-1">Baz Danışmanlık Tutarı</label>
                       <input
                         type="number"
                         value={hgFeeBase}
@@ -433,7 +433,7 @@ export default function InteractiveSandbox() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#6E6E73] block mb-1">KDV (%20) Dahil Toplam</label>
+                      <label className="text-[11px] text-[#515154] block mb-1">KDV (%20) Dahil Toplam</label>
                       <div className="px-3 py-2 text-xs bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-mono font-bold">
                         {hgFeeCurrency === 'TRY' ? '₺' : hgFeeCurrency === 'USD' ? '$' : '€'}{(hgFeeBase * 1.2).toLocaleString('tr-TR')}
                       </div>
@@ -441,7 +441,7 @@ export default function InteractiveSandbox() {
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-black/[0.06] text-xs">
-                    <span className="text-[#86868B] text-[11px]">Entegre Iyzico Sanal POS ile anında 3D Secure kredi kartı tahsilatı</span>
+                    <span className="text-[#6E6E73] text-[11px]">Entegre Iyzico Sanal POS ile anında 3D Secure kredi kartı tahsilatı</span>
                     <button
                       type="button"
                       onClick={() => alert(`HG Avukatlık & Açıkel Law demo tahsilat simülasyonu: ${hgFeeCurrency} ${(hgFeeBase * 1.2).toLocaleString('tr-TR')} için 3D Secure oturumu başlatıldı.`)}
@@ -463,7 +463,7 @@ export default function InteractiveSandbox() {
                       <Sparkles className="w-4 h-4 text-[#EC4899]" />
                       <span>Flamantyou Yapay Zeka Cilt Analizi & Ürün Reçetesi Motoru</span>
                     </h5>
-                    <p className="text-xs text-[#86868B]">Kamera taraması ve anket verileriyle kullanıcıya özel bakım protokolü çıkarır.</p>
+                    <p className="text-xs text-[#6E6E73]">Kamera taraması ve anket verileriyle kullanıcıya özel bakım protokolü çıkarır.</p>
                   </div>
                   <span className="text-xs font-semibold text-[#EC4899] bg-[#EC4899]/10 px-3 py-1 rounded-full">
                     %94 Doğruluk
@@ -496,11 +496,11 @@ export default function InteractiveSandbox() {
                 <div className="bg-[#F5F5F7] p-5 rounded-xl border border-black/[0.05]">
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-white p-3.5 rounded-lg border border-black/[0.04]">
-                      <span className="text-[11px] text-[#86868B]">Nem Seviyesi</span>
+                      <span className="text-[11px] text-[#6E6E73]">Nem Seviyesi</span>
                       <h6 className="text-base font-bold text-[#1D1D1F] mt-1">{skinReport.hydration}</h6>
                     </div>
                     <div className="bg-white p-3.5 rounded-lg border border-black/[0.04]">
-                      <span className="text-[11px] text-[#86868B]">Bariyer Sağlığı</span>
+                      <span className="text-[11px] text-[#6E6E73]">Bariyer Sağlığı</span>
                       <h6 className="text-base font-bold text-[#1D1D1F] mt-1">{skinReport.barrier}</h6>
                     </div>
                   </div>

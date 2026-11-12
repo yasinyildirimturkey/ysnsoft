@@ -85,20 +85,20 @@ export default function LiveSiteShowcase() {
   };
 
   return (
-    <section id="live-sites" className="py-24 bg-white border-b border-black/[0.06]">
+    <section id="live-sites" className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4 shadow-xs">
-            <Globe className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Globe className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Canlı Web Siteleri & Sistem İstasyonu</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Gerçek domainler, <br />
-            <span className="text-[#0071E3]">canlıda çalışan web sitelerimiz.</span>
+            <span>canlıda çalışan web sitelerimiz.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Aşağıdaki cihaz konsolundan istediğiniz projemizi seçin; tarayıcıda canlı olarak inceleyin veya tek tıkla doğrudan resmi adresine gidin.
           </p>
 
@@ -114,11 +114,11 @@ export default function LiveSiteShowcase() {
                 className={`px-4 py-2 text-xs font-semibold rounded-full border transition-all flex items-center gap-1.5 ${
                   selectedProduct.id === prod.id
                     ? 'bg-[#1D1D1F] text-white border-[#1D1D1F] shadow-sm'
-                    : 'bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] border-black/[0.06]'
+                    : 'bg-[#F5F5F7] text-[#515154] hover:text-[#1D1D1F] border-black/[0.06]'
                 }`}
               >
                 <span>{prod.displayDomain}</span>
-                <span className="text-[10px] opacity-70 font-normal">({prod.categoryLabel.split(' ')[0]})</span>
+                <span className="text-[11px] opacity-70 font-normal">({prod.categoryLabel.split(' ')[0]})</span>
               </button>
             ))}
           </div>
@@ -157,7 +157,7 @@ export default function LiveSiteShowcase() {
                   <button
                     onClick={() => setViewMode('interactive')}
                     className={`px-3 py-1 rounded-md transition-all flex items-center gap-1 ${
-                      viewMode === 'interactive' ? 'bg-[#0071E3] text-white shadow-2xs' : 'text-[#86868B]'
+                      viewMode === 'interactive' ? 'bg-[#0071E3] text-white shadow-2xs' : 'text-[#6E6E73]'
                     }`}
                   >
                     <Sparkles className="w-3 h-3" />
@@ -166,7 +166,7 @@ export default function LiveSiteShowcase() {
                   <button
                     onClick={() => setViewMode('proxy')}
                     className={`px-3 py-1 rounded-md transition-all ${
-                      viewMode === 'proxy' ? 'bg-[#0071E3] text-white shadow-2xs' : 'text-[#86868B]'
+                      viewMode === 'proxy' ? 'bg-[#0071E3] text-white shadow-2xs' : 'text-[#6E6E73]'
                     }`}
                   >
                     Canlı Site (Web)
@@ -179,7 +179,7 @@ export default function LiveSiteShowcase() {
                     onClick={() => setDeviceView('desktop')}
                     title="Masaüstü Görünümü"
                     className={`p-1.5 rounded-md transition-all ${
-                      deviceView === 'desktop' ? 'bg-[#0071E3] text-white' : 'text-[#86868B]'
+                      deviceView === 'desktop' ? 'bg-[#0071E3] text-white' : 'text-[#6E6E73]'
                     }`}
                   >
                     <Monitor className="w-3.5 h-3.5" />
@@ -188,7 +188,7 @@ export default function LiveSiteShowcase() {
                     onClick={() => setDeviceView('mobile')}
                     title="Mobil Görünümü"
                     className={`p-1.5 rounded-md transition-all ${
-                      deviceView === 'mobile' ? 'bg-[#0071E3] text-white' : 'text-[#86868B]'
+                      deviceView === 'mobile' ? 'bg-[#0071E3] text-white' : 'text-[#6E6E73]'
                     }`}
                   >
                     <Smartphone className="w-3.5 h-3.5" />
@@ -215,7 +215,7 @@ export default function LiveSiteShowcase() {
                 {viewMode === 'proxy' ? (
                   <div className="relative w-full h-full">
                     {/* Security notice hint */}
-                    <div className="absolute top-2 left-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg border border-black/[0.06] shadow-xs flex items-center justify-between text-[11px] text-[#6E6E73] z-10">
+                    <div className="absolute top-2 left-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg border border-black/[0.06] shadow-xs flex items-center justify-between text-[11px] text-[#515154] z-10">
                       <div className="flex items-center gap-1.5 truncate">
                         <ShieldCheck className="w-3.5 h-3.5 text-[#0071E3] shrink-0" />
                         <span className="truncate">Same-Origin & CSP Korumalı Canlı Görünüm</span>
@@ -244,7 +244,7 @@ export default function LiveSiteShowcase() {
                       <div className="flex items-center gap-2 text-xs">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="font-semibold text-[#1D1D1F]">Canlı Görünüm Aktif:</span>
-                        <span className="text-[#6E6E73] font-mono">{selectedProduct.displayDomain}</span>
+                        <span className="text-[#515154] font-mono">{selectedProduct.displayDomain}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -279,11 +279,11 @@ export default function LiveSiteShowcase() {
                           <div>
                             <h3 className="font-bold text-[#1D1D1F] text-base flex items-center gap-2">
                               {selectedProduct.name}
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
+                              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
                                 {selectedProduct.displayDomain}
                               </span>
                             </h3>
-                            <p className="text-xs text-[#86868B]">{selectedProduct.tagline}</p>
+                            <p className="text-xs text-[#6E6E73]">{selectedProduct.tagline}</p>
                           </div>
                         </div>
 
@@ -292,7 +292,7 @@ export default function LiveSiteShowcase() {
                           <button
                             onClick={() => setActiveTab('dashboard')}
                             className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                              activeTab === 'dashboard' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#86868B]'
+                              activeTab === 'dashboard' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#6E6E73]'
                             }`}
                           >
                             Canlı Arayüz
@@ -300,7 +300,7 @@ export default function LiveSiteShowcase() {
                           <button
                             onClick={() => setActiveTab('modules')}
                             className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                              activeTab === 'modules' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#86868B]'
+                              activeTab === 'modules' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#6E6E73]'
                             }`}
                           >
                             Modül Detayı
@@ -308,7 +308,7 @@ export default function LiveSiteShowcase() {
                           <button
                             onClick={() => setActiveTab('stats')}
                             className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                              activeTab === 'stats' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#86868B]'
+                              activeTab === 'stats' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#6E6E73]'
                             }`}
                           >
                             Metrikler & SLA
@@ -326,7 +326,7 @@ export default function LiveSiteShowcase() {
                                 <span className="font-bold text-[#1D1D1F] flex items-center gap-1.5">
                                   <Scale className="w-4 h-4 text-blue-600" /> UYAP Otonom Dava & İcra Sorgu Konsolu
                                 </span>
-                                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                                <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
                                   Robot Aktif (0.33.45)
                                 </span>
                               </div>
@@ -372,7 +372,7 @@ export default function LiveSiteShowcase() {
                                 <span className="font-bold text-[#1D1D1F] flex items-center gap-1.5">
                                   <Compass className="w-4 h-4 text-emerald-600" /> 3194 Sayılı İmar Kanunu Md. 18 DOP Hesap Motoru
                                 </span>
-                                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                                <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
                                   DOP: %{(simDopRatio * 100).toFixed(2)} (Yasal Sınır İçinde)
                                 </span>
                               </div>
@@ -417,7 +417,7 @@ export default function LiveSiteShowcase() {
                                 <span className="font-bold text-[#1D1D1F] flex items-center gap-1.5">
                                   <Building className="w-4 h-4 text-blue-600" /> Çok Dilli Uluslararası Hukuk Portalı
                                 </span>
-                                <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg text-[10px] font-bold">
+                                <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold">
                                   {(['TR', 'EN', 'DE'] as const).map(l => (
                                     <button
                                       key={l}
@@ -452,7 +452,7 @@ export default function LiveSiteShowcase() {
                                 <span className="font-bold text-[#1D1D1F] flex items-center gap-1.5">
                                   <Cpu className="w-4 h-4 text-purple-600" /> Multi-Tenant Bulut Altyapısı
                                 </span>
-                                <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full">
+                                <span className="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full">
                                   Canlıda Yayında
                                 </span>
                               </div>
@@ -498,19 +498,19 @@ export default function LiveSiteShowcase() {
                         <div className="space-y-3 animate-in fade-in text-xs">
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                             <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[10px] text-gray-500 block">Kullanıcı Hacmi</span>
+                              <span className="text-[11px] text-gray-500 block">Kullanıcı Hacmi</span>
                               <strong className="text-sm text-[#1D1D1F] mt-1 block">{selectedProduct.liveStats.users}</strong>
                             </div>
                             <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[10px] text-gray-500 block">Uptime Garantisi</span>
+                              <span className="text-[11px] text-gray-500 block">Uptime Garantisi</span>
                               <strong className="text-sm text-emerald-600 mt-1 block">{selectedProduct.liveStats.uptime}</strong>
                             </div>
                             <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[10px] text-gray-500 block">İşlem Hacmi</span>
+                              <span className="text-[11px] text-gray-500 block">İşlem Hacmi</span>
                               <strong className="text-sm text-[#1D1D1F] mt-1 block">{selectedProduct.liveStats.processedVolume}</strong>
                             </div>
                             <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[10px] text-gray-500 block">Ortalama Yanıt</span>
+                              <span className="text-[11px] text-gray-500 block">Ortalama Yanıt</span>
                               <strong className="text-sm text-blue-600 mt-1 block">{selectedProduct.liveStats.speed}</strong>
                             </div>
                           </div>
@@ -520,7 +520,7 @@ export default function LiveSiteShowcase() {
 
                     {/* Bottom Status Bar */}
                     <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-                      <span className="text-xs font-mono text-[#86868B] flex items-center gap-1.5">
+                      <span className="text-xs font-mono text-[#6E6E73] flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
                         Domain: https://{selectedProduct.displayDomain}
                       </span>
@@ -541,7 +541,7 @@ export default function LiveSiteShowcase() {
                 <div className="absolute bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md p-3 rounded-xl border border-black/[0.08] shadow-md flex items-center justify-between text-xs">
                   <div>
                     <strong className="text-[#1D1D1F] block">{selectedProduct.name}</strong>
-                    <span className="text-[#86868B] text-[11px]">{selectedProduct.tagline}</span>
+                    <span className="text-[#6E6E73] text-[11px]">{selectedProduct.tagline}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <a

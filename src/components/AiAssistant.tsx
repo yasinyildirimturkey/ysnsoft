@@ -165,7 +165,7 @@ export default function AiAssistant() {
       handleSend('Panelde emlak SaaS mimarisi ve multi-tenant yapısı hakkında bilgi ver.');
     } else if (act.action === 'schedule_demo' || act.action === 'jump_scheduler') {
       setIsOpen(false);
-      document.getElementById('demo-scheduler')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
     } else if (act.action === 'jump_calculator') {
       setIsOpen(false);
       document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' });
@@ -188,28 +188,29 @@ export default function AiAssistant() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-label="YSNSOFT AI Asistan"
-        className={`fixed bottom-24 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full shadow-2xl transition-all duration-300 ${
+        aria-expanded={isOpen}
+        className={`fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-2.5 p-2.5 sm:pl-3 sm:pr-4 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.14)] transition-all duration-300 ${
           isOpen
             ? 'bg-[#1D1D1F] text-white scale-95'
-            : 'bg-white/95 backdrop-blur-xl border border-blue-200/60 text-[#1D1D1F] hover:shadow-blue-500/20 hover:scale-105 group'
+            : 'bg-white/95 backdrop-blur-xl border border-blue-200/60 text-[#1D1D1F] hover:shadow-[0_12px_36px_rgba(0,113,227,0.22)] group'
         }`}
       >
         <div className="relative flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 text-white shadow-sm">
-          <Sparkles className="w-4 h-4 animate-pulse" />
+          <Sparkles className="w-4 h-4" />
           <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 opacity-40 blur-sm group-hover:opacity-75 transition-opacity" />
         </div>
         <div className="text-left hidden sm:block">
           <div className="text-xs font-semibold leading-tight flex items-center gap-1.5">
             YSNSOFT AI
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" aria-hidden="true" />
           </div>
-          <div className="text-[10px] text-[#86868B] font-medium leading-none">Canlı Çözüm Asistanı</div>
+          <div className="text-[11px] text-[#6E6E73] font-medium leading-none">Canlı Çözüm Asistanı</div>
         </div>
       </button>
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-36 right-4 sm:right-6 z-50 w-[92vw] sm:w-[420px] max-h-[640px] h-[80vh] flex flex-col bg-white/95 backdrop-blur-2xl rounded-3xl border border-gray-200/80 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div role="dialog" aria-label="YSNSOFT AI Asistan" className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[420px] max-h-[640px] h-[calc(100dvh-7rem)] flex flex-col bg-white/95 backdrop-blur-2xl rounded-3xl border border-gray-200/80 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
           <div className="px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-[#F5F5F7] to-white flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -219,11 +220,11 @@ export default function AiAssistant() {
               <div>
                 <h3 className="text-sm font-semibold text-[#1D1D1F] flex items-center gap-2">
                   YSNSOFT AI
-                  <span className="px-1.5 py-0.5 text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-md shadow-2xs">
+                  <span className="px-1.5 py-0.5 text-[11px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-md shadow-2xs">
                     Intelligence
                   </span>
                 </h3>
-                <p className="text-xs text-[#86868B]">Çözüm Mimarisi & SaaS Danışmanı</p>
+                <p className="text-xs text-[#6E6E73]">Çözüm Mimarisi & SaaS Danışmanı</p>
               </div>
             </div>
             
@@ -253,7 +254,7 @@ export default function AiAssistant() {
                 <span className="font-bold text-blue-900 flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5" /> Yapay Zeka Model Yapılandırması
                 </span>
-                <span className="text-[10px] text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full font-semibold">
+                <span className="text-[11px] text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full font-semibold">
                   YSNSOFT Motoru
                 </span>
               </div>
@@ -331,7 +332,7 @@ export default function AiAssistant() {
                     </div>
                   )}
 
-                  <div className="text-[10px] text-[#86868B] mt-1 px-1 flex items-center justify-between">
+                  <div className="text-[11px] text-[#6E6E73] mt-1 px-1 flex items-center justify-between">
                     <span>{msg.time}</span>
                     <span className="font-semibold text-blue-600">
                       YSNSOFT AI
@@ -355,7 +356,7 @@ export default function AiAssistant() {
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" />
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]" />
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]" />
-                  <span className="text-xs text-[#86868B] ml-2">YSNSOFT AI düşünüyor...</span>
+                  <span className="text-xs text-[#6E6E73] ml-2">YSNSOFT AI düşünüyor...</span>
                 </div>
               </div>
             )}
@@ -386,7 +387,7 @@ export default function AiAssistant() {
                 <Send className="w-3.5 h-3.5" />
               </button>
             </form>
-            <div className="text-[10px] text-center text-gray-400 mt-2 flex items-center justify-center gap-1.5">
+            <div className="text-[11px] text-center text-gray-400 mt-2 flex items-center justify-center gap-1.5">
               <span>YSNSOFT Akıllı Çözüm & Mimari Danışmanı</span>
             </div>
           </div>

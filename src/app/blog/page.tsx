@@ -127,7 +127,7 @@ export default function BlogPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="flex items-center gap-2 text-xs font-semibold text-[#86868B] hover:text-[#1D1D1F] transition-colors bg-gray-100 px-3 py-1.5 rounded-full"
+              className="flex items-center gap-2 text-xs font-semibold text-[#6E6E73] hover:text-[#1D1D1F] transition-colors bg-gray-100 px-3 py-1.5 rounded-full"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Ana Sayfaya Dön
             </Link>
@@ -161,7 +161,7 @@ export default function BlogPage() {
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1D1D1F]">
             Nasıl İnşa Ediyoruz?
           </h1>
-          <p className="text-sm text-[#86868B] mt-2">
+          <p className="text-sm text-[#6E6E73] mt-2">
             KGLEX, HaritaPlan ve Panelde gibi enterprise SaaS ürünlerimizin mutfağındaki mimari kararlar, ölçekleme teknikleri ve kaynak kod analizleri.
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function BlogPage() {
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> Makale Listesine Dön
               </button>
-              <span className="text-xs text-[#86868B] flex items-center gap-1.5 font-medium">
+              <span className="text-xs text-[#6E6E73] flex items-center gap-1.5 font-medium">
                 <Clock className="w-3.5 h-3.5" /> {selectedPost.readTime}
               </span>
             </div>
@@ -188,7 +188,7 @@ export default function BlogPage() {
               <h2 className="text-2xl sm:text-3xl font-bold text-[#1D1D1F] leading-tight">
                 {selectedPost.title}
               </h2>
-              <div className="flex items-center gap-3 mt-4 text-xs text-[#86868B]">
+              <div className="flex items-center gap-3 mt-4 text-xs text-[#6E6E73]">
                 <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-sm">
                   {selectedPost.author.avatar}
                 </div>
@@ -203,7 +203,7 @@ export default function BlogPage() {
               {selectedPost.content.metrics.map((m, i) => (
                 <div key={i}>
                   <div className="text-xl sm:text-2xl font-bold text-blue-600">{m.value}</div>
-                  <div className="text-[11px] text-[#86868B] font-medium mt-0.5">{m.label}</div>
+                  <div className="text-[11px] text-[#6E6E73] font-medium mt-0.5">{m.label}</div>
                 </div>
               ))}
             </div>
@@ -260,7 +260,7 @@ export default function BlogPage() {
                 <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200/60 inline-block w-fit">
                   {post.category}
                 </span>
-                <div className="flex items-center gap-3 text-xs text-[#86868B]">
+                <div className="flex items-center gap-3 text-xs text-[#6E6E73]">
                   <span>{post.readTime}</span>
                   <span>•</span>
                   <span>{post.date}</span>
@@ -271,7 +271,7 @@ export default function BlogPage() {
                 {post.title}
               </h3>
 
-              <p className="text-xs sm:text-sm text-[#86868B] mt-2.5 leading-relaxed line-clamp-2">
+              <p className="text-xs sm:text-sm text-[#6E6E73] mt-2.5 leading-relaxed line-clamp-2">
                 {post.summary}
               </p>
 

@@ -2,179 +2,153 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Layers, Lock, Mail, ArrowRight, ShieldCheck, Check, UserCheck, DollarSign, Briefcase, Cpu, Sparkles } from 'lucide-react';
-import { PRESET_ADMIN_USERS } from '@/lib/store';
+import { Layers, Lock, Mail, ArrowRight, ArrowLeft, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('yasin@ysnsoft.com');
-  const [password, setPassword] = useState('Deniz2026?!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Kimlik doğrulama sunucuda yapılır; başarılıysa sunucu httpOnly oturum çerezi yazar.
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError('');
 
-    setTimeout(() => {
-      // Find matching preset user or validate password
-      const user = PRESET_ADMIN_USERS.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-      
-      if (user && (password === user.password || password === 'Deniz2026?!')) {
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('ysn_admin_auth', 'true');
-          sessionStorage.setItem('ysn_admin_role', user.role);
-          sessionStorage.setItem('ysn_admin_email', user.email);
-          sessionStorage.setItem('ysn_admin_name', user.name);
-        }
-        router.push('/admin');
-      } else if (password === 'Deniz2026?!') {
-        // Fallback for custom emails with correct password
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('ysn_admin_auth', 'true');
-          sessionStorage.setItem('ysn_admin_role', 'superadmin');
-          sessionStorage.setItem('ysn_admin_email', email);
-          sessionStorage.setItem('ysn_admin_name', 'Yasin Yıldırım');
-        }
-        router.push('/admin');
-      } else {
-        setError('Geçersiz şifre veya e-posta adresi. (Varsayılan şifre: Deniz2026?!)');
-        setLoading(false);
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data?.success) {
+        router.replace('/admin');
+        router.refresh();
+        return;
       }
-    }, 300);
+      setError(data?.error || 'Giriş yapılamadı. Lütfen tekrar deneyin.');
+    } catch {
+      setError('Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.');
+    }
+    setPassword('');
+    setLoading(false);
   };
 
-  const handleQuickLogin = (user: typeof PRESET_ADMIN_USERS[0]) => {
-    setEmail(user.email);
-    setPassword(user.password);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('ysn_admin_auth', 'true');
-      sessionStorage.setItem('ysn_admin_role', user.role);
-      sessionStorage.setItem('ysn_admin_email', user.email);
-      sessionStorage.setItem('ysn_admin_name', user.name);
-    }
-    router.push('/admin');
-  };
+  const inputClass =
+    'w-full pl-10 py-3 text-[15px] bg-[#F5F5F7] rounded-xl border border-black/[0.08] placeholder:text-[#8E8E93] transition-colors focus:bg-white focus:border-[#0071E3]';
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-[#1D1D1F]">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        {/* Brand Logo */}
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#1D1D1F] text-white shadow-md mb-4">
-          <Layers className="w-6 h-6 text-white" />
+    <div className="relative min-h-screen bg-[#F5F5F7] flex flex-col justify-center py-12 px-4 sm:px-6 text-[#1D1D1F] overflow-hidden">
+      <div aria-hidden="true" className="absolute inset-0 hero-grid pointer-events-none" />
+
+      <main className="relative w-full max-w-[420px] mx-auto">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#1D1D1F] text-white shadow-md mb-5">
+            <Layers className="w-6 h-6" aria-hidden="true" />
+          </div>
+          <h1 className="text-[26px] font-semibold tracking-tight text-[#1D1D1F]">Yönetim Konsolu</h1>
+          <p className="mt-1.5 text-sm text-[#6E6E73]">YSNSOFT yetkili personel girişi</p>
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-[#1D1D1F]">
-          YSNSOFT Yönetim Portalı
-        </h2>
-        <p className="mt-1 text-xs text-[#86868B]">
-          Yetkili Personel & Kurucu Yönetici Konsolu
-        </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="apple-card bg-white p-6 sm:p-8 border border-black/[0.08] shadow-lg rounded-3xl">
-          
-          {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">
-              {error}
-            </div>
-          )}
+        <div className="bg-white p-6 sm:p-8 border border-black/[0.08] rounded-3xl shadow-[0_2px_4px_rgba(0,0,0,0.03),0_24px_56px_-12px_rgba(0,0,0,0.12)]">
+          <form onSubmit={handleLogin} className="space-y-5" noValidate>
+            {error && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200 text-[13px] text-red-700 font-medium animate-in fade-in slide-in-from-top-2 duration-200"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">
-                Yönetici E-Posta
+              <label htmlFor="admin-email" className="text-[13px] font-medium text-[#1D1D1F] block mb-1.5">
+                E-posta
               </label>
               <div className="relative">
+                <Mail className="w-4 h-4 text-[#6E6E73] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
                 <input
+                  id="admin-email"
                   type="email"
                   required
+                  autoFocus
+                  autoComplete="username"
+                  inputMode="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="yasin@ysnsoft.com"
-                  className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-[#F5F5F7] rounded-xl border border-black/[0.08] focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
+                  placeholder="ad@ysnsoft.com"
+                  aria-invalid={error ? true : undefined}
+                  className={`${inputClass} pr-3.5`}
                 />
-                <Mail className="w-4 h-4 text-[#86868B] absolute left-3 top-3" />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">
+              <label htmlFor="admin-password" className="text-[13px] font-medium text-[#1D1D1F] block mb-1.5">
                 Şifre
               </label>
               <div className="relative">
+                <Lock className="w-4 h-4 text-[#6E6E73] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
                 <input
-                  type="password"
+                  id="admin-password"
+                  type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-[#F5F5F7] rounded-xl border border-black/[0.08] focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
+                  placeholder="Şifreniz"
+                  aria-invalid={error ? true : undefined}
+                  className={`${inputClass} pr-11`}
                 />
-                <Lock className="w-4 h-4 text-[#86868B] absolute left-3 top-3" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                  aria-pressed={showPassword}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/[0.05] transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full apple-pill-btn py-3 text-xs font-semibold flex items-center justify-center gap-2 shadow-md shadow-[#0071E3]/25 disabled:opacity-70"
-              >
-                <span>{loading ? 'Giriş Yapılıyor...' : 'Yönetim Konsoluna Giriş'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </form>
-
-          {/* Quick Selection Buttons with Prepared Accounts */}
-          <div className="mt-6 pt-6 border-t border-black/[0.06]">
-            <span className="text-[11px] font-bold text-[#86868B] uppercase tracking-wider block mb-3 text-center">
-              Tanımlı Yönetici Hesapları (Hızlı Giriş):
-            </span>
-
-            <div className="space-y-2">
-              {PRESET_ADMIN_USERS.map((u) => (
-                <button
-                  key={u.email}
-                  type="button"
-                  onClick={() => handleQuickLogin(u)}
-                  className="w-full p-2.5 rounded-xl bg-[#F5F5F7] hover:bg-blue-50 hover:border-blue-200 border border-black/[0.04] transition-all text-xs flex items-center justify-between group"
-                >
-                  <div className="flex items-center gap-2.5 text-left">
-                    <span className="text-base">{u.avatar}</span>
-                    <div>
-                      <div className="font-bold text-[#1D1D1F] group-hover:text-blue-600 flex items-center gap-1.5">
-                        <span>{u.name}</span>
-                        {u.role === 'superadmin' && (
-                          <span className="text-[10px] px-1.5 py-0.2 bg-blue-100 text-blue-700 font-bold rounded">
-                            SUPER ADMIN
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-[#86868B] font-mono">{u.email}</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-white border border-gray-200 text-gray-700 px-2 py-1 rounded-lg font-medium group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                    Giriş Yap →
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 text-center">
-            <a
-              href="/"
-              className="text-xs text-[#0071E3] hover:underline font-medium"
+            <button
+              type="submit"
+              disabled={loading || !email || !password}
+              className="w-full apple-pill-btn py-3.5 text-[15px] font-semibold flex items-center justify-center gap-2"
             >
-              ← Ana Sayfaya Dön
-            </a>
-          </div>
-
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                  <span>Giriş yapılıyor…</span>
+                </>
+              ) : (
+                <>
+                  <span>Giriş Yap</span>
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                </>
+              )}
+            </button>
+          </form>
         </div>
-      </div>
+
+        <div className="mt-6 text-center">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1.5 text-[13px] text-[#515154] hover:text-[#1D1D1F] font-medium px-3 py-2 rounded-full hover:bg-black/[0.04] transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+            Ana sayfaya dön
+          </a>
+        </div>
+      </main>
     </div>
   );
 }

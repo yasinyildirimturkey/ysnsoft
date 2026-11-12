@@ -78,7 +78,6 @@ export const PRESET_ADMIN_USERS = [
     name: 'Yasin Yıldırım',
     role: 'superadmin',
     roleTitle: 'Super Admin & Kurucu Çözüm Mimarı',
-    password: 'Deniz2026?!',
     avatar: '👨‍💼',
     permissions: ['Tüm Sistem Yetkisi', 'Muhasebe & Finans', 'Teklif Onayı', 'Rol & Ekip Yönetimi', 'Canlı Siteler & DNS', 'Yapay Zeka Mimarisi']
   },
@@ -87,7 +86,6 @@ export const PRESET_ADMIN_USERS = [
     name: 'YSNSOFT Destek Ekibi',
     role: 'engineer',
     roleTitle: 'Teknik Destek & Sistem Mühendisliği',
-    password: 'Deniz2026?!',
     avatar: '🛠️',
     permissions: ['Teknik Destek', 'Canlı Sistem Sağlığı & Uptime', 'Hata Logları', 'Müşteri Ticketları']
   },
@@ -96,7 +94,6 @@ export const PRESET_ADMIN_USERS = [
     name: 'YSNSOFT Kurumsal İletişim',
     role: 'sales',
     roleTitle: 'Kurumsal İletişim & Satış Direktörü',
-    password: 'Deniz2026?!',
     avatar: '💼',
     permissions: ['Teklif Talepleri (Leads)', 'Resmi PDF Teklif Mektubu', 'Google Meet Randevuları', 'Müşteri CRM']
   },
@@ -105,7 +102,6 @@ export const PRESET_ADMIN_USERS = [
     name: 'Sistem & E-Posta Bildirimleri',
     role: 'accounting',
     roleTitle: 'Sistem Otomasyonu & E-Fatura Botu',
-    password: 'Deniz2026?!',
     avatar: '⚡',
     permissions: ['E-Fatura & E-Arşiv (GİB)', 'Otomatik SMTP Bildirimleri', 'Banka Entegrasyonları']
   }
@@ -115,7 +111,7 @@ export const DEFAULT_SMTP_SETTINGS: SmtpSettings = {
   host: 'mail.ysnsoft.com',
   port: 587,
   user: 'noreply@ysnsoft.com',
-  pass: 'Deniz2026?!',
+  pass: '',
   fromName: 'YSNSOFT Bilişim Teknolojileri',
   fromEmail: 'noreply@ysnsoft.com',
   secure: true

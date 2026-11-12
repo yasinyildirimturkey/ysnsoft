@@ -1,91 +1,450 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────────────────────
+   YSNSOFT tasarım sistemi — tek kaynak.
+   Renk, gölge, yarıçap ve hareket değerleri buradan yönetilir.
+   ────────────────────────────────────────────────────────────── */
 :root {
+  /* Yüzeyler */
   --background: #F5F5F7;
+  --surface: #FFFFFF;
+  --surface-sunken: #F5F5F7;
+
+  /* Metin — hepsi #F5F5F7 üzerinde WCAG AA (≥4.5:1) */
   --foreground: #1D1D1F;
-  --card-bg: #FFFFFF;
-  --card-border: rgba(0, 0, 0, 0.08);
+  --subtle-text: #515154;
+  --muted-text: #6E6E73;
+
+  /* Marka */
   --apple-blue: #0071E3;
-  --apple-blue-hover: #0077ED;
-  --muted-text: #86868B;
-  --subtle-text: #6E6E73;
+  --apple-blue-hover: #0066CC;
+  --apple-blue-soft: rgba(0, 113, 227, 0.1);
+  --success: #0E9F6E;
+
+  /* Çizgiler */
+  --hairline: rgba(0, 0, 0, 0.08);
+  --hairline-strong: rgba(0, 0, 0, 0.14);
+  --card-bg: var(--surface);
+  --card-border: var(--hairline);
+
+  /* Yükseklik */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.03), 0 12px 32px -6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.03), 0 24px 56px -12px rgba(0, 0, 0, 0.14);
+
+  /* Hareket */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+
+  /* Sabit navbar yüksekliği — çapa kaydırmaları için */
+  --nav-offset: 96px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand: var(--apple-blue);
+  --color-muted: var(--muted-text);
+  --color-subtle: var(--subtle-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html {
+  scroll-padding-top: var(--nav-offset);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background-color: #F5F5F7;
-  color: #1D1D1F;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-geist-sans), sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  font-feature-settings: "ss01", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
 }
 
-/* Custom Apple Glassmorphism and Card Styling */
+/* Tipografi: başlıklar dengeli kırılır, paragraflar yetim kelime bırakmaz */
+h1, h2, h3, h4 {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+p, li {
+  text-wrap: pretty;
+}
+
+/* Rakamlar kolonlarda hizalı dursun */
+.tabular,
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--apple-blue);
+  color: #fff;
+}
+
+/* ── Etkileşim temelleri ───────────────────────────────────── */
+
+/* Tailwind 4 butonlarda varsayılan imleci kaldırır; geri getiriyoruz */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="tab"],
+summary,
+label[for],
+select {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Klavye odağı: her etkileşimli öğede tutarlı, görünür halka */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--apple-blue);
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+}
+
+/* Basma geri bildirimi */
+button:not(:disabled):active,
+a.apple-pill-btn:active,
+a.apple-pill-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* Dokunmatik hedefler: ince işaretçide en az 44px tıklama alanı */
+@media (pointer: coarse) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── Bileşen sınıfları ─────────────────────────────────────── */
+
 .apple-glass {
   background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--hairline);
 }
 
 .apple-card {
-  background: #FFFFFF;
+  background: var(--surface);
   border: 1px solid rgba(0, 0, 0, 0.07);
   border-radius: 1.5rem;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 12px 32px -4px rgba(0, 0, 0, 0.04);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
 }
 
-.apple-card:hover {
-  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.08), 0 20px 48px -8px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
-  border-color: rgba(0, 0, 0, 0.12);
+@media (hover: hover) {
+  .apple-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: rgba(0, 0, 0, 0.12);
+  }
 }
 
 .apple-pill-btn {
-  background-color: #0071E3;
+  background-color: var(--apple-blue);
   color: #FFFFFF;
   border-radius: 9999px;
   font-weight: 500;
-  transition: all 0.25s ease;
+  transition:
+    background-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 
 .apple-pill-btn:hover {
-  background-color: #0077ED;
-  transform: scale(1.015);
+  background-color: var(--apple-blue-hover);
+}
+
+.apple-pill-btn:disabled {
+  opacity: 0.5;
 }
 
 .apple-pill-btn-secondary {
   background-color: rgba(0, 0, 0, 0.05);
-  color: #1D1D1F;
+  color: var(--foreground);
   border-radius: 9999px;
   font-weight: 500;
-  transition: all 0.25s ease;
+  transition:
+    background-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 
 .apple-pill-btn-secondary:hover {
   background-color: rgba(0, 0, 0, 0.09);
-  transform: scale(1.015);
 }
 
-/* Smooth custom scrollbars */
+/* ── Bölüm başlığı: tüm bölümlerde tek kalıp ───────────────────
+   Etiket (mavi, küçük) → başlık (koyu + gri devam cümlesi) → açıklama.
+   Mavi yalnızca etiket ve eylemlerde kullanılır; başlıklar sakin kalır. */
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--apple-blue);
+}
+
+.section-title {
+  margin-bottom: 1.125rem;
+  font-size: clamp(1.875rem, 1.2rem + 3vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--foreground);
+}
+.section-title > span {
+  color: var(--muted-text);
+}
+/* Dar ekranda zorunlu satır sonu yerine doğal, dengeli kırılma */
+@media (max-width: 639px) {
+  .section-title > br {
+    display: none;
+  }
+}
+
+.section-lead {
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.1875rem);
+  line-height: 1.6;
+  color: var(--subtle-text);
+}
+
+/* ── Yönetim konsolu katmanı ────────────────────────────────────
+   /admin kökündeki `.admin-ui` altında tablo, form ve modal kalıplarını
+   tek yerden düzenler. (Katmansız kurallar Tailwind yardımcılarını ezer.) */
+
+/* Bilgi kartları tıklanabilir değil; üzerine gelince kalkmasın */
+.admin-ui .apple-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+/* Tablolar */
+.admin-ui table {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  border-collapse: collapse;
+}
+.admin-ui th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-text);
+  white-space: nowrap;
+}
+.admin-ui td {
+  vertical-align: middle;
+}
+.admin-ui tbody tr {
+  transition: background-color var(--duration-fast) ease;
+}
+.admin-ui tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.025);
+}
+
+/* Form alanları */
+.admin-ui label {
+  font-size: 0.8125rem;
+}
+.admin-ui input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+.admin-ui select,
+.admin-ui textarea {
+  font-size: 0.8125rem;
+  min-height: 2.5rem;
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+.admin-ui textarea {
+  line-height: 1.5;
+}
+.admin-ui input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):hover,
+.admin-ui select:hover,
+.admin-ui textarea:hover {
+  border-color: var(--hairline-strong);
+}
+.admin-ui input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus,
+.admin-ui select:focus,
+.admin-ui textarea:focus {
+  outline: none;
+  background-color: #fff;
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.16);
+}
+.admin-ui input:disabled,
+.admin-ui select:disabled,
+.admin-ui textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* iOS, 16px'ten küçük alanlara odaklanınca sayfayı yakınlaştırır */
+@media (max-width: 767px) {
+  .admin-ui input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  .admin-ui select,
+  .admin-ui textarea {
+    font-size: 1rem;
+  }
+}
+
+/* Modallar */
+.admin-modal {
+  animation: ysn-fade 200ms var(--ease-out) backwards;
+  --enter-opacity: 0;
+}
+.admin-modal > div {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  animation: ysn-enter 250ms var(--ease-out) backwards;
+  --enter-opacity: 0;
+  --enter-y: 0.75rem;
+  --enter-scale: 0.98;
+}
+.admin-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  color: var(--muted-text);
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+.admin-close:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: var(--foreground);
+}
+@media print {
+  .admin-modal,
+  .admin-modal > div {
+    animation: none;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Yatay kaydırılan sekme şeritlerinde kaydırma çubuğunu gizle */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hero arka planı: ince nokta ızgarası, kenarlara doğru erir */
+.hero-grid {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.09) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 75%);
+}
+
+/* ── Giriş animasyonları ───────────────────────────────────────
+   Bileşenlerde kullanılan `animate-in fade-in slide-in-from-*`
+   sınıflarının karşılığı (eklenti kurulu değildi, etkisizdi). */
+/* Yalnızca opaklık: transform içeren bir animasyon, içindeki `position: fixed`
+   öğeleri (modallar) kendi kutusuna hapseder. Sekme sarmalayıcıları bu yüzden
+   sadece solarak girer; kayma/ölçek isteyen öğeler ayrı anahtar kare kullanır. */
+@keyframes ysn-fade {
+  from {
+    opacity: var(--enter-opacity, 1);
+  }
+}
+@keyframes ysn-enter {
+  from {
+    opacity: var(--enter-opacity, 1);
+    transform: translate3d(var(--enter-x, 0), var(--enter-y, 0), 0) scale(var(--enter-scale, 1));
+  }
+}
+.animate-in {
+  animation: ysn-fade var(--duration-base) var(--ease-out) backwards;
+}
+.animate-in[class*='slide-in-from-'],
+.animate-in[class*='zoom-in-'] {
+  animation-name: ysn-enter;
+}
+.animate-in.duration-200 { animation-duration: 200ms; }
+.animate-in.duration-300 { animation-duration: 300ms; }
+.animate-in.duration-500 { animation-duration: 500ms; }
+.fade-in { --enter-opacity: 0; }
+.zoom-in-95 { --enter-scale: 0.95; }
+.slide-in-from-bottom-3 { --enter-y: 0.75rem; }
+.slide-in-from-bottom-4 { --enter-y: 1rem; }
+.slide-in-from-bottom-5 { --enter-y: 1.25rem; }
+.slide-in-from-top-2 { --enter-y: -0.5rem; }
+.slide-in-from-top-4 { --enter-y: -1rem; }
+.slide-in-from-right-5 { --enter-x: 1.25rem; }
+
+/* Kaydırınca beliren bölümler. JS çalışmazsa içerik görünür kalır. */
+.reveal[data-reveal="pending"] {
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+}
+.reveal {
+  transition:
+    opacity 700ms var(--ease-out),
+    transform 700ms var(--ease-out);
+}
+
+/* Hareket hassasiyeti olan kullanıcılar için tüm hareketi kapat */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal[data-reveal="pending"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Kaydırma çubuğu ───────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #F5F5F7;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D2D2D7;
-  border-radius: 4px;
+  background: #C7C7CC;
+  border-radius: 9999px;
+  border: 2px solid var(--background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #86868B;
+  background: #8E8E93;
 }

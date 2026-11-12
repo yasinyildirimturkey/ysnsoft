@@ -76,20 +76,20 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
   };
 
   return (
-    <section id="calculator" className="py-24 bg-white border-y border-black/[0.06]">
+    <section id="calculator" className="py-16 sm:py-24 bg-white border-y border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             <span>İnteraktif Proje Yapılandırıcı</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Projenizi yapılandırın, <br />
-            <span className="text-[#0071E3]">anında süre ve mimari alın.</span>
+            <span>anında süre ve mimari alın.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             İster KGLEX veya HaritaPlan benzeri bir SaaS mimarisi, ister Flamantyou tarzı bir e-ticaret platformu tasarlayın.
           </p>
         </div>
@@ -102,7 +102,7 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
             
             {/* Step 1: Project Type */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-[#86868B] block mb-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] block mb-3">
                 1. Yazılım / SaaS Türünü Seçin
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -124,7 +124,7 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-[#86868B]">Önerilen: {type.recommendedStack.split('+')[0]}</span>
+                    <span className="text-xs text-[#6E6E73]">Önerilen: {type.recommendedStack.split('+')[0]}</span>
                   </button>
                 ))}
               </div>
@@ -132,7 +132,7 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
 
             {/* Step 2: Company Scale */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-[#86868B] block mb-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] block mb-3">
                 2. Şirket & Kullanıcı Ölçeği
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -147,7 +147,7 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
                     }`}
                   >
                     <span className="text-sm font-semibold text-[#1D1D1F] block mb-1">{scale.name}</span>
-                    <span className="text-xs text-[#86868B] leading-tight block">{scale.desc}</span>
+                    <span className="text-xs text-[#6E6E73] leading-tight block">{scale.desc}</span>
                   </button>
                 ))}
               </div>
@@ -155,7 +155,7 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
 
             {/* Step 3: Add-on Modules */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-[#86868B] block mb-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] block mb-3">
                 3. Ek Modüller & Entegrasyonlar
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -189,7 +189,7 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
           <div className="lg:col-span-5 sticky top-28">
             <div className="apple-card p-6 sm:p-8 bg-[#F5F5F7] border border-black/[0.08]">
               <div className="flex items-center justify-between pb-4 border-b border-black/[0.06] mb-6">
-                <span className="text-xs font-semibold uppercase tracking-wider text-[#86868B]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#6E6E73]">
                   Canlı Yapılandırma Özeti
                 </span>
                 <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-2.5 py-0.5 rounded-full">
@@ -199,28 +199,28 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
 
               {/* Selected Type & Scale */}
               <div className="mb-6">
-                <span className="text-xs text-[#86868B]">Seçilen Altyapı</span>
+                <span className="text-xs text-[#6E6E73]">Seçilen Altyapı</span>
                 <h4 className="text-xl font-semibold text-[#1D1D1F] mt-0.5">{currentType.name}</h4>
-                <p className="text-xs text-[#6E6E73] mt-1">{currentScale.name}</p>
+                <p className="text-xs text-[#515154] mt-1">{currentScale.name}</p>
               </div>
 
               {/* Estimated Timeline */}
               <div className="bg-white p-4 rounded-2xl border border-black/[0.06] mb-6 shadow-xs">
-                <div className="flex items-center gap-2 text-xs text-[#86868B] mb-1">
+                <div className="flex items-center gap-2 text-xs text-[#6E6E73] mb-1">
                   <Clock className="w-4 h-4 text-[#0071E3]" />
                   <span>Tahmini Canlıya Alış Süresi</span>
                 </div>
                 <div className="text-2xl sm:text-3xl font-semibold text-[#1D1D1F]">
                   {estimatedWeeks - 1} - {estimatedWeeks + 1} Hafta
                 </div>
-                <p className="text-[11px] text-[#86868B] mt-1">
+                <p className="text-[11px] text-[#6E6E73] mt-1">
                   Sprint bazlı haftalık test ortamı ve aşamalı teslimat dahildir.
                 </p>
               </div>
 
               {/* Architecture Blueprint */}
               <div className="bg-white p-4 rounded-2xl border border-black/[0.06] mb-6 shadow-xs">
-                <div className="flex items-center gap-2 text-xs text-[#86868B] mb-1">
+                <div className="flex items-center gap-2 text-xs text-[#6E6E73] mb-1">
                   <Cpu className="w-4 h-4 text-[#8B5CF6]" />
                   <span>Önerilen Mimari Yığın</span>
                 </div>
@@ -242,7 +242,7 @@ export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculat
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <p className="text-center text-[11px] text-[#86868B] mt-3">
+              <p className="text-center text-[11px] text-[#6E6E73] mt-3">
                 Ücretsiz teknik danışmanlık ve 24 saat içinde detaylı teklif dökümü.
               </p>
             </div>
