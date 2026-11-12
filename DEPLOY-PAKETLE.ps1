@@ -69,9 +69,36 @@ if (Test-Path "$WwwKlasoru\.next") {
   Rename-Item "$WwwKlasoru\.next" "$WwwKlasoru\.next_yedek_$damga" -Force -ErrorAction SilentlyContinue
 }
 
+# Sunucuya ozel ayarlar paketteki .env.production ile ezilmesin:
+# asagidaki anahtarlar sunucuda zaten tanimliysa sunucudaki deger korunur.
+$KorunanAnahtarlar = @('ADMIN_PASSWORD_HASH', 'ADMIN_SESSION_SECRET')
+$EnvDosyasi = Join-Path $WwwKlasoru '.env.production'
+$Korunan = @{}
+if (Test-Path $EnvDosyasi) {
+  foreach ($satir in [System.IO.File]::ReadAllLines($EnvDosyasi)) {
+    foreach ($anahtar in $KorunanAnahtarlar) {
+      if ($satir.StartsWith("$anahtar=") -and $satir.Length -gt ($anahtar.Length + 1)) { $Korunan[$anahtar] = $satir }
+    }
+  }
+}
+
 # Zip'i aç
 Expand-Archive -Path $ZipDosyasi -DestinationPath $WwwKlasoru -Force
 Write-Host "  [OK] Dosyalar açıldı." -ForegroundColor Green
+
+if ($Korunan.Count -gt 0 -and (Test-Path $EnvDosyasi)) {
+  $yeni = New-Object System.Collections.Generic.List[string]
+  $yazilan = @{}
+  foreach ($satir in [System.IO.File]::ReadAllLines($EnvDosyasi)) {
+    $eslesen = $null
+    foreach ($anahtar in $Korunan.Keys) { if ($satir.StartsWith("$anahtar=")) { $eslesen = $anahtar } }
+    if ($eslesen) { $yeni.Add($Korunan[$eslesen]); $yazilan[$eslesen] = $true } else { $yeni.Add($satir) }
+  }
+  foreach ($anahtar in $Korunan.Keys) { if (-not $yazilan[$anahtar]) { $yeni.Add($Korunan[$anahtar]) } }
+  # BOM'suz UTF-8: Next.js ilk satirdaki anahtari BOM yuzunden kacirmasin
+  [System.IO.File]::WriteAllLines($EnvDosyasi, $yeni, (New-Object System.Text.UTF8Encoding($false)))
+  Write-Host ("  [OK] Sunucu ayarlari korundu: " + (($Korunan.Keys | Sort-Object) -join ', ')) -ForegroundColor Green
+}
 
 # Bagimliliklar kontrol
 if (-not (Test-Path "$WwwKlasoru\node_modules\next")) {
@@ -86,9 +113,10 @@ if (-not (Test-Path "$WwwKlasoru\node_modules\next")) {
 # IIS Havuzunu yeniden baslat
 Write-Host "3. IIS Uygulama Havuzu yenileniyor..." -ForegroundColor Yellow
 try {
-  Stop-Process -Name node -Force -ErrorAction SilentlyContinue
+  # Yalnizca bu sitenin uygulamasi yenilenir (iisnode watchedFiles=web.config).
+  # "Stop-Process -Name node" KULLANILMAZ: ayni sunucudaki diger siteleri de durdurur.
   (Get-Item "$WwwKlasoru\web.config").LastWriteTime = Get-Date
-  Write-Host "  [OK] IIS node yenilendi ve web.config guncellendi." -ForegroundColor Green
+  Write-Host "  [OK] web.config guncellendi, uygulama yenilendi." -ForegroundColor Green
 } catch {
   Write-Host "  [BILGI] Havuz IIS uzerinden veya web.config touch ile yenilenebilir." -ForegroundColor Gray
 }
