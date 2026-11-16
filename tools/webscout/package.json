@@ -6,6 +6,6 @@
   "description": "Yerel işletme web sitelerini tarar, puanlar ve satış/ortaklık takibini yapar (Duisburg, Essen, Düsseldorf pilotu).",
   "engines": { "node": ">=22.15" },
   "scripts": {
-    "cli": "node --use-system-ca --no-warnings src/cli.js"
+    "cli": "node --no-warnings src/cli.js"
   }
 }

@@ -4,24 +4,27 @@ Yerel işletmelerin web sitelerini bulur, tarar, puanlar; satış ziyareti ve or
 
 Gereksinim: Node ≥ 22.15. Paket kurulumu yok.
 
+> `--use-system-ca` KULLANMA: Node'un kendi kök sertifika listesinin yerine Windows deposunu koyar; Windows Server'da
+> eksik kökler yüzünden OSM/GLM istekleri düşüyordu. Panel bayrağı yalnızca `WEBSCOUT_SYSTEM_CA=1` ise ekler.
+
 > PowerShell'de `npm run cli -- --city X` seçenekleri yutar. Doğrudan şunu kullan:
-> `node --use-system-ca --no-warnings src/cli.js <komut> ...`
+> `node --no-warnings src/cli.js <komut> ...`
 
 ```bash
 # 1) Liste çek (OpenStreetMap, açık veri)
-node --use-system-ca --no-warnings src/cli.js fetch --city all --category all
-node --use-system-ca --no-warnings src/cli.js fetch --city all --category all --target partners
+node --no-warnings src/cli.js fetch --city all --category all
+node --no-warnings src/cli.js fetch --city all --category all --target partners
 
 # 2) Tara (site başına tek GET)
-node --use-system-ca --no-warnings src/cli.js scan --limit 100
+node --no-warnings src/cli.js scan --limit 100
 
 # 3) Rapor: out/report.html + out/leads.csv
-node --use-system-ca --no-warnings src/cli.js report --min-score 40
+node --no-warnings src/cli.js report --min-score 40
 
 # 4) Takip
-node --use-system-ca --no-warnings src/cli.js status 12 visited "Sahibi ilgili, Perşembe tekrar"
-node --use-system-ca --no-warnings src/cli.js partners --city Essen
-node --use-system-ca --no-warnings src/cli.js partner-set 3 meeting
+node --no-warnings src/cli.js status 12 visited "Sahibi ilgili, Perşembe tekrar"
+node --no-warnings src/cli.js partners --city Essen
+node --no-warnings src/cli.js partner-set 3 meeting
 ```
 
 ## Bölge seçimi ve sitesi olmayan işletmeler
@@ -43,8 +46,8 @@ Seviye 1 (`scan`) site başına tek istekle puan verir. Seçilmiş adaylar için
 - Alan adında gerçek site yoksa (park / "coming soon") Seviye 1 kaydını yeniler: aday "Yeni site"ye geçer.
 
 ```bash
-node --use-system-ca --no-warnings src/cli.js enrich --id 168,62
-node --use-system-ca --no-warnings src/cli.js enrich --top 10 --city Duisburg --category gastro,handwerk
+node --no-warnings src/cli.js enrich --id 168,62
+node --no-warnings src/cli.js enrich --top 10 --city Duisburg --category gastro,handwerk
 ```
 Panelde: bölge taramasının sonunda en iyi 10 aday otomatik (kutucukla kapatılır), "İlk 10'u derin tara" düğmesi
 ve Detay penceresinde tek aday için "Derin tara". Sonuç `profiles` tablosunda (işletme başına son profil).

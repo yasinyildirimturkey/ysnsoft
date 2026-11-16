@@ -13,7 +13,7 @@ import { buildDraft, newToken } from './draft.js';
 
 const HELP = `WebScout – yerel işletme sitelerini tara, puanla, takip et
 
-Kullanım:  node --use-system-ca --no-warnings src/cli.js <komut> [seçenekler]
+Kullanım:  node --no-warnings src/cli.js <komut> [seçenekler]
 
   fetch    --city <Şehir|all> --category <kat|all> [--country DE] [--area <id>] [--target partners]
            OpenStreetMap'ten işletme/aracı listesi çeker (sitesi olmayanlar dahil).
