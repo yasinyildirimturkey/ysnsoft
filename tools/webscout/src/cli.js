@@ -258,6 +258,14 @@ async function runEnrich(db, todo, auto, onProgress) {
     // Derin tarama "aslında site yok" dediyse Seviye 1 kaydını yenile: aday "Yenileme"den "Yeni site"ye geçer
     if (profile.site?.error === 'placeholder') {
       const r = await scanSite(b.website);
+      // Seviye 1 sertifika hatası yüzünden sayfayı hiç göremediyse (ör. https'te yalnızca veritabanı hatası) yer tutucuyu
+      // Seviye 2 bulmuştur: kayda eklenir ki aday "Yeni site" teklifine geçsin; sertifika bulgusu da kalır.
+      if (!JSON.stringify(r.findings ?? {}).includes('"placeholder"')) {
+        r.findings = { info: {}, ...r.findings, items: [
+          { code: 'placeholder', points: 70, de: 'Website nicht in Betrieb (Fehler- oder Platzhalterseite)', tr: 'Site çalışmıyor (hata ya da yer tutucu sayfası)' },
+          ...(r.findings?.items ?? []),
+        ] };
+      }
       insertScan.run(b.id, r.ok ? 1 : 0, r.error ?? null, r.finalUrl ?? null, r.status ?? null, r.ms ?? null, r.score, JSON.stringify(r.findings));
     }
     save.run(b.id, profile.activity.verdict, auto ? 1 : 0, JSON.stringify(profile), adjusted);
