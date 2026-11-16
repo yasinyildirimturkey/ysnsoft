@@ -21,11 +21,15 @@ const KIND_SQL = `CASE
   WHEN b.brand IS NOT NULL THEN 'chain'
   WHEN b.website IS NULL OR s.findings LIKE '%"social_only"%' OR s.findings LIKE '%"placeholder"%' THEN 'no_site'
   WHEN s.id IS NULL OR s.score IS NULL THEN 'unscanned'
-  WHEN s.score >= @minScore THEN 'redesign'
+  WHEN COALESCE(p.adjusted_score, s.score) >= @minScore THEN 'redesign'
   ELSE 'ok' END`;
 
+// Geçerli puan: Seviye 2 doğrulaması yapıldıysa yanlış alarmlar düşülmüş puan, yoksa ilk tarama puanı.
+const SCORE_SQL = 'COALESCE(p.adjusted_score, s.score)';
+
 const FROM_SQL = `FROM businesses b
-  LEFT JOIN scans s ON s.id = (SELECT MAX(id) FROM scans WHERE business_id = b.id)`;
+  LEFT JOIN scans s ON s.id = (SELECT MAX(id) FROM scans WHERE business_id = b.id)
+  LEFT JOIN profiles p ON p.business_id = b.id`;
 
 // node:sqlite, SQL'de geçmeyen adlandırılmış parametreyi reddeder: yalnızca kullanılanları geçir.
 const pick = (sql, params) => Object.fromEntries(Object.entries(params).filter(([k]) => sql.includes('@' + k)));
@@ -84,18 +88,17 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
     db,
       `SELECT b.id, b.name, b.category, b.country, b.city, b.address, b.postcode, b.suburb, b.website, b.phone,
               b.status, b.notes, b.lat, b.lon,
-              s.score, s.findings, s.final_url, s.scanned_at, s.error AS scan_error,
+              ${SCORE_SQL} AS score, s.score AS raw_score, s.findings, s.final_url, s.scanned_at, s.error AS scan_error,
               ${KIND_SQL} AS kind,
-              (SELECT p.activity FROM profiles p WHERE p.business_id = b.id) AS activity,
-              (SELECT p.enriched_at FROM profiles p WHERE p.business_id = b.id) AS enriched_at,
-              (SELECT json_extract(p.profile, '$.site.verification') FROM profiles p WHERE p.business_id = b.id) AS verification,
+              p.activity, p.enriched_at,
+              json_extract(p.profile, '$.site.verification') AS verification,
               (SELECT d.token FROM drafts d WHERE d.business_id = b.id) AS draft_token,
               (SELECT d.expires_at FROM drafts d WHERE d.business_id = b.id) AS draft_expires,
               (SELECT group_concat(a.name, ' · ') FROM business_areas ba JOIN areas a ON a.id = ba.area_id WHERE ba.business_id = b.id) AS districts
          ${FROM_SQL}
         WHERE ${where.join(' AND ')}
         ORDER BY CASE ${KIND_SQL} WHEN 'redesign' THEN 0 WHEN 'no_site' THEN 1 WHEN 'unscanned' THEN 2 ELSE 3 END,
-                 s.score DESC, b.name
+                 ${SCORE_SQL} DESC, b.name
         LIMIT @limit`,
     { ...params, limit },
   );

@@ -226,12 +226,25 @@ function enrichTop(db, { country, city, categories, areaId, minScore = 40, limit
     .all(...params, limit);
 }
 
+/**
+ * Doğrulamadan sonraki puan: Seviye 2'nin "yanlış alarm" (refuted) dediği bulguların puanı düşülür.
+ * Site gezilemediyse ya da ilk taramada puan yoksa null (ilk puan geçerli kalır).
+ */
+function adjustedScore(scan, profile) {
+  if (!scan || scan.score === null || !profile.site?.ok) return null;
+  let items = [];
+  try { items = JSON.parse(scan.findings)?.items ?? []; } catch { return null; }
+  const v = profile.site.verification ?? {};
+  return Math.min(100, items.filter((f) => v[f.code]?.status !== 'refuted').reduce((s, f) => s + f.points, 0));
+}
+
 /** İşletmeleri SIRAYLA zenginleştirir (aynı anda tek site: dış servislere ve siteye nazik). */
 async function runEnrich(db, todo, auto, onProgress) {
-  const lastScan = db.prepare('SELECT final_url, findings FROM scans WHERE business_id=? ORDER BY id DESC LIMIT 1');
+  const lastScan = db.prepare('SELECT final_url, findings, score FROM scans WHERE business_id=? ORDER BY id DESC LIMIT 1');
   const save = db.prepare(
-    `INSERT INTO profiles (business_id, enriched_at, activity, auto, profile) VALUES (?, datetime('now'), ?, ?, ?)
-     ON CONFLICT(business_id) DO UPDATE SET enriched_at=excluded.enriched_at, activity=excluded.activity, auto=excluded.auto, profile=excluded.profile`,
+    `INSERT INTO profiles (business_id, enriched_at, activity, auto, profile, adjusted_score) VALUES (?, datetime('now'), ?, ?, ?, ?)
+     ON CONFLICT(business_id) DO UPDATE SET enriched_at=excluded.enriched_at, activity=excluded.activity, auto=excluded.auto,
+       profile=excluded.profile, adjusted_score=excluded.adjusted_score`,
   );
   const insertScan = db.prepare(
     `INSERT INTO scans (business_id, ok, error, final_url, http_status, response_ms, score, findings) VALUES (?,?,?,?,?,?,?,?)`,
@@ -239,13 +252,15 @@ async function runEnrich(db, todo, auto, onProgress) {
   for (let i = 0; i < todo.length; i++) {
     const b = todo[i];
     onProgress(i, todo.length, b, null);
-    const profile = await enrichBusiness(b, lastScan.get(b.id) ?? null);
+    const scan = lastScan.get(b.id) ?? null;
+    const profile = await enrichBusiness(b, scan);
+    const adjusted = adjustedScore(scan, profile);
     // Derin tarama "aslında site yok" dediyse Seviye 1 kaydını yenile: aday "Yenileme"den "Yeni site"ye geçer
     if (profile.site?.error === 'placeholder') {
       const r = await scanSite(b.website);
       insertScan.run(b.id, r.ok ? 1 : 0, r.error ?? null, r.finalUrl ?? null, r.status ?? null, r.ms ?? null, r.score, JSON.stringify(r.findings));
     }
-    save.run(b.id, profile.activity.verdict, auto ? 1 : 0, JSON.stringify(profile));
+    save.run(b.id, profile.activity.verdict, auto ? 1 : 0, JSON.stringify(profile), adjusted);
     onProgress(i + 1, todo.length, b, profile);
   }
 }

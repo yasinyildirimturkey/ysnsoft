@@ -22,9 +22,11 @@ function addColumn(db, table, column, ddl) {
 export function openDb(path = process.env.WEBSCOUT_DB || join(DATA_DIR, 'webscout.db')) {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
+  // Bekleme süresi HER ŞEYDEN ÖNCE ayarlanır: panel aynı anda birkaç süreç açar (liste + profil + iş durumu);
+  // journal_mode ve şema komutları kilide takılırsa beklemeden "database is locked" verir.
+  db.exec('PRAGMA busy_timeout = 8000');
   db.exec(`
     PRAGMA journal_mode = WAL;
-    PRAGMA busy_timeout = 8000;
 
     -- Taranacak yerel işletmeler (müşteri adayları = prospects)
     CREATE TABLE IF NOT EXISTS businesses (
@@ -131,5 +133,7 @@ export function openDb(path = process.env.WEBSCOUT_DB || join(DATA_DIR, 'webscou
   addColumn(db, 'businesses', 'updated_at', 'TEXT');
   addColumn(db, 'businesses', 'brand', 'TEXT'); // OSM marka etiketi: zincir şubesi, aday değil
   addColumn(db, 'partners', 'country', "TEXT NOT NULL DEFAULT 'DE'");
+  // Seviye 2 doğrulamasından sonraki puan: yanlış alarm çıkan bulguların puanı düşülür (yoksa NULL)
+  addColumn(db, 'profiles', 'adjusted_score', 'INTEGER');
   return db;
 }

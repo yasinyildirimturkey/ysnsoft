@@ -50,7 +50,10 @@ interface Prospect {
   notes: string;
   lat: number | null;
   lon: number | null;
+  /** Geçerli puan: derin tarama yapıldıysa yanlış alarmlar düşülmüş hâli */
   score: number | null;
+  /** İlk tarama puanı (doğrulamadan önce) */
+  raw_score: number | null;
   final_url: string | null;
   scanned_at: string | null;
   kind: Kind;
@@ -742,10 +745,13 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                     <td className="p-4 max-w-64">
                       {r.findings.length ? (
                         <div className="flex flex-wrap gap-1">
-                          {r.findings.slice(0, 4).map((f) => (
+                          {/* Derin taramanın çürüttüğü bulgular listede gösterilmez (Detay'da üstü çizili durur) */}
+                          {r.findings.filter((f) => f.verified !== 'refuted').slice(0, 4).map((f) => (
                             <span key={f.code} title={f.de} className="px-2 py-0.5 rounded-full bg-[#F5F5F7] text-[#515154] text-[11px]">{f.tr}</span>
                           ))}
-                          {r.findings.length > 4 && <span className="text-[11px] text-[#6E6E73] self-center">+{r.findings.length - 4}</span>}
+                          {r.findings.filter((f) => f.verified !== 'refuted').length > 4 && (
+                            <span className="text-[11px] text-[#6E6E73] self-center">+{r.findings.filter((f) => f.verified !== 'refuted').length - 4}</span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-[#6E6E73]">—</span>
@@ -900,17 +906,24 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                 <div className="p-3.5 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
                   <span className="text-[#6E6E73] block mb-2">
                     Teknik bulgular{selected.score !== null && selected.kind !== 'no_site' ? ` — sorun puanı ${selected.score}/100` : ''}
+                    {selected.score !== null && selected.raw_score !== null && selected.raw_score !== selected.score && (
+                      <span> (ilk tarama {selected.raw_score}; yanlış alarmlar düşüldü)</span>
+                    )}
                   </span>
                   <ul className="space-y-1.5">
-                    {selected.findings.map((f) => (
-                      <li key={f.code} className="flex items-start justify-between gap-3">
-                        <span>
-                          <span className="text-[#1D1D1F] font-semibold">{f.tr}</span>
-                          <span className="block text-[#6E6E73] text-[11px]" lang="de">{f.de}</span>
-                        </span>
-                        <span className="tabular text-[#6E6E73] shrink-0">+{f.points}</span>
-                      </li>
-                    ))}
+                    {selected.findings.map((f) => {
+                      const refuted = f.verified === 'refuted';
+                      return (
+                        <li key={f.code} className={`flex items-start justify-between gap-3 ${refuted ? 'opacity-60' : ''}`}>
+                          <span>
+                            <span className={`text-[#1D1D1F] font-semibold ${refuted ? 'line-through' : ''}`}>{f.tr}</span>
+                            {refuted && <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-red-100 text-red-800 text-[10px] font-bold">Yanlış alarm</span>}
+                            <span className="block text-[#6E6E73] text-[11px]" lang="de">{f.de}</span>
+                          </span>
+                          <span className={`tabular text-[#6E6E73] shrink-0 ${refuted ? 'line-through' : ''}`}>+{f.points}</span>
+                        </li>
+                      );
+                    })}
                   </ul>
                   <p className="text-[11px] text-[#6E6E73] mt-2.5">Görüşmede “hukuka aykırı” demeyin; “kontrol edilmeli” deyin.</p>
                 </div>
