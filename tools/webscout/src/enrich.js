@@ -132,7 +132,21 @@ function kindOf(link) {
   return null;
 }
 
-async function fetchPageSafe(url, { insecure = false } = {}) {
+// Geçici ağ hataları: sunucunun DNS'i/bağlantısı ara sıra kopuyor (2026-11-16, Plesk sunucusu). Site bozuk değildir.
+const TRANSIENT = /^(ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|ECONNREFUSED|UND_ERR_CONNECT_TIMEOUT|UND_ERR_SOCKET|TimeoutError)$/;
+
+async function fetchPageSafe(url, opts = {}) {
+  // Geçici hatada iki kez daha dene (2 sn, 5 sn ara); kalıcı hatalar (sertifika, 404…) hemen döner
+  let p;
+  for (const wait of [0, 2000, 5000]) {
+    if (wait) await sleep(wait);
+    p = await fetchPageOnce(url, opts);
+    if (p.ok || !TRANSIENT.test(p.error ?? '')) return p;
+  }
+  return p;
+}
+
+async function fetchPageOnce(url, { insecure = false } = {}) {
   try {
     const { res, html, ms } = await (insecure ? getInsecure : get)(String(url));
     const ctype = res.headers.get('content-type') || '';
@@ -146,7 +160,7 @@ async function fetchPageSafe(url, { insecure = false } = {}) {
       const u = new URL(String(url));
       if (u.protocol === 'https:') {
         u.protocol = 'http:';
-        const plain = await fetchPageSafe(u);
+        const plain = await fetchPageOnce(u); // tek deneme: 80 portu kapalıysa uzun beklemesin
         // http, https'e geri yönlendiriyorsa ya da boşsa işe yaramaz
         if (plain.ok && plain.url.protocol === 'http:' && visibleText(plain.html).length >= 200) return { ...plain, tlsError: code };
       }
