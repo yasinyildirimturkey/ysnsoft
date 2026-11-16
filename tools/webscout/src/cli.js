@@ -317,7 +317,7 @@ async function cmdDraft(db, opt) {
   const [id] = parseIds(opt.id);
   if (!id) { console.log('Kullanım: draft --id <n>'); process.exit(1); }
   const r = await runDraft(db, id, (m) => console.log(m));
-  console.log(`${r.biz.name}: /demo/${r.token}  (şablon: ${r.kit.template}, ${r.kit.photos.length} görsel, metin: ${r.kit.copy.placeholder ? 'yer tutucu' : r.kit.copy.model})`);
+  console.log(`${r.biz.name}: /demo/${r.token}  (şablon: ${r.kit.template}, ${r.kit.photos.length} görsel (${r.kit.uploads} saha), saatler: ${r.kit.hours?.source ?? 'yok'}, metin: ${r.kit.copy.placeholder ? `yer tutucu${r.kit.copy.llmError ? ` — ${r.kit.copy.llmError}` : ''}` : r.kit.copy.model})`);
 }
 
 async function cmdJobDraft(db, opt) {

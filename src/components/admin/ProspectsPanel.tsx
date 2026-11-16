@@ -24,6 +24,7 @@ import {
   Search,
 } from 'lucide-react';
 import ProspectOffer from './ProspectOffer';
+import ProspectPhotos from './ProspectPhotos';
 import ProspectProfile from './ProspectProfile';
 
 type Kind = 'no_site' | 'redesign' | 'unscanned' | 'ok' | 'chain';
@@ -938,7 +939,8 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
               />
 
               {/* Seviye 3: şablon taslağı */}
-              <div className="p-3.5 rounded-xl border border-black/[0.08] flex flex-wrap items-center justify-between gap-3">
+              <div className="p-3.5 rounded-xl border border-black/[0.08]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <strong className="text-[#1D1D1F] flex items-center gap-1.5">
                     <LayoutTemplate className="w-3.5 h-3.5" aria-hidden="true" /> Şablon taslağı
@@ -979,6 +981,8 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                     {jobRunning ? 'Çalışıyor…' : selected.draft_token ? 'Yeniden üret' : 'Taslak oluştur'}
                   </button>
                 </div>
+              </div>
+              <ProspectPhotos key={selected.id} id={selected.id} />
               </div>
 
               <div>

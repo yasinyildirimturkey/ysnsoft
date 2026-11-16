@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/admin-auth';
-import { readWebscoutShot, runWebscout, startWebscoutJob, webscoutAvailability } from '@/lib/webscout';
+import {
+  deleteWebscoutUpload,
+  listWebscoutUploads,
+  makeWebscoutUploadCover,
+  readWebscoutShot,
+  readWebscoutUpload,
+  runWebscout,
+  saveWebscoutUpload,
+  startWebscoutJob,
+  UPLOAD_MAX_BYTES,
+  webscoutAvailability,
+} from '@/lib/webscout';
 
 /**
  * Müşteri adayları (prospects) — WebScout'un bulduğu, BİZİM gideceğimiz işletmeler.
@@ -69,6 +80,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, available: true, ...job }, { headers: NO_STORE });
     }
 
+    // Saha fotoğrafları (taslakta kullanılır)
+    if (view === 'uploads' || view === 'upload') {
+      const id = Number(searchParams.get('id'));
+      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      if (view === 'uploads') return NextResponse.json({ success: true, uploads: listWebscoutUploads(id) }, { headers: NO_STORE });
+      const file = readWebscoutUpload(id, String(searchParams.get('name') ?? ''));
+      if (!file) return fail('Fotoğraf yok.', 404);
+      return new NextResponse(new Uint8Array(file.data), { headers: { 'Content-Type': file.type, 'Cache-Control': 'private, max-age=300' } });
+    }
+
     // Seviye 2 derin profil (tek aday)
     if (view === 'profile' || view === 'shot') {
       const id = Number(searchParams.get('id'));
@@ -123,6 +144,24 @@ export async function POST(request: Request) {
 
   const status = webscoutAvailability();
   if (!status.available) return unavailable(status.reason);
+
+  // Saha fotoğrafı yükleme: multipart/form-data { id, file }
+  if ((request.headers.get('content-type') ?? '').startsWith('multipart/form-data')) {
+    const length = Number(request.headers.get('content-length') ?? 0);
+    if (length > UPLOAD_MAX_BYTES + 64 * 1024) return fail('Fotoğraf en fazla 8 MB olabilir.', 413);
+    try {
+      const form = await request.formData();
+      const id = Number(form.get('id'));
+      const file = form.get('file');
+      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      if (!(file instanceof File) || !file.size) return fail('Fotoğraf seçilmedi.');
+      if (file.size > UPLOAD_MAX_BYTES) return fail('Fotoğraf en fazla 8 MB olabilir.', 413);
+      const name = saveWebscoutUpload(id, Buffer.from(await file.arrayBuffer()));
+      return NextResponse.json({ success: true, name, uploads: listWebscoutUploads(id) }, { headers: NO_STORE });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : 'Fotoğraf yüklenemedi.');
+    }
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -183,6 +222,16 @@ export async function POST(request: Request) {
 
       startWebscoutJob(['--id', String(id)], 'job-draft');
       return NextResponse.json({ success: true, started: true }, { headers: NO_STORE });
+    }
+
+    // Saha fotoğrafını sil ya da kapak yap
+    if (body.action === 'delete-upload' || body.action === 'cover-upload') {
+      const id = Number(body.id);
+      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      const name = String(body.name ?? '');
+      const done = body.action === 'delete-upload' ? deleteWebscoutUpload(id, name) : makeWebscoutUploadCover(id, name);
+      if (!done) return fail('Fotoğraf bulunamadı.', 404);
+      return NextResponse.json({ success: true, uploads: listWebscoutUploads(id) }, { headers: NO_STORE });
     }
 
     // Durum / not / elle bulunan site adresi güncelle
