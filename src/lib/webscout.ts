@@ -88,6 +88,87 @@ export function readWebscoutDraft(token: string, file?: string): DraftFile {
   }
 }
 
+// ── Saha fotoğrafları ────────────────────────────────────────
+// Ziyarette çekilen (izinli) fotoğraflar: tools/webscout/data/uploads/<işletme id>/.
+// Taslak üretilirken önce bunlar kullanılır; ilk fotoğraf açılış (kapak) görseli olur.
+// Deploy paketi data/ klasörünü taşımaz, sunucudaki yüklemeler korunur.
+
+export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+export const UPLOAD_MAX_FILES = 9;
+const UPLOAD_NAME_RE = /^u\d{13}-[a-z0-9]{6}\.(jpg|png|webp)$/;
+
+const uploadDir = (businessId: number) => path.join(TOOL_DIR, 'data', 'uploads', String(businessId));
+
+/** Dosyanın gerçekten JPEG/PNG/WebP olup olmadığını ilk baytlarından anlar (uzantıya güvenilmez). */
+function sniffImage(buf: Buffer): 'jpg' | 'png' | 'webp' | null {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
+  if (buf.readUInt32BE(0) === 0x89504e47) return 'png';
+  if (buf.subarray(0, 4).toString('latin1') === 'RIFF' && buf.subarray(8, 12).toString('latin1') === 'WEBP') return 'webp';
+  return null;
+}
+
+/** Yüklenen fotoğraflar, yükleme sırasına göre (ilk = kapak). */
+export function listWebscoutUploads(businessId: number): { name: string; size: number }[] {
+  try {
+    return fs
+      .readdirSync(uploadDir(businessId))
+      .filter((n) => UPLOAD_NAME_RE.test(n))
+      .sort()
+      .map((name) => ({ name, size: fs.statSync(path.join(uploadDir(businessId), name)).size }));
+  } catch {
+    return [];
+  }
+}
+
+export function saveWebscoutUpload(businessId: number, buf: Buffer): string {
+  if (buf.length > UPLOAD_MAX_BYTES) throw new Error(`Fotoğraf en fazla ${UPLOAD_MAX_BYTES / 1024 / 1024} MB olabilir.`);
+  const ext = sniffImage(buf);
+  if (!ext) throw new Error('Yalnızca JPG, PNG veya WebP fotoğraf yüklenebilir.');
+  if (listWebscoutUploads(businessId).length >= UPLOAD_MAX_FILES) throw new Error(`En fazla ${UPLOAD_MAX_FILES} fotoğraf yüklenebilir.`);
+  const dir = uploadDir(businessId);
+  fs.mkdirSync(dir, { recursive: true });
+  const name = `u${Date.now()}-${Math.random().toString(36).slice(2, 8).padEnd(6, '0')}.${ext}`;
+  fs.writeFileSync(path.join(dir, name), buf);
+  return name;
+}
+
+export function readWebscoutUpload(businessId: number, name: string): { data: Buffer; type: string } | null {
+  const m = UPLOAD_NAME_RE.exec(name);
+  if (!m) return null;
+  try {
+    return { data: fs.readFileSync(path.join(uploadDir(businessId), name)), type: ASSET_TYPE[m[1]] };
+  } catch {
+    return null;
+  }
+}
+
+export function deleteWebscoutUpload(businessId: number, name: string): boolean {
+  if (!UPLOAD_NAME_RE.test(name)) return false;
+  try {
+    fs.unlinkSync(path.join(uploadDir(businessId), name));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Kapak fotoğrafını değiştirmek için: seçilen dosyayı listenin başına alır (adındaki zaman damgası yenilenir). */
+export function makeWebscoutUploadCover(businessId: number, name: string): boolean {
+  if (!UPLOAD_NAME_RE.test(name)) return false;
+  const dir = uploadDir(businessId);
+  const first = listWebscoutUploads(businessId)[0];
+  if (!first || first.name === name) return Boolean(first);
+  const stamp = Number(first.name.slice(1, 14)) - 1;
+  const next = `u${stamp}-${name.slice(15)}`;
+  try {
+    fs.renameSync(path.join(dir, name), path.join(dir, next));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Uzun süren işi arka planda başlatır; ilerleme `job-status` ile okunur.
  * `job` = çekim + tarama (+ isteğe bağlı derin profil), `job-enrich` = yalnızca derin profil (Seviye 2),
