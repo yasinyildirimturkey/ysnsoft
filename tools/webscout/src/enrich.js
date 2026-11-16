@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DATA_DIR } from './db.js';
-import { get, visibleText, detectPlaceholder, metaRefreshTarget } from './scan.js';
+import { get, getInsecure, TLS_ERROR, visibleText, detectPlaceholder, metaRefreshTarget } from './scan.js';
 import { llmConfigured, llmJson } from './llm.js';
 
 const UA = process.env.WEBSCOUT_UA || 'WebScout/0.3 (local business survey)';
@@ -132,14 +132,28 @@ function kindOf(link) {
   return null;
 }
 
-async function fetchPageSafe(url) {
+async function fetchPageSafe(url, { insecure = false } = {}) {
   try {
-    const { res, html, ms } = await get(String(url));
+    const { res, html, ms } = await (insecure ? getInsecure : get)(String(url));
     const ctype = res.headers.get('content-type') || '';
     const isHtml = /html|xml/i.test(ctype) || html.trimStart().startsWith('<');
     return { ok: res.status < 400 && isHtml, status: res.status, url: new URL(res.url || String(url)), html: isHtml ? html : '', ms };
   } catch (e) {
-    return { ok: false, status: 0, url: new URL(String(url)), html: '', ms: 0, error: e?.cause?.code || e?.name || 'network' };
+    const code = e?.cause?.code || e?.code || e?.name || 'network';
+    // Sertifikası bozuk site: içerik yine de herkese açık. Önce aynı adresin http:// hâli (barındırıcı HTTPS'i hiç
+    // kurmamış olabilir: https'te yalnızca "HTTPS Not Available" sayfası çıkar), olmazsa doğrulamasız https.
+    if (!insecure && TLS_ERROR.test(code)) {
+      const u = new URL(String(url));
+      if (u.protocol === 'https:') {
+        u.protocol = 'http:';
+        const plain = await fetchPageSafe(u);
+        // http, https'e geri yönlendiriyorsa ya da boşsa işe yaramaz
+        if (plain.ok && plain.url.protocol === 'http:' && visibleText(plain.html).length >= 200) return { ...plain, tlsError: code };
+      }
+      const p = await fetchPageSafe(url, { insecure: true });
+      return { ...p, tlsError: code };
+    }
+    return { ok: false, status: 0, url: new URL(String(url)), html: '', ms: 0, error: code };
   }
 }
 
@@ -147,11 +161,13 @@ async function fetchPageSafe(url) {
 async function crawl(startUrl) {
   let home = await fetchPageSafe(startUrl);
   if (!home.ok) return { ok: false, error: home.error || `http_${home.status}`, pages: [], links: [] };
+  const tlsError = home.tlsError ?? null;
+  const opts = { insecure: Boolean(tlsError) };
   // Boş gövde + meta refresh: asıl sayfaya geç (Seviye 1 ile aynı davranış)
   for (let hop = 0; hop < 2 && visibleText(home.html).length < 40; hop++) {
     const target = metaRefreshTarget(home.html, home.url);
     if (!target || target === home.url.href) break;
-    const next = await fetchPageSafe(target);
+    const next = await fetchPageSafe(target, opts);
     if (!next.ok) break;
     home = next;
   }
@@ -164,7 +180,7 @@ async function crawl(startUrl) {
   const external = []; // başka alan adındaki çerçeve içeriği: yalnızca o klasörün altı bu işletmeye aittir
   for (const src of uniq(frameSources(home.html, home.url).map(String)).slice(0, 3)) {
     await sleep(300);
-    const p = await fetchPageSafe(src);
+    const p = await fetchPageSafe(src, opts);
     if (!p.ok) continue;
     pages.push({ kind: 'frame', ...p });
     if (!sameSite(p.url, home.url)) external.push({ host: bareHost(p.url.hostname), dir: p.url.pathname.replace(/[^/]*$/, '') });
@@ -184,12 +200,12 @@ async function crawl(startUrl) {
   }
   for (const [kind, url] of [...chosen].slice(0, MAX_SUBPAGES)) {
     await sleep(400); // siteye nazik davran
-    const p = await fetchPageSafe(url);
+    const p = await fetchPageSafe(url, opts);
     if (p.ok) pages.push({ kind, ...p });
   }
   // Alt sayfalardaki bağlantılar da toplanır (sosyal medya, menü PDF'i çoğu zaman oradadır)
   const allLinks = pages.flatMap((p) => extractLinks(p.html, p.url));
-  return { ok: true, home, pages, links: allLinks, framedFrom: external[0]?.host ?? null };
+  return { ok: true, home, pages, links: allLinks, framedFrom: external[0]?.host ?? null, tlsError };
 }
 
 /** Bağlantısı bulunmayan yasal sayfa bilinen adreslerde var mı? (yumuşak 404'e karşı içerik de sınanır) */
@@ -634,6 +650,8 @@ async function siteProfile(startUrl, findingCodes, bizName) {
     ok: true,
     finalUrl: c.home.url.href,
     framedFrom: c.framedFrom,
+    // Sertifika bozuk: içerik doğrulamasız okundu; ziyaretçinin tarayıcısı "güvenli değil" uyarısı gösterir
+    tlsError: c.tlsError ?? null,
     pages: pages.map((p) => ({ kind: p.kind, url: p.url.href })),
     // Impressum sayfası yoksa tüm metinde aranır (küçük sitelerde ana sayfanın altındadır)
     impressum: parseImpressum(imp ? textLines(imp.html) : allLines, bizName),
