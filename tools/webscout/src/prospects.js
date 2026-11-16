@@ -27,6 +27,9 @@ const KIND_SQL = `CASE
 // Geçerli puan: Seviye 2 doğrulaması yapıldıysa yanlış alarmlar düşülmüş puan, yoksa ilk tarama puanı.
 const SCORE_SQL = 'COALESCE(p.adjusted_score, s.score)';
 
+// Seviye 3 taslağı üretilmiş aday ("Taslak hazır" süzgeci; süresi dolmuş olanlar da sayılır, yeniden üretilebilir)
+const HAS_DRAFT_SQL = 'EXISTS (SELECT 1 FROM drafts d WHERE d.business_id = b.id)';
+
 const FROM_SQL = `FROM businesses b
   LEFT JOIN scans s ON s.id = (SELECT MAX(id) FROM scans WHERE business_id = b.id)
   LEFT JOIN profiles p ON p.business_id = b.id`;
@@ -57,8 +60,9 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
 
   // Özet: bölge + kategori seçimine göre (tür/durum/arama süzgeçlerinden bağımsız)
   const counts = all(db, `SELECT ${KIND_SQL} AS kind, COUNT(*) AS n ${FROM_SQL} WHERE ${region.where.join(' AND ')} GROUP BY 1`, { ...region.params, minScore });
-  const summary = { total: 0, no_site: 0, redesign: 0, unscanned: 0, ok: 0, chain: 0 };
+  const summary = { total: 0, no_site: 0, redesign: 0, unscanned: 0, ok: 0, chain: 0, drafts: 0 };
   for (const c of counts) { summary[c.kind] = c.n; summary.total += c.n; }
+  summary.drafts = all(db, `SELECT COUNT(*) AS n ${FROM_SQL} WHERE ${region.where.join(' AND ')} AND ${HAS_DRAFT_SQL}`, region.params)[0].n;
 
   const breakdown = all(
     db,
@@ -75,6 +79,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   const where = [...region.where];
   const params = { ...region.params, minScore };
   if (kind === 'offer') where.push(`${KIND_SQL} IN ('no_site','redesign')`);
+  else if (kind === 'draft') where.push(HAS_DRAFT_SQL);
   else if (kind && kind !== 'all') { where.push(`${KIND_SQL} = @kind`); params.kind = kind; }
   if (status) { where.push('b.status = @status'); params.status = status; }
   else where.push("b.status != 'do_not_contact'");
@@ -97,7 +102,8 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
               (SELECT group_concat(a.name, ' · ') FROM business_areas ba JOIN areas a ON a.id = ba.area_id WHERE ba.business_id = b.id) AS districts
          ${FROM_SQL}
         WHERE ${where.join(' AND ')}
-        ORDER BY CASE ${KIND_SQL} WHEN 'redesign' THEN 0 WHEN 'no_site' THEN 1 WHEN 'unscanned' THEN 2 ELSE 3 END,
+        ORDER BY ${kind === 'draft' ? '(SELECT d.created_at FROM drafts d WHERE d.business_id = b.id) DESC,' : ''}
+                 CASE ${KIND_SQL} WHEN 'redesign' THEN 0 WHEN 'no_site' THEN 1 WHEN 'unscanned' THEN 2 ELSE 3 END,
                  ${SCORE_SQL} DESC, b.name
         LIMIT @limit`,
     { ...params, limit },
