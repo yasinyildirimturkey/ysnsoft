@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Globe,
   LayoutTemplate,
+  List,
+  Map as MapIcon,
   MapPin,
   Phone,
   Printer,
@@ -24,6 +26,7 @@ import {
   Search,
 } from 'lucide-react';
 import ProspectOffer from './ProspectOffer';
+import ProspectMap from './ProspectMap';
 import ProspectPhotos from './ProspectPhotos';
 import ProspectProfile from './ProspectProfile';
 
@@ -176,6 +179,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
 
   // Liste süzgeçleri
   const [kind, setKind] = useState('offer');
+  const [view, setView] = useState<'list' | 'map'>('list');
   const [status, setStatus] = useState('');
   const [minScore, setMinScore] = useState(40);
   const [q, setQ] = useState('');
@@ -245,6 +249,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
       if (status) p.set('status', status);
       p.set('minScore', String(minScore));
       if (q.trim()) p.set('q', q.trim());
+      if (view === 'map') p.set('limit', '2000');
       const res = await api<{ available: boolean; rows: Prospect[]; summary: Summary; breakdown: Breakdown[]; matched: number }>(
         `/api/admin/prospects?${p.toString()}`
       );
@@ -261,7 +266,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
     } finally {
       if (seq === requestSeq.current) setLoading(false);
     }
-  }, [regionQuery, kind, status, minScore, q]);
+  }, [regionQuery, kind, status, minScore, q, view]);
 
   useEffect(() => {
     const t = setTimeout(loadMeta, 0);
@@ -704,7 +709,22 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
             {loading ? 'Yükleniyor…' : `${matched.toLocaleString('tr-TR')} aday`}
             {!loading && matched > rows.length && ` — ilk ${rows.length} gösteriliyor, süzgeçle daraltın`}
           </span>
-          <span className="hidden sm:inline">Puan yüksek = sitede daha çok sorun = daha güçlü yenileme adayı</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden md:inline">{view === 'map' ? 'Aynı bölgedekileri tek rotada toplayın' : 'Puan yüksek = sitede daha çok sorun = daha güçlü yenileme adayı'}</span>
+            <div className="flex rounded-lg bg-[#F5F5F7] p-0.5" role="group" aria-label="Görünüm">
+              {([['list', 'Liste', List], ['map', 'Harita', MapIcon]] as const).map(([id, label, Icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={view === id}
+                  onClick={() => setView(id)}
+                  className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 ${view === id ? 'bg-white text-[#1D1D1F] shadow-sm' : 'text-[#6E6E73] hover:text-[#1D1D1F]'}`}
+                >
+                  <Icon className="w-3.5 h-3.5" aria-hidden="true" /> {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         {listError ? (
           <p className="p-8 text-center text-xs text-red-700">{listError}</p>
@@ -713,6 +733,14 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
             Bu seçimde aday yok. Yukarıdan şehir ve işletme türü seçip <strong className="text-[#1D1D1F]">“Bu bölgede işletmeleri bul”</strong> ile tarama başlatın
             ya da süzgeci <strong className="text-[#1D1D1F]">Tümü</strong> yapın.
           </p>
+        ) : view === 'map' ? (
+          <ProspectMap
+            rows={rows}
+            onOpen={(id) => {
+              const p = rows.find((r) => r.id === id);
+              if (p) openDetail(p);
+            }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

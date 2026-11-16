@@ -129,7 +129,9 @@ export async function GET(request: Request) {
     const q = (searchParams.get('q') ?? '').trim().slice(0, 80);
     // "--" ile başlayan arama metni araç seçeneği sanılmasın
     if (q && !q.startsWith('--')) args.push('--q', q);
-    args.push('--limit', '500');
+    // Liste 500 satır gösterir; harita görünümü bölgenin tamamını ister (en çok 2000)
+  const limit = Number(searchParams.get('limit') ?? 500);
+  args.push('--limit', String(Number.isInteger(limit) ? Math.max(1, Math.min(2000, limit)) : 500));
 
     const res = await runWebscout(['query', ...args]);
     return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
