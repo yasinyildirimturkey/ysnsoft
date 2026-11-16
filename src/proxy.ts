@@ -10,6 +10,8 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/admin-auth';
 export function proxy(request: NextRequest) {
   const session = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
   const isLoginPage = request.nextUrl.pathname === '/admin/login';
+  // Davet bağlantısı oturumsuz açılır; belirteç sunucuda /api/admin/invite ile doğrulanır
+  if (request.nextUrl.pathname === '/admin/davet') return NextResponse.next();
 
   if (isLoginPage) {
     return session ? NextResponse.redirect(new URL('/admin', request.url)) : NextResponse.next();

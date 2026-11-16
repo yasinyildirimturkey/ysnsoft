@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireRole } from '@/lib/admin-auth';
 import { getStoredSites, saveSite, deleteSite, SiteItem } from '@/lib/server-db';
 
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = requireRole(request, 'domains', 'write');
   if (denied) return denied;
 
   try {
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = requireRole(request, 'domains', 'write');
   if (denied) return denied;
 
   const { searchParams } = new URL(request.url);

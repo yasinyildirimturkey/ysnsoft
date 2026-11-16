@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireRole } from '@/lib/admin-auth';
 
 interface SiteBridgeStatus {
   domain: string;
@@ -122,7 +122,7 @@ function withToken(site: SiteBridgeStatus) {
 }
 
 export async function GET(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = requireRole(request, 'domains', 'write');
   if (denied) return denied;
 
   const { searchParams } = new URL(request.url);
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = requireRole(request, 'domains', 'write');
   if (denied) return denied;
 
   try {

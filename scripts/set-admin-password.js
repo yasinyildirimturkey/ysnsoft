@@ -9,13 +9,22 @@
  * Değişikliğin geçerli olması için sunucuyu yeniden başlatın.
  *
  * Farklı bir dosyaya yazmak için:  node scripts/set-admin-password.js .env.production
+ *
+ * Kişiye özel hesap şifresi (kurtarma; ör. Süper Admin şifresini unuttuysa):
+ *   node scripts/set-admin-password.js --user yasin@ysnsoft.com
+ * data/admin-users.json içindeki hesabın şifresini değiştirir, açık oturumlarını kapatır.
+ * Yeniden başlatma gerekmez.
  */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const readline = require('readline');
 
-const envPath = path.resolve(process.cwd(), process.argv[2] || '.env.local');
+const userFlag = process.argv.indexOf('--user');
+const targetUser = userFlag > -1 ? String(process.argv[userFlag + 1] || '').trim().toLowerCase() : '';
+const envArg = process.argv.slice(2).find((a, i, arr) => !a.startsWith('--') && arr[i - 1] !== '--user');
+const envPath = path.resolve(process.cwd(), envArg || '.env.local');
+const usersPath = path.resolve(process.cwd(), 'data', 'admin-users.json');
 
 function readHidden(prompt) {
   return new Promise((resolve) => {
@@ -63,6 +72,31 @@ function upsert(content, key, value) {
 
   const salt = crypto.randomBytes(16);
   const hash = crypto.scryptSync(password, salt, 64);
+
+  if (targetUser) {
+    if (!fs.existsSync(usersPath)) {
+      console.error(`Hesap dosyası yok: ${usersPath}. Panel bir kez açılınca oluşur.`);
+      process.exit(1);
+    }
+    const store = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+    const user = (store.users || []).find((u) => u.email === targetUser);
+    if (!user) {
+      console.error(`Hesap bulunamadı: ${targetUser}`);
+      process.exit(1);
+    }
+    user.passwordHash = `scrypt:${salt.toString('hex')}:${hash.toString('hex')}`;
+    user.invite = null;
+    user.status = 'active';
+    user.sv = (user.sv || 0) + 1;
+    user.updatedAt = new Date().toISOString();
+    const tmp = `${usersPath}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(store, null, 2));
+    fs.renameSync(tmp, usersPath);
+    fs.appendFileSync(path.join(path.dirname(usersPath), 'admin-audit.log'),
+      JSON.stringify({ at: new Date().toISOString(), actor: 'console', action: 'password-reset', target: targetUser }) + '\n');
+    console.log(`Şifre güncellendi: ${targetUser} (açık oturumları kapatıldı)`);
+    return;
+  }
 
   let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
   if (!/^ADMIN_SESSION_SECRET=.{32,}$/m.test(content)) {

@@ -26,11 +26,23 @@ if (Test-Path public) {
 Copy-Item package.json, package-lock.json, next.config.ts, start.js, web.config _deploy\www\
 if (Test-Path data) {
   # Canlı veritabanı dosyaları pakete girmez: sunucudaki gerçek talepler, randevular,
-  # faturalar ve site listesi yerel kopyalarla ezilmesin. (Yoksa sunucu varsayılanları üretir.)
-  robocopy data _deploy\www\data /E /XF leads.json appointments.json invoices.json sites.json geo-settings.json /NFL /NDL /NJH /NJS /NP | Out-Null
+  # faturalar, site listesi, yonetici hesaplari (sifre ozetleri) ve islem kaydi
+  # yerel kopyalarla ezilmesin. (Yoksa sunucu varsayılanları üretir.)
+  robocopy data _deploy\www\data /E /XF leads.json appointments.json invoices.json sites.json geo-settings.json admin-users.json admin-audit.log *.tmp /NFL /NDL /NJH /NJS /NP | Out-Null
 }
 if (Test-Path scripts) {
   robocopy scripts _deploy\www\scripts /E /NFL /NDL /NJH /NJS /NP | Out-Null
+}
+if (Test-Path tools\webscout\src) {
+  # WebScout (yonetim paneli > Musteri Adaylari): yalnizca arac kodu pakete girer.
+  # Sunucudaki aday veritabani (tools\webscout\data) ASLA ezilmez: durumlar ve ziyaret notlari orada yasar.
+  robocopy tools\webscout _deploy\www\tools\webscout /E /XD data out node_modules seed /XF *.log /NFL /NDL /NJH /NJS /NP | Out-Null
+  if (Test-Path tools\webscout\data\webscout.db) {
+    # Ilk kurulum tohumu: sunucuda veritabani yoksa SUNUCUDA-UYGULA bunu data\ altina kopyalar, varsa siler.
+    node --no-warnings tools\webscout\src\cli.js snapshot _deploy\www\tools\webscout\seed\webscout.db
+    if ($LASTEXITCODE -ne 0) { Write-Host '*** WebScout veritabani kopyasi alinamadi. Paketleme iptal. ***' -ForegroundColor Red; return }
+  }
+  Write-Host '  [OK] WebScout araci pakete eklendi.' -ForegroundColor Green
 }
 if (Test-Path .env.local) {
   Copy-Item .env.local _deploy\www\.env.production
@@ -98,6 +110,21 @@ if ($Korunan.Count -gt 0 -and (Test-Path $EnvDosyasi)) {
   # BOM'suz UTF-8: Next.js ilk satirdaki anahtari BOM yuzunden kacirmasin
   [System.IO.File]::WriteAllLines($EnvDosyasi, $yeni, (New-Object System.Text.UTF8Encoding($false)))
   Write-Host ("  [OK] Sunucu ayarlari korundu: " + (($Korunan.Keys | Sort-Object) -join ', ')) -ForegroundColor Green
+}
+
+# WebScout aday veritabani: yalnizca ilk kurulumda tohumlanir, mevcut veri korunur
+$WsTohum = Join-Path $WwwKlasoru 'tools\webscout\seed'
+if (Test-Path "$WsTohum\webscout.db") {
+  $WsVeri = Join-Path $WwwKlasoru 'tools\webscout\data'
+  if (-not (Test-Path "$WsVeri\webscout.db")) {
+    New-Item -ItemType Directory -Path $WsVeri -Force | Out-Null
+    # Copy (Move degil): dosya hedef klasorun izinlerini devralsin, uygulama havuzu yazabilsin
+    Copy-Item "$WsTohum\webscout.db" "$WsVeri\webscout.db"
+    Write-Host "  [OK] WebScout aday veritabani ilk kez kuruldu." -ForegroundColor Green
+  } else {
+    Write-Host "  [OK] WebScout aday veritabani korundu (sunucudaki veri gecerli)." -ForegroundColor Green
+  }
+  Remove-Item $WsTohum -Recurse -Force
 }
 
 # Bagimliliklar kontrol

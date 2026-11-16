@@ -6,8 +6,6 @@ import {
   getStoredLeads, 
   updateLeadStatus, 
   getStoredAppointments, 
-  getStoredTeamMembers,
-  saveTeamMember,
   getStoredInvoices,
   saveInvoice,
   updateInvoiceStatus,
@@ -23,13 +21,15 @@ import {
   GeoSettings,
   Lead, 
   Appointment,
-  TeamMember,
   InvoiceRecord,
   SmtpSettings,
   SystemSettings,
   PRESET_ADMIN_USERS
 } from '@/lib/store';
 import { PRODUCTS, Product } from '@/data/products';
+import ProspectsPanel from '@/components/admin/ProspectsPanel';
+import UsersPanel from '@/components/admin/UsersPanel';
+import { ROLE_INFO, can, isAdminRole } from '@/lib/roles';
 import { 
   Layers, 
   LayoutDashboard, 
@@ -71,18 +71,18 @@ import {
   Edit3,
   Copy,
   Code,
-  CheckSquare
+  CheckSquare,
+  Target
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [activeMenu, setActiveMenu] = useState<'overview' | 'leads' | 'appointments' | 'muhasebe' | 'roller' | 'domains' | 'seo-geo' | 'glm' | 'settings'>('overview');
+  const [activeMenu, setActiveMenu] = useState<'overview' | 'leads' | 'prospects' | 'appointments' | 'muhasebe' | 'roller' | 'domains' | 'seo-geo' | 'glm' | 'settings'>('overview');
   
   // States
   const [leads, setLeads] = useState<Lead[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -179,16 +179,6 @@ export default function AdminDashboardPage() {
     paymentType: 'Havale / EFT' as const
   });
 
-  const [teamModalOpen, setTeamModalOpen] = useState(false);
-  const [newMemberData, setNewMemberData] = useState({
-    name: '',
-    email: '',
-    role: 'sales' as const,
-    roleTitle: 'Satış & Müşteri Temsilcisi',
-    status: 'Aktif' as const,
-    permissions: ['Teklif Talepleri', 'Müşteri CRM']
-  });
-
   // Load from store on mount
   useEffect(() => {
     let cancelled = false;
@@ -216,7 +206,6 @@ export default function AdminDashboardPage() {
 
       setLeads(getStoredLeads());
       setAppointments(getStoredAppointments());
-      setTeamMembers(getStoredTeamMembers());
       setInvoices(getStoredInvoices());
       setSmtpSettings(getStoredSmtpSettings());
       setSystemSettings(getStoredSystemSettings());
@@ -491,31 +480,6 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const handleCreateTeamMember = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMemberData.name || !newMemberData.email) return;
-
-    saveTeamMember({
-      name: newMemberData.name,
-      email: newMemberData.email,
-      role: newMemberData.role,
-      roleTitle: newMemberData.roleTitle,
-      status: newMemberData.status,
-      permissions: newMemberData.permissions
-    });
-
-    setTeamMembers(getStoredTeamMembers());
-    setTeamModalOpen(false);
-    setNewMemberData({
-      name: '',
-      email: '',
-      role: 'sales',
-      roleTitle: 'Satış & Müşteri Temsilcisi',
-      status: 'Aktif',
-      permissions: ['Teklif Talepleri', 'Müşteri CRM']
-    });
-  };
-
   // Tarayıcı alert() yerine sayfa içi bildirim
   const [toast, setToast] = useState<{ id: number; message: string; tone: 'success' | 'error' } | null>(null);
   const notify = (message: string) => {
@@ -534,12 +498,11 @@ export default function AdminDashboardPage() {
       if (proposalLead) setProposalLead(null);
       else if (selectedLead) setSelectedLead(null);
       else if (invoiceModalOpen) setInvoiceModalOpen(false);
-      else if (teamModalOpen) setTeamModalOpen(false);
       else if (siteModalOpen) setSiteModalOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [proposalLead, selectedLead, invoiceModalOpen, teamModalOpen, siteModalOpen]);
+  }, [proposalLead, selectedLead, invoiceModalOpen, siteModalOpen]);
 
   const handleLogout = async () => {
     try {
@@ -600,6 +563,7 @@ export default function AdminDashboardPage() {
       label: 'Satış',
       items: [
         { id: 'leads', label: 'Teklif Talepleri', icon: Inbox, badge: newLeadCount, highlight: true },
+        { id: 'prospects', label: 'Müşteri Adayları', icon: Target },
         { id: 'appointments', label: 'Randevular', icon: Calendar, badge: appointments.length },
         { id: 'muhasebe', label: 'Muhasebe & Finans', icon: Receipt },
       ],
@@ -615,15 +579,21 @@ export default function AdminDashboardPage() {
     {
       label: 'Yönetim',
       items: [
-        { id: 'roller', label: 'Roller & Yetkiler', icon: Users, badge: teamMembers.length },
+        { id: 'roller', label: 'Roller & Yetkiler', icon: Users },
         { id: 'settings', label: 'Sistem Ayarları', icon: Settings },
       ],
     },
   ];
 
+  // Menü yalnızca görünüm içindir; yetki kontrolü API rotalarında sunucuda yapılır
+  const VISIBLE_NAV_GROUPS = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => can(activeUserRole, it.id)) })).filter(
+    (g) => g.items.length > 0
+  );
+
   const PAGE_META: Record<MenuId, { title: string; desc: string }> = {
     overview: { title: 'Genel Bakış', desc: 'Talepler, randevular ve gelirin anlık özeti.' },
     leads: { title: 'Teklif Talepleri', desc: 'Siteden gelen teklif ve iletişim talepleri.' },
+    prospects: { title: 'Müşteri Adayları', desc: 'Bölge ve işletme türü seçin; teklif verilebilecek işletmeleri bulun.' },
     appointments: { title: 'Randevular', desc: 'Planlanan canlı demo görüşmeleri.' },
     muhasebe: { title: 'Muhasebe & Finans', desc: 'E-fatura, tahsilat ve kasa yönetimi.' },
     roller: { title: 'Roller & Yetkiler', desc: 'Ekip üyeleri ve yetki matrisi.' },
@@ -633,15 +603,6 @@ export default function AdminDashboardPage() {
     settings: { title: 'Sistem Ayarları', desc: 'Şirket, iletişim ve e-posta ayarları.' },
   };
 
-  const ROLE_LABELS: Record<string, string> = {
-    superadmin: 'Süper Yönetici',
-    admin: 'Yönetici',
-    sales: 'Satış',
-    finance: 'Finans',
-    accounting: 'Muhasebe',
-    engineer: 'Mühendis',
-    support: 'Destek',
-  };
 
   if (isAuthenticated !== true) {
     return (
@@ -716,7 +677,7 @@ export default function AdminDashboardPage() {
           aria-label="Yönetim menüsü"
           className="flex md:flex-col md:flex-1 gap-1 md:gap-5 overflow-x-auto md:overflow-x-visible md:overflow-y-auto no-scrollbar px-3 pb-3 md:pb-4"
         >
-          {NAV_GROUPS.map((group) => (
+          {VISIBLE_NAV_GROUPS.map((group) => (
             <div key={group.label} className="flex md:flex-col gap-1 md:gap-0.5 shrink-0">
               <span className="hidden md:block px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#6E6E73]">
                 {group.label}
@@ -812,7 +773,7 @@ export default function AdminDashboardPage() {
 
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs font-medium text-[#515154] bg-white border border-black/[0.08] px-3 py-1.5 rounded-full">
-              {ROLE_LABELS[activeUserRole] ?? activeUserRole}
+              {isAdminRole(activeUserRole) ? ROLE_INFO[activeUserRole].label : activeUserRole}
             </span>
             <span className="text-xs font-medium text-[#0B815A] bg-[#0E9F6E]/10 px-3 py-1.5 rounded-full flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#0E9F6E]" aria-hidden="true" />
@@ -857,9 +818,9 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#6E6E73] font-medium">Aktif Ekip & Roller</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Rolünüz</span>
                 <div className="flex items-baseline justify-between mt-2">
-                  <span className="text-3xl font-bold text-[#F59E0B]">{teamMembers.length} Kişi</span>
+                  <span className="text-2xl font-bold text-[#F59E0B]">{isAdminRole(activeUserRole) ? ROLE_INFO[activeUserRole].label : activeUserRole}</span>
                   <span className="text-xs font-semibold text-[#10B981] flex items-center gap-0.5">
                     <UserCheck className="w-3.5 h-3.5" /> RBAC Aktif
                   </span>
@@ -1217,6 +1178,9 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* MÜŞTERİ ADAYLARI (prospects): WebScout'un bulduğu, bizim gideceğimiz işletmeler */}
+        {activeMenu === 'prospects' && <ProspectsPanel notify={notify} />}
+
         {/* TAB 3: APPOINTMENTS */}
         {activeMenu === 'appointments' && (
           <div className="space-y-6 animate-in fade-in duration-200">
@@ -1471,200 +1435,7 @@ export default function AdminDashboardPage() {
         )}
 
         {/* TAB 5: ROLLER & EKİP YETKİLERİ (NEW) */}
-        {activeMenu === 'roller' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Header info */}
-            <div className="apple-card bg-white border border-black/[0.07] p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-black/[0.06] mb-6">
-                <div>
-                  <h3 className="text-base font-bold text-[#1D1D1F] flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#8B5CF6]" />
-                    <span>Rol Tabanlı Yetkilendirme (RBAC) & Ekip Üyeleri</span>
-                  </h3>
-                  <p className="text-xs text-[#6E6E73]">
-                    Hangi ekip üyesinin muhasebe, teklif onayı veya teknik loglara erişebileceğini yönetin
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setTeamModalOpen(true)}
-                  className="apple-pill-btn px-4 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Yeni Ekip Üyesi Ekle</span>
-                </button>
-              </div>
-
-              {/* Team Members List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {teamMembers.map(member => (
-                  <div key={member.id} className="p-5 rounded-2xl bg-[#F5F5F7] border border-black/[0.06] flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                          member.role === 'superadmin' ? 'bg-blue-100 text-blue-700' :
-                          member.role === 'accounting' ? 'bg-emerald-100 text-emerald-700' :
-                          member.role === 'sales' ? 'bg-purple-100 text-purple-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
-                          {member.roleTitle}
-                        </span>
-                        <span className="text-xs text-[#10B981] font-semibold flex items-center gap-1">
-                          <Check className="w-3 h-3" />
-                          {member.status}
-                        </span>
-                      </div>
-
-                      <h4 className="text-base font-bold text-[#1D1D1F]">{member.name}</h4>
-                      <p className="text-xs text-[#6E6E73] mb-3">{member.email}</p>
-
-                      <div className="space-y-1">
-                        <span className="text-[11px] text-[#6E6E73] font-bold uppercase tracking-wider block">Yetki Alanları:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {member.permissions.map((p, idx) => (
-                            <span key={idx} className="bg-white px-2 py-0.5 rounded text-[11px] font-medium text-[#1D1D1F] border border-black/[0.04]">
-                              {p}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-black/[0.06] text-[11px] text-[#6E6E73] mt-4 flex justify-between items-center">
-                      <span>Son Görülme: {member.lastLogin}</span>
-                      <span className="text-[#0071E3] font-semibold cursor-pointer hover:underline">Düzenle</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Role Permissions Matrix Table */}
-              <div className="pt-4 border-t border-black/[0.06]">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] mb-3">
-                  Sistem Yetki Matrisi
-                </h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border border-black/[0.06] rounded-xl overflow-hidden">
-                    <thead className="bg-[#F5F5F7] text-[#6E6E73]">
-                      <tr>
-                        <th className="p-3 font-semibold">Modül / İşlem</th>
-                        <th className="p-3 font-semibold text-center">Süper Admin</th>
-                        <th className="p-3 font-semibold text-center">Muhasebe Müdürü</th>
-                        <th className="p-3 font-semibold text-center">Satış / Lead</th>
-                        <th className="p-3 font-semibold text-center">Çözüm Mimarı</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-black/[0.04]">
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Gelen Teklif Taleplerini Görme & Düzenleme</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#0071E3]">Yalnızca Okuma</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Resmi Teklif Mektubu PDF Basma & Fiyatlandırma</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#0071E3]">Onaylama</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Taslak & Basım</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">E-Fatura Kesme, Kasa & Banka Tahsilatı</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Canlı Siteler & DNS/SSL Sağlık İzleme</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                        <td className="p-3 text-center text-[#0071E3]">Yalnızca Okuma</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Kullanıcı Ekleme, Silme ve Rol Değiştirme</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                        <td className="p-3 text-center text-[#6E6E73]">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* New Member Modal */}
-            {teamModalOpen && (
-              <div role="dialog" aria-modal="true" aria-label="Ekip üyesi" onMouseDown={(e) => { if (e.target === e.currentTarget) setTeamModalOpen(false); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-                <div className="apple-card bg-white p-6 sm:p-8 max-w-md w-full border border-black/[0.1] shadow-2xl">
-                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-4">
-                    <h4 className="text-base font-bold text-[#1D1D1F]">Yeni Ekip Üyesi & Rol Tanımı</h4>
-                    <button type="button" onClick={() => setTeamModalOpen(false)} aria-label="Kapat" className="admin-close">✕</button>
-                  </div>
-
-                  <form onSubmit={handleCreateTeamMember} className="space-y-3.5 text-xs">
-                    <div>
-                      <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Ad Soyad *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Örn: Ayşe Demir"
-                        value={newMemberData.name}
-                        onChange={e => setNewMemberData({ ...newMemberData, name: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Kurumsal E-Posta *</label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="ayse@ysnsoft.com"
-                        value={newMemberData.email}
-                        onChange={e => setNewMemberData({ ...newMemberData, email: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Rol Tanımı</label>
-                      <select
-                        value={newMemberData.role}
-                        onChange={e => {
-                          const r = e.target.value as any;
-                          const title = 
-                            r === 'superadmin' ? 'Süper Admin' :
-                            r === 'accounting' ? 'Mali İşler & Muhasebe' :
-                            r === 'sales' ? 'Satış & Müşteri Yöneticisi' : 'Kıdemli Çözüm Mimarı';
-                          setNewMemberData({ ...newMemberData, role: r, roleTitle: title });
-                        }}
-                        className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                      >
-                        <option value="sales">Satış & Müşteri Yöneticisi</option>
-                        <option value="accounting">Mali İşler & Muhasebe</option>
-                        <option value="engineer">Kıdemli Çözüm Mimarı</option>
-                        <option value="superadmin">Süper Admin</option>
-                      </select>
-                    </div>
-
-                    <div className="pt-3 border-t border-black/[0.06] flex justify-end">
-                      <button
-                        type="submit"
-                        className="apple-pill-btn px-6 py-2 text-xs font-semibold"
-                      >
-                        Üyeyi Kaydet
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {activeMenu === 'roller' && <UsersPanel notify={notify} />}
 
         {/* TAB 6: SITE KONTROL MERKEZİ & YENİ İŞ EKLEME */}
         {activeMenu === 'domains' && (

@@ -42,3 +42,8 @@ next-env.d.ts
 
 # deploy packages
 /_deploy/
+
+# admin accounts (password hashes) and audit log live only on the server
+/data/admin-users.json
+/data/admin-users.json.*.tmp
+/data/admin-audit.log

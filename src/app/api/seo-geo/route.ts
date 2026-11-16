@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireRole } from '@/lib/admin-auth';
 import { getStoredSites } from '@/lib/server-db';
 
 interface SeoAuditResult {
@@ -32,7 +32,7 @@ const DEFAULT_TARGETS = [
 ];
 
 export async function GET(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = requireRole(request, 'seo-geo', 'read');
   if (denied) return denied;
 
   const { searchParams } = new URL(request.url);
@@ -185,7 +185,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = requireRole(request, 'seo-geo', 'write');
   if (denied) return denied;
 
   try {

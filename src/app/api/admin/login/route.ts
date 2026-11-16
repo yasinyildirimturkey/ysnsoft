@@ -10,6 +10,7 @@ import {
   recordFailedAttempt,
   sessionCookieOptions,
 } from '@/lib/admin-auth';
+import { audit } from '@/lib/admin-users';
 
 const noStore = { 'Cache-Control': 'no-store' };
 
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Yönetici girişi yapılandırılmamış. Sunucuda `node scripts/set-admin-password.js` çalıştırın.',
+        error: 'Yönetici girişi yapılandırılmamış (ADMIN_SESSION_SECRET eksik).',
       },
       { status: 503, headers: noStore }
     );
@@ -64,7 +65,11 @@ export async function POST(request: Request) {
   }
 
   clearFailedAttempts(key);
-  const response = NextResponse.json({ success: true, user }, { headers: noStore });
+  audit(user.email, 'login');
+  const response = NextResponse.json(
+    { success: true, user: { email: user.email, name: user.name, role: user.role } },
+    { headers: noStore }
+  );
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return response;
 }

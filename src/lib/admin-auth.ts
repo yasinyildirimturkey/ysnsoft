@@ -1,40 +1,37 @@
 /**
  * Yönetici kimlik doğrulaması — YALNIZCA SUNUCU.
  *
- * Bu dosyayı istemci bileşenlerinden import etmeyin. Şifre özeti ve oturum
- * anahtarı ortam değişkenlerinden okunur; kaynak kodda hiçbir gizli değer yoktur:
+ * Bu dosyayı istemci bileşenlerinden import etmeyin. Kaynak kodda hiçbir gizli değer yoktur:
  *
- *   ADMIN_PASSWORD_HASH   scrypt:<salt-hex>:<hash-hex>  (scripts/set-admin-password.js üretir)
- *   ADMIN_SESSION_SECRET  en az 32 karakterlik rastgele dize
+ *   ADMIN_SESSION_SECRET  en az 32 karakterlik rastgele dize (yoksa giriş kapalı — fail closed)
  *
- * İkisinden biri eksikse giriş kapalıdır (fail closed).
+ * Hesaplar ve şifre özetleri `src/lib/admin-users.ts` deposundadır (data/admin-users.json).
+ * Eski ortak ADMIN_PASSWORD_HASH yalnızca ilk tohumlamada Süper Admin'e aktarılır.
+ * Yetki matrisi `src/lib/roles.ts` içindedir.
  */
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { authenticateUser, findUserById } from '@/lib/admin-users';
+import { can, type AccessLevel, type AdminModule, type AdminRole } from '@/lib/roles';
+
+export type { AdminRole } from '@/lib/roles';
 
 export const SESSION_COOKIE = 'ysn_admin_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 8; // 8 saat
 
-export type AdminRole = 'superadmin' | 'accounting' | 'sales' | 'engineer';
-
 export interface AdminUser {
+  id: string;
   email: string;
   name: string;
   role: AdminRole;
 }
 
 export interface AdminSession extends AdminUser {
+  /** Oturum sürümü (hesap deposundaki `sv` ile eşleşmeli) */
+  sv: number;
   /** Bitiş zamanı (epoch saniye) */
   exp: number;
 }
-
-/** Giriş yapabilen hesaplar. Şifre burada tutulmaz. */
-const ADMIN_USERS: AdminUser[] = [
-  { email: 'yasin@ysnsoft.com', name: 'Yasin Yıldırım', role: 'superadmin' },
-  { email: 'destek@ysnsoft.com', name: 'YSNSOFT Destek Ekibi', role: 'engineer' },
-  { email: 'info@ysnsoft.com', name: 'YSNSOFT Kurumsal İletişim', role: 'sales' },
-  { email: 'noreply@ysnsoft.com', name: 'Sistem & E-Posta Bildirimleri', role: 'accounting' },
-];
 
 // ── Yapılandırma ─────────────────────────────────────────────
 
@@ -44,47 +41,27 @@ function getSecret(): string | null {
 }
 
 export function isAuthConfigured(): boolean {
-  return Boolean(getSecret() && process.env.ADMIN_PASSWORD_HASH);
+  return Boolean(getSecret());
 }
 
-// ── Şifre ────────────────────────────────────────────────────
-
-export function hashPassword(password: string): string {
-  const salt = randomBytes(16);
-  const hash = scryptSync(password, salt, 64);
-  return `scrypt:${salt.toString('hex')}:${hash.toString('hex')}`;
+/** E-posta + şifreyi kullanıcı deposunda doğrular (her hesabın kendi şifresi vardır). */
+export function authenticate(email: string, password: string): (AdminUser & { sv: number }) | null {
+  const user = authenticateUser(email, password);
+  return user ? { id: user.id, email: user.email, name: user.name, role: user.role, sv: user.sv } : null;
 }
 
-function verifyPassword(password: string): boolean {
-  const stored = process.env.ADMIN_PASSWORD_HASH ?? '';
-  const [scheme, saltHex, hashHex] = stored.split(':');
-  if (scheme !== 'scrypt' || !saltHex || !hashHex) return false;
-
-  const expected = Buffer.from(hashHex, 'hex');
-  const actual = scryptSync(password, Buffer.from(saltHex, 'hex'), expected.length || 64);
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
-}
-
-/**
- * E-posta + şifreyi doğrular. Bilinmeyen e-postada da şifre hesabı yapılır ki
- * yanıt süresi hangi hesapların var olduğunu ele vermesin.
- */
-export function authenticate(email: string, password: string): AdminUser | null {
-  const user = ADMIN_USERS.find((u) => u.email === email.trim().toLowerCase());
-  const passwordOk = verifyPassword(password);
-  return user && passwordOk ? user : null;
-}
-
-// ── Oturum belirteci (HMAC imzalı, durumsuz) ─────────────────
+// ── Oturum belirteci (HMAC imzalı; hesap durumu her istekte depodan kontrol edilir) ──
 
 function sign(payload: string, secret: string): string {
   return createHmac('sha256', secret).update(payload).digest('base64url');
 }
 
-export function createSessionToken(user: AdminUser): string | null {
+export function createSessionToken(user: AdminUser & { sv: number }): string | null {
   const secret = getSecret();
   if (!secret) return null;
   const session: AdminSession = {
+    id: user.id,
+    sv: user.sv,
     email: user.email,
     name: user.name,
     role: user.role,
@@ -108,9 +85,10 @@ export function verifySessionToken(token: string | undefined | null): AdminSessi
   try {
     const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as AdminSession;
     if (typeof session.exp !== 'number' || session.exp < Date.now() / 1000) return null;
-    // Hesap listeden çıkarıldıysa eski oturumu da geçersiz say
-    if (!ADMIN_USERS.some((u) => u.email === session.email && u.role === session.role)) return null;
-    return session;
+    // Hesap silindi, pasifleşti, rolü ya da şifresi değiştiyse eski oturum düşer
+    const user = typeof session.id === 'string' ? findUserById(session.id) : undefined;
+    if (!user || user.status !== 'active' || user.sv !== session.sv) return null;
+    return { ...session, email: user.email, name: user.name, role: user.role };
   } catch {
     return null;
   }
@@ -134,19 +112,33 @@ export function getAdminSession(request: Request): AdminSession | null {
   return verifySessionToken(readCookie(request, SESSION_COOKIE));
 }
 
-/**
- * Rota işleyicilerinin başında çağrılır. Oturum yoksa 401 yanıtı döner;
- * varsa `null` döner ve işleyici devam eder.
- *
- *   const denied = requireAdmin(request);
- *   if (denied) return denied;
- */
-export function requireAdmin(request: Request): NextResponse | null {
-  if (getAdminSession(request)) return null;
-  return NextResponse.json(
+const unauthorized = () =>
+  NextResponse.json(
     { success: false, error: 'Bu işlem için yönetici girişi gereklidir.' },
     { status: 401, headers: { 'Cache-Control': 'no-store' } }
   );
+
+const forbidden = () =>
+  NextResponse.json(
+    { success: false, error: 'Bu işlem için yetkiniz yok.' },
+    { status: 403, headers: { 'Cache-Control': 'no-store' } }
+  );
+
+/** Yalnızca oturum kontrolü (rol fark etmez). Mümkünse `requireRole` kullanın. */
+export function requireAdmin(request: Request): NextResponse | null {
+  return getAdminSession(request) ? null : unauthorized();
+}
+
+/**
+ * Oturum + rol yetkisi kontrolü.
+ *
+ *   const denied = requireRole(request, 'leads', 'write');
+ *   if (denied) return denied;
+ */
+export function requireRole(request: Request, module: AdminModule, level: AccessLevel = 'read'): NextResponse | null {
+  const session = getAdminSession(request);
+  if (!session) return unauthorized();
+  return can(session.role, module, level) ? null : forbidden();
 }
 
 export const sessionCookieOptions = {
