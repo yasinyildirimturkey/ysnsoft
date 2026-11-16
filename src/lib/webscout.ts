@@ -15,8 +15,10 @@ const TOOL_DIR = path.join(/* turbopackIgnore: true */ process.cwd(), 'tools', '
 const CLI = path.join(TOOL_DIR, 'src', 'cli.js');
 const [NODE_MAJOR, NODE_MINOR] = process.versions.node.split('.').map(Number);
 const atLeast = (major: number, minor: number) => NODE_MAJOR > major || (NODE_MAJOR === major && NODE_MINOR >= minor);
-// --use-system-ca: kurumsal/TLS denetimli ağlarda sistem sertifikalarını kullan (yalnızca Node >= 22.15 tanır)
-const NODE_FLAGS = [...(atLeast(22, 15) ? ['--use-system-ca'] : []), '--no-warnings'];
+// Varsayılan: Node'un kendi (Mozilla) kök sertifika listesi. --use-system-ca bu listenin YERİNE Windows deposunu
+// kullanır; Windows Server'da eksik kökler yüzünden OSM, GLM gibi HTTPS istekleri "unable to get issuer certificate"
+// ile düşüyordu (2026-11-16). TLS denetimli bir kurumsal ağda gerekirse WEBSCOUT_SYSTEM_CA=1 ile açılır.
+const NODE_FLAGS = [...(process.env.WEBSCOUT_SYSTEM_CA === '1' && atLeast(22, 15) ? ['--use-system-ca'] : []), '--no-warnings'];
 
 export function webscoutAvailability(): { available: boolean; reason?: string } {
   if (!fs.existsSync(CLI)) {
