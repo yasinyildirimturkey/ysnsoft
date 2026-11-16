@@ -16,6 +16,7 @@ import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { DATA_DIR } from './db.js';
 import { llmConfigured, llmJson } from './llm.js';
+import { fetchInsecure } from './scan.js';
 
 export const DRAFT_DIR = join(DATA_DIR, 'drafts');
 export const UPLOAD_DIR = join(DATA_DIR, 'uploads');
@@ -87,11 +88,19 @@ export function imageInfo(buf) {
   return null;
 }
 
-async function download(url, maxBytes = 4_000_000) {
+async function download(url, maxBytes = 4_000_000, insecure = false) {
   try {
-    const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'image/*' }, signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
+    let buf;
+    if (insecure) {
+      // Sertifikası bozuk site (Seviye 2 tespit etti): görseli doğrulamasız indir
+      const r = await fetchInsecure(url, { accept: 'image/*', maxBytes: maxBytes + 1, timeoutMs: 15_000 });
+      if (r.status >= 400) return null;
+      buf = r.buf;
+    } else {
+      const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'image/*' }, signal: AbortSignal.timeout(15_000) });
+      if (!res.ok) return null;
+      buf = Buffer.from(await res.arrayBuffer());
+    }
     if (buf.length > maxBytes) return null;
     const info = imageInfo(buf);
     return info ? { buf, ...info } : null;
@@ -99,6 +108,9 @@ async function download(url, maxBytes = 4_000_000) {
     return null;
   }
 }
+
+// Fotoğraf olmayan site görselleri: rozet, mühür, üyelik/ortak logoları, banner
+const NOT_PHOTO = /logo|badge|siegel|zertifikat|zertifiziert|award|auszeichnung|mitglied|partner|sponsor|innung|verband|handwerkskammer|tuev|t%c3%bcv|tüv|icon|banner|button|signet|emblem|wappen|qr[-_]?code|facebook|instagram|whatsapp|google|trustpilot|provenexpert|kununu/i;
 
 /** Panelden yüklenen saha fotoğrafları (yükleme sırasıyla; ilki kapak). */
 function readUploads(businessId) {
@@ -118,17 +130,21 @@ async function collectImages(businessId, site, dir) {
   const uploads = readUploads(businessId).slice(0, MAX_PHOTOS);
   out.uploads = uploads.length;
 
+  const insecure = Boolean(site?.tlsError);
   if (site?.ok && site.brand?.logo) {
-    const l = await download(site.brand.logo, 1_500_000);
+    const l = await download(site.brand.logo, 1_500_000, insecure);
     if (l) { out.logo = `logo.${l.ext}`; writeFileSync(join(dir, out.logo), l.buf); }
   }
   const fromSite = [];
   if (site?.ok && uploads.length < MAX_PHOTOS) {
-    for (const img of (site.images ?? []).slice(0, 14)) {
+    for (const img of (site.images ?? []).slice(0, 18)) {
       if (uploads.length + fromSite.length >= Math.min(MAX_PHOTOS, 7)) break;
-      const d = await download(img.url);
+      if (NOT_PHOTO.test(`${img.url} ${img.alt ?? ''}`)) continue;
+      const d = await download(img.url, 4_000_000, insecure);
       // Küçük süs görselleri ve çok ince şeritler fotoğraf değildir
       if (!d || d.buf.length < 8_000 || (d.w && d.w < 320) || (d.h && d.h < 200) || (d.w && d.h && d.w / d.h > 4)) continue;
+      // PNG/GIF/WebP çoğunlukla grafik/logodur: yalnızca büyükse fotoğraf say (fotoğraflar neredeyse hep JPEG)
+      if (d.ext !== 'jpg' && !(d.w >= 900 && d.h >= 500)) continue;
       fromSite.push({ ...d, alt: img.alt });
     }
     // Sitedeki görsellerde en büyüğü öne (saha fotoğrafı yoksa kapak olur)

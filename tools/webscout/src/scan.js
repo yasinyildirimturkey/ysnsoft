@@ -95,7 +95,7 @@ const CHECKS = [
 const PLACEHOLDER_STRONG =
   /domain (?:is )?not available|domain nicht verf(?:ü|&uuml;)gbar|data-i18n="?domain-only|sedoparking|parkingcrew|domain (?:steht|ist) zum verkauf|this domain (?:is|may be) for sale|diese domain (?:wurde|ist) (?:registriert|geparkt|reserviert)|hier entsteht (?:eine|in k(?:ü|&uuml;)rze)|domain (?:is now )?reserved|domain wurde soeben freigeschaltet|location\.href\s*=\s*["']\/lander|class="cm-offline-content"/i;
 const PLACEHOLDER_WEAK =
-  /in bearbeitung|im aufbau|under construction|comm?ing soon|(?:web)?seite ist derzeit nicht verf(?:ü|&uuml;)gbar|wartungsmodus|wartungsarbeiten|maintenance mode|tut uns leid|bald (?:wieder )?(?:verf(?:ü|&uuml;)gbar|online|erreichbar)|website (?:ist )?(?:nicht|derzeit nicht) erreichbar|wird (?:derzeit |gerade )?(?:ü|&uuml;)berarbeitet|erwartet sie bald|^\s*maintenance\s*$/i;
+  /in bearbeitung|im aufbau|under construction|comm?ing soon|(?:web)?seite ist derzeit nicht verf(?:ü|&uuml;)gbar|wartungsmodus|wartungsarbeiten|maintenance mode|tut uns leid|bald (?:wieder )?(?:verf(?:ü|&uuml;)gbar|online|erreichbar)|website (?:ist )?(?:nicht|derzeit nicht) erreichbar|wird (?:derzeit |gerade )?(?:ü|&uuml;)berarbeitet|erwartet sie bald|^\s*maintenance\s*$|database connection error|error establishing a database connection|mysql adapter .{0,20} is not available|https not available|does not yet support https/i;
 
 export function visibleText(html) {
   return html
@@ -199,6 +199,62 @@ async function readCapped(res) {
   } catch {
     return new TextDecoder('windows-1252').decode(buf);
   }
+}
+
+// Sertifika hataları: site çalışıyor ama ziyaretçinin tarayıcısı "güvenli değil" der.
+export const TLS_ERROR = /^(CERT_HAS_EXPIRED|CERT_NOT_YET_VALID|CERT_UNTRUSTED|DEPTH_ZERO_SELF_SIGNED_CERT|SELF_SIGNED_CERT_IN_CHAIN|ERR_TLS_CERT_ALTNAME_INVALID|UNABLE_TO_VERIFY_LEAF_SIGNATURE|UNABLE_TO_GET_ISSUER_CERT(_LOCALLY)?)$/;
+
+/**
+ * YALNIZCA okuma için, sertifika doğrulamasız istek (Seviye 2 metin/görsel toplama ve Seviye 3 görsel indirme).
+ * Sertifikası bozuk sitelerin herkese açık içeriğini okumak içindir; kimlik bilgisi ya da çerez gönderilmez.
+ * Seviye 1 puanlaması bunu KULLANMAZ: bozuk sertifika orada bulgu olarak kalır.
+ * @returns {Promise<{status: number, url: string, headers: Headers, buf: Buffer}>}
+ */
+export async function fetchInsecure(rawUrl, { accept = 'text/html,application/xhtml+xml', maxBytes = MAX_BYTES, timeoutMs = TIMEOUT_MS } = {}) {
+  const { request: httpsRequest } = await import('node:https');
+  const { request: httpRequest } = await import('node:http');
+  let url = new URL(rawUrl);
+  const deadline = Date.now() + timeoutMs;
+  for (let hop = 0; hop < 6; hop++) {
+    const result = await new Promise((resolve, reject) => {
+      const req = (url.protocol === 'https:' ? httpsRequest : httpRequest)(url, {
+        method: 'GET',
+        rejectUnauthorized: false,
+        headers: { 'user-agent': UA, accept, 'accept-language': 'de-DE,de;q=0.9' },
+        timeout: Math.max(1000, deadline - Date.now()),
+      }, (res) => {
+        const chunks = [];
+        let total = 0;
+        res.on('data', (c) => {
+          total += c.length;
+          if (total <= maxBytes) chunks.push(c);
+          else res.destroy();
+        });
+        res.on('close', () => resolve({ res, buf: Buffer.concat(chunks) }));
+        res.on('error', reject);
+      });
+      req.on('timeout', () => req.destroy(Object.assign(new Error('timeout'), { name: 'TimeoutError' })));
+      req.on('error', reject);
+      req.end();
+    });
+    const loc = result.res.headers.location;
+    if (result.res.statusCode >= 300 && result.res.statusCode < 400 && loc) {
+      url = new URL(loc, url);
+      continue;
+    }
+    const headers = new Headers();
+    for (const [k, v] of Object.entries(result.res.headers)) if (v !== undefined) headers.set(k, Array.isArray(v) ? v.join(', ') : String(v));
+    return { status: result.res.statusCode ?? 0, url: url.href, headers, buf: result.buf };
+  }
+  throw new Error('too_many_redirects');
+}
+
+/** `get` ile aynı biçim, ama sertifika doğrulamasız (yalnızca Seviye 2 içerik toplama). */
+export async function getInsecure(url) {
+  const t0 = Date.now();
+  const r = await fetchInsecure(url);
+  const html = await readCapped(new Response(r.buf, { headers: r.headers }));
+  return { res: { status: r.status, url: r.url, headers: r.headers }, html, ms: Date.now() - t0 };
 }
 
 export async function get(url) {
