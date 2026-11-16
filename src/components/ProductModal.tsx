@@ -67,14 +67,14 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
             <button
               onClick={handleCopyLink}
               title="Site Adresini Kopyala"
-              className="p-2 text-[#6E6E73] hover:text-[#1D1D1F] rounded-full hover:bg-black/5 transition-colors text-xs flex items-center gap-1.5"
+              className="p-2 text-[#515154] hover:text-[#1D1D1F] rounded-full hover:bg-black/5 transition-colors text-xs flex items-center gap-1.5"
             >
               {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4" />}
               <span className="hidden sm:inline">{copied ? 'Kopyalandı' : 'Adresi Paylaş'}</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-[#6E6E73] hover:text-[#1D1D1F] rounded-full hover:bg-black/5 transition-colors"
+              className="p-2 text-[#515154] hover:text-[#1D1D1F] rounded-full hover:bg-black/5 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -89,7 +89,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
               <h3 className="text-2xl sm:text-3xl font-semibold text-[#1D1D1F] tracking-tight mb-1.5">
                 {product.name}
               </h3>
-              <p className="text-sm text-[#6E6E73]">
+              <p className="text-sm text-[#515154]">
                 {product.tagline}
               </p>
             </div>
@@ -115,7 +115,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     activeScreenTab === 'overview'
                       ? 'bg-[#1D1D1F] text-white shadow-xs'
-                      : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                      : 'text-[#515154] hover:text-[#1D1D1F]'
                   }`}
                 >
                   Modül Detayları
@@ -125,7 +125,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     activeScreenTab === 'live'
                       ? 'bg-[#1D1D1F] text-white shadow-xs'
-                      : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                      : 'text-[#515154] hover:text-[#1D1D1F]'
                   }`}
                 >
                   Canlı Site Önizleme ({product.displayDomain})
@@ -135,7 +135,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     activeScreenTab === 'analytics'
                       ? 'bg-[#1D1D1F] text-white shadow-xs'
-                      : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                      : 'text-[#515154] hover:text-[#1D1D1F]'
                   }`}
                 >
                   Performans Metrikleri
@@ -145,7 +145,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     activeScreenTab === 'specs'
                       ? 'bg-[#1D1D1F] text-white shadow-xs'
-                      : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+                      : 'text-[#515154] hover:text-[#1D1D1F]'
                   }`}
                 >
                   Mimari & Güvenlik
@@ -162,7 +162,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
             {activeScreenTab === 'live' && (
               <div className="bg-white rounded-xl p-4 border border-black/[0.06] shadow-sm animate-in fade-in duration-150">
                 <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] mb-3">
-                  <div className="flex items-center gap-2 text-xs font-mono text-[#86868B]">
+                  <div className="flex items-center gap-2 text-xs font-mono text-[#6E6E73]">
                     <span className="w-2 h-2 rounded-full bg-[#10B981]" />
                     <span>{product.liveUrl}</span>
                   </div>
@@ -187,7 +187,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                   />
                   {/* Subtle overlay bar allowing direct open if iframe is restricted */}
                   <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-black/[0.1] text-xs font-medium flex items-center gap-2 shadow-sm">
-                    <span className="text-[#6E6E73]">Site açılmıyorsa:</span>
+                    <span className="text-[#515154]">Site açılmıyorsa:</span>
                     <a
                       href={product.liveUrl}
                       target="_blank"
@@ -209,7 +209,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                     <span className="w-2.5 h-2.5 rounded-full bg-[#0071E3]" />
                     <span>{product.name} — Sistem Mimarisi & Açıklama</span>
                   </div>
-                  <span className="text-[11px] font-medium text-[#86868B] bg-[#F5F5F7] px-2.5 py-0.5 rounded-md">
+                  <span className="text-[11px] font-medium text-[#6E6E73] bg-[#F5F5F7] px-2.5 py-0.5 rounded-md">
                     {product.displayDomain}
                   </span>
                 </div>
@@ -237,19 +237,19 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#86868B]">Aktif Kullanıcı</span>
+                    <span className="text-[11px] text-[#6E6E73]">Aktif Kullanıcı</span>
                     <p className="text-base font-semibold text-[#1D1D1F] mt-1">{product.liveStats.users}</p>
                   </div>
                   <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#86868B]">Uptime Oranı</span>
+                    <span className="text-[11px] text-[#6E6E73]">Uptime Oranı</span>
                     <p className="text-base font-semibold text-[#10B981] mt-1">{product.liveStats.uptime}</p>
                   </div>
                   <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#86868B]">İşlem Hacmi</span>
+                    <span className="text-[11px] text-[#6E6E73]">İşlem Hacmi</span>
                     <p className="text-base font-semibold text-[#1D1D1F] mt-1">{product.liveStats.processedVolume}</p>
                   </div>
                   <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#86868B]">Ortalama Yanıt Hızı</span>
+                    <span className="text-[11px] text-[#6E6E73]">Ortalama Yanıt Hızı</span>
                     <p className="text-base font-semibold text-[#0071E3] mt-1">{product.liveStats.speed}</p>
                   </div>
                 </div>
@@ -283,7 +283,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                   ))}
                 </div>
 
-                <div className="space-y-2 text-xs text-[#6E6E73]">
+                <div className="space-y-2 text-xs text-[#515154]">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#10B981]" />
                     <span>Uçtan Uca AES-256 Şifreleme ve TLS 1.3 Protokolü</span>
@@ -305,7 +305,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
           <div className="grid grid-cols-3 gap-4 mb-8">
             {product.metrics.map((metric, i) => (
               <div key={i} className="text-center p-3 rounded-2xl bg-[#F5F5F7] border border-black/[0.04]">
-                <div className="text-xs text-[#86868B]">{metric.label}</div>
+                <div className="text-xs text-[#6E6E73]">{metric.label}</div>
                 <div className="text-xl sm:text-2xl font-semibold text-[#1D1D1F] mt-1">{metric.value}</div>
               </div>
             ))}
@@ -314,7 +314,7 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
           {/* Conversion Action Footer */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-black/[0.06]">
             <div>
-              <span className="text-xs text-[#86868B]">Şirketinize Özel Kurulum</span>
+              <span className="text-xs text-[#6E6E73]">Şirketinize Özel Kurulum</span>
               <p className="text-sm font-semibold text-[#1D1D1F]">Canlı demo ve özel fiyat teklifi için hazırız.</p>
             </div>
 

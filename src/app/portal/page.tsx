@@ -309,6 +309,12 @@ export default function ClientPortalPage() {
   const [selectedCode, setSelectedCode] = useState('YSN-KGLEX-2026');
   const [feedback, setFeedback] = useState('');
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [codeError, setCodeError] = useState('');
+  const [notice, setNotice] = useState('');
+  const showNotice = (message: string) => {
+    setNotice(message);
+    setTimeout(() => setNotice(''), 4000);
+  };
 
   const currentProject = mockProjects[selectedCode] || mockProjects['YSN-KGLEX-2026'];
 
@@ -317,8 +323,9 @@ export default function ClientPortalPage() {
     const clean = projectCodeInput.trim().toUpperCase();
     if (mockProjects[clean]) {
       setSelectedCode(clean);
+      setCodeError('');
     } else {
-      alert(`Girilen proje kodu (${clean}) bulunamadı. Lütfen size iletilen YSN-XXXX-2026 formatındaki kodu giriniz.`);
+      setCodeError(`"${clean}" kodlu proje bulunamadı. Size iletilen YSN-XXXX-2026 biçimindeki kodu girin.`);
     }
   };
 
@@ -332,39 +339,49 @@ export default function ClientPortalPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] selection:bg-blue-500 selection:text-white pb-24">
-      {/* Top Navbar */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* Bildirim */}
+      {notice && (
+        <div role="status" aria-live="polite" className="fixed bottom-6 inset-x-4 z-[70] flex justify-center pointer-events-none">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-3xl pointer-events-auto bg-[#1D1D1F] text-white text-[13px] font-medium shadow-[0_12px_40px_rgba(0,0,0,0.25)] animate-in fade-in slide-in-from-bottom-3 duration-200">
+            <CheckCircle2 className="w-4 h-4 text-[#34D399] shrink-0" aria-hidden="true" />
+            <span>{notice}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Üst çubuk */}
+      <nav aria-label="Portal" className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl backdrop-saturate-150 border-b border-black/[0.08]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/"
-              className="flex items-center gap-2 text-xs font-semibold text-[#86868B] hover:text-[#1D1D1F] transition-colors bg-gray-100 px-3 py-1.5 rounded-full"
+              aria-label="Ana sayfaya dön"
+              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[#515154] hover:text-[#1D1D1F] hover:bg-black/[0.05] transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Ana Sayfaya Dön
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             </Link>
-            <div className="h-4 w-[1px] bg-gray-300 hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <span className="font-bold tracking-tight text-lg">YSNSOFT</span>
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md font-semibold">
-                Müşteri Takip Portalı
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="font-semibold tracking-tight text-[17px]">
+                YSN<span className="text-[#0071E3]">SOFT</span>
               </span>
+              <span className="text-[13px] text-[#6E6E73] font-medium truncate">Müşteri Portalı</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Link
               href="/admin/login"
-              className="text-xs font-medium text-[#86868B] hover:text-[#1D1D1F] px-3 py-1.5 rounded-full hover:bg-gray-100 transition-colors hidden sm:block"
+              className="text-[13px] font-medium text-[#515154] hover:text-[#1D1D1F] px-3 py-2 rounded-full hover:bg-black/[0.04] transition-colors hidden sm:block"
             >
-              Yönetici Girişi (Admin)
+              Yönetici Girişi
             </Link>
             <a
               href="https://wa.me/905327255098"
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-semibold px-3.5 py-1.5 bg-[#0071E3] text-white rounded-full hover:bg-blue-600 transition-all shadow-sm flex items-center gap-1.5"
+              className="apple-pill-btn text-[13px] font-semibold px-4 py-2 flex items-center gap-1.5"
             >
-              <span>Canlı Mimar Desteği</span>
+              Destek Alın
             </a>
           </div>
         </div>
@@ -381,7 +398,7 @@ export default function ClientPortalPage() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1D1D1F]">
               {currentProject.projectName}
             </h1>
-            <p className="text-sm text-[#86868B] mt-1 flex items-center gap-3 flex-wrap">
+            <p className="text-sm text-[#6E6E73] mt-1 flex items-center gap-3 flex-wrap">
               <span>Müşteri: <strong>{currentProject.clientName}</strong></span>
               <span>•</span>
               <span>Proje Kodu: <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono font-bold text-blue-600">{currentProject.code}</code></span>
@@ -399,18 +416,21 @@ export default function ClientPortalPage() {
 
           {/* Quick Demo Switcher & Code Form */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-2xl">
+            <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-2xl overflow-x-auto no-scrollbar max-w-full">
               {Object.keys(mockProjects).map(code => (
                 <button
                   key={code}
+                  type="button"
+                  aria-pressed={selectedCode === code}
                   onClick={() => {
                     setSelectedCode(code);
                     setProjectCodeInput(code);
+                    setCodeError('');
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     selectedCode === code
                       ? 'bg-white text-blue-600 shadow-xs'
-                      : 'text-[#86868B] hover:text-[#1D1D1F]'
+                      : 'text-[#6E6E73] hover:text-[#1D1D1F]'
                   }`}
                 >
                   {code.replace('YSN-', '').replace('-2026', '')}
@@ -418,20 +438,40 @@ export default function ClientPortalPage() {
               ))}
             </div>
 
-            <form onSubmit={handleSearch} className="flex items-center gap-2">
+            <form onSubmit={handleSearch} className="relative flex items-center gap-2" noValidate>
+              <label htmlFor="project-code" className="sr-only">Proje kodu</label>
               <input
+                id="project-code"
                 type="text"
                 value={projectCodeInput}
-                onChange={e => setProjectCodeInput(e.target.value)}
-                placeholder="Proje Kodu (YSN-XXXX-2026)"
-                className="px-3.5 py-2 bg-[#F5F5F7] border border-gray-200 rounded-xl text-xs font-mono focus:outline-none focus:border-blue-500 w-44"
+                onChange={e => {
+                  setProjectCodeInput(e.target.value);
+                  if (codeError) setCodeError('');
+                }}
+                placeholder="YSN-XXXX-2026"
+                autoComplete="off"
+                spellCheck={false}
+                aria-invalid={codeError ? true : undefined}
+                aria-describedby={codeError ? 'project-code-error' : undefined}
+                className={`flex-1 sm:flex-none px-3.5 py-2.5 bg-[#F5F5F7] border rounded-xl text-[13px] font-mono uppercase w-full sm:w-44 transition-colors ${
+                  codeError ? 'border-red-400 bg-red-50' : 'border-black/[0.08] focus:border-[#0071E3]'
+                }`}
               />
               <button
                 type="submit"
-                className="px-3.5 py-2 bg-[#1D1D1F] hover:bg-black text-white text-xs font-semibold rounded-xl transition-all"
+                className="px-4 py-2.5 bg-[#1D1D1F] hover:bg-black text-white text-[13px] font-semibold rounded-xl transition-colors"
               >
                 Getir
               </button>
+              {codeError && (
+                <p
+                  id="project-code-error"
+                  role="alert"
+                  className="absolute top-full right-0 mt-2 w-max max-w-[min(22rem,calc(100vw-3rem))] px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium z-10 animate-in fade-in slide-in-from-top-2 duration-200"
+                >
+                  {codeError}
+                </p>
+              )}
             </form>
           </div>
         </div>
@@ -439,7 +479,7 @@ export default function ClientPortalPage() {
         {/* Progress & KPI Ribbon */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-            <div className="text-xs text-[#86868B] font-medium flex items-center justify-between">
+            <div className="text-xs text-[#6E6E73] font-medium flex items-center justify-between">
               Genel Tamamlanma
               <span className="font-bold text-blue-600">{currentProject.overallProgress}%</span>
             </div>
@@ -455,37 +495,37 @@ export default function ClientPortalPage() {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-            <div className="text-xs text-[#86868B] font-medium flex items-center gap-1.5">
+            <div className="text-xs text-[#6E6E73] font-medium flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-500" /> Aktif Sprint & Aşama
             </div>
             <div className="mt-2 text-sm font-bold text-[#1D1D1F] line-clamp-1">
               {currentProject.currentSprint}
             </div>
-            <div className="text-xs text-[#86868B] mt-2">
+            <div className="text-xs text-[#6E6E73] mt-2">
               Hedef Canlıya Alım: <strong className="text-[#1D1D1F]">{currentProject.targetLaunch}</strong>
             </div>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-            <div className="text-xs text-[#86868B] font-medium flex items-center gap-1.5">
+            <div className="text-xs text-[#6E6E73] font-medium flex items-center gap-1.5">
               <Server className="w-3.5 h-3.5 text-emerald-500" /> SLA & Çalışma Süresi
             </div>
             <div className="mt-2 text-2xl font-bold text-emerald-600 flex items-center gap-1.5">
-              %99.98 <span className="text-xs font-normal text-[#86868B]">Uptime</span>
+              %99.98 <span className="text-xs font-normal text-[#6E6E73]">Uptime</span>
             </div>
-            <div className="text-xs text-[#86868B] mt-2">
+            <div className="text-xs text-[#6E6E73] mt-2">
               Ortalama Yanıt: <strong className="text-emerald-700">24ms (Edge)</strong>
             </div>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-            <div className="text-xs text-[#86868B] font-medium flex items-center gap-1.5">
+            <div className="text-xs text-[#6E6E73] font-medium flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Güvenlik & KVKK Uyumu
             </div>
             <div className="mt-2 text-2xl font-bold text-blue-600 flex items-center gap-1.5">
               A+ Seviye
             </div>
-            <div className="text-xs text-[#86868B] mt-2">
+            <div className="text-xs text-[#6E6E73] mt-2">
               Sıfır Güvenlik Zafiyeti (OWASP Denetimli)
             </div>
           </div>
@@ -499,7 +539,7 @@ export default function ClientPortalPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-[#1D1D1F]">Proje Fazları & Aşama Detayları</h2>
-                  <p className="text-xs text-[#86868B] mt-0.5">Sözleşme ve teknik şartname kapsamındaki teslimatlar</p>
+                  <p className="text-xs text-[#6E6E73] mt-0.5">Sözleşme ve teknik şartname kapsamındaki teslimatlar</p>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg border border-blue-200">
                   Agile Scrum 2-Haftalık Sprintler
@@ -524,7 +564,7 @@ export default function ClientPortalPage() {
                       ) : m.status === 'in_progress' ? (
                         <Clock className="w-3.5 h-3.5" />
                       ) : (
-                        <span className="text-[10px] font-bold">{idx + 1}</span>
+                        <span className="text-[11px] font-bold">{idx + 1}</span>
                       )}
                     </div>
 
@@ -533,22 +573,22 @@ export default function ClientPortalPage() {
                         <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-2">
                           {m.title}
                           {m.status === 'completed' && (
-                            <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded-md">
+                            <span className="px-2 py-0.5 text-[11px] font-semibold bg-emerald-100 text-emerald-800 rounded-md">
                               Tamamlandı
                             </span>
                           )}
                           {m.status === 'in_progress' && (
-                            <span className="px-2 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-800 rounded-md">
+                            <span className="px-2 py-0.5 text-[11px] font-semibold bg-blue-100 text-blue-800 rounded-md">
                               Geliştiriliyor
                             </span>
                           )}
                           {m.status === 'upcoming' && (
-                            <span className="px-2 py-0.5 text-[10px] font-semibold bg-gray-200 text-gray-700 rounded-md">
+                            <span className="px-2 py-0.5 text-[11px] font-semibold bg-gray-200 text-gray-700 rounded-md">
                               Sıradaki Faz
                             </span>
                           )}
                         </h3>
-                        <span className="text-xs text-[#86868B] font-medium">{m.date}</span>
+                        <span className="text-xs text-[#6E6E73] font-medium">{m.date}</span>
                       </div>
                       <p className="text-xs text-[#555] leading-relaxed mb-3">{m.description}</p>
                       
@@ -576,7 +616,7 @@ export default function ClientPortalPage() {
                   <GitCommit className="w-4 h-4 text-purple-600" />
                   <h3 className="text-sm font-bold text-[#1D1D1F]">Canlı Git Geliştirme Akışı</h3>
                 </div>
-                <span className="text-xs text-[#86868B] font-mono">YSNSOFT Private Repo (GitHub Enterprise)</span>
+                <span className="text-xs text-[#6E6E73] font-mono">YSNSOFT Private Repo (GitHub Enterprise)</span>
               </div>
               <div className="space-y-2.5">
                 {currentProject.gitActivity.map((git, i) => (
@@ -590,8 +630,8 @@ export default function ClientPortalPage() {
                       </span>
                       <span className="text-[#1D1D1F] font-sans font-medium line-clamp-1">{git.msg}</span>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0 text-[#86868B]">
-                      <span className="hidden sm:inline bg-gray-200 px-2 py-0.5 rounded text-[10px]">
+                    <div className="flex items-center gap-3 shrink-0 text-[#6E6E73]">
+                      <span className="hidden sm:inline bg-gray-200 px-2 py-0.5 rounded text-[11px]">
                         {git.branch}
                       </span>
                       <span>{git.time}</span>
@@ -617,7 +657,7 @@ export default function ClientPortalPage() {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-[#1D1D1F]">{member.name}</div>
-                      <div className="text-[11px] text-[#86868B]">{member.role}</div>
+                      <div className="text-[11px] text-[#6E6E73]">{member.role}</div>
                     </div>
                   </div>
                 ))}
@@ -647,15 +687,15 @@ export default function ClientPortalPage() {
                 <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-2">
                   <FileText className="w-4 h-4 text-emerald-600" /> Proje Faturaları
                 </h3>
-                <span className="text-xs text-[#86868B]">E-Fatura (GİB)</span>
+                <span className="text-xs text-[#6E6E73]">E-Fatura (GİB)</span>
               </div>
               <div className="space-y-2.5">
                 {currentProject.invoices.map((inv, i) => (
                   <div key={i} className="p-3 bg-[#F5F5F7] rounded-xl border border-gray-200/60 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono text-[#86868B] font-semibold">{inv.no}</span>
+                      <span className="font-mono text-[#6E6E73] font-semibold">{inv.no}</span>
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                           inv.status === 'paid'
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-amber-100 text-amber-800'
@@ -668,7 +708,8 @@ export default function ClientPortalPage() {
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-xs font-bold text-blue-600">{inv.amount}</span>
                       <button
-                        onClick={() => alert(`${inv.no} numaralı e-fatura PDF'i indirildi.`)}
+                        type="button"
+                        onClick={() => showNotice(`${inv.no} numaralı e-fatura PDF'i indirildi.`)}
                         className="text-[11px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                       >
                         <Download className="w-3 h-3" /> PDF İndir
@@ -684,7 +725,7 @@ export default function ClientPortalPage() {
               <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-2 mb-2">
                 <Send className="w-4 h-4 text-blue-600" /> Revizyon & Geri Bildirim Talebi
               </h3>
-              <p className="text-xs text-[#86868B] mb-3">
+              <p className="text-xs text-[#6E6E73] mb-3">
                 Doğrudan Çözüm Mimarımız ve Lead Geliştiricimize iletilir.
               </p>
               {feedbackSuccess ? (

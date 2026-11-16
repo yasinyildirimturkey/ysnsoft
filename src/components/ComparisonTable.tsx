@@ -44,20 +44,20 @@ export default function ComparisonTable() {
   ];
 
   return (
-    <section className="py-24 bg-[#F5F5F7]">
+    <section className="py-16 sm:py-24 bg-[#F5F5F7]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Fark Yaratan Mühendislik</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Eski nesil çözümler vs. <br />
-            <span className="text-[#0071E3]">YSNSOFT Canlı Ürün Ekosistemi.</span>
+            <span>YSNSOFT Canlı Ürün Ekosistemi.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Şirketinizi geleceğe taşırken operasyonel verimi nasıl 10 katına çıkardığımızı gerçek ürün kabiliyetlerimizle görün.
           </p>
         </div>
@@ -67,10 +67,10 @@ export default function ComparisonTable() {
           <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
               <tr className="border-b border-black/[0.08]">
-                <th className="pb-5 text-sm font-semibold text-[#86868B] uppercase tracking-wider w-1/3">
+                <th className="pb-5 text-sm font-semibold text-[#6E6E73] uppercase tracking-wider w-1/3">
                   Sektörel Kriter
                 </th>
-                <th className="pb-5 text-sm font-semibold text-[#86868B] w-1/3">
+                <th className="pb-5 text-sm font-semibold text-[#6E6E73] w-1/3">
                   Geleneksel Yazılımlar
                 </th>
                 <th className="pb-5 text-sm font-bold text-[#0071E3] w-1/3 flex items-center gap-1.5">
@@ -85,7 +85,7 @@ export default function ComparisonTable() {
                   <td className="py-4.5 font-semibold text-[#1D1D1F] pr-4">
                     {item.feature}
                   </td>
-                  <td className="py-4.5 text-[#6E6E73] pr-4 flex items-center gap-2">
+                  <td className="py-4.5 text-[#515154] pr-4 flex items-center gap-2">
                     <X className="w-4 h-4 text-[#FF5F56] shrink-0" />
                     <span>{item.traditional}</span>
                   </td>

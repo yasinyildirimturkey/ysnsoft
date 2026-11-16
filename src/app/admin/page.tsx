@@ -6,8 +6,6 @@ import {
   getStoredLeads, 
   updateLeadStatus, 
   getStoredAppointments, 
-  getStoredTeamMembers,
-  saveTeamMember,
   getStoredInvoices,
   saveInvoice,
   updateInvoiceStatus,
@@ -23,13 +21,15 @@ import {
   GeoSettings,
   Lead, 
   Appointment,
-  TeamMember,
   InvoiceRecord,
   SmtpSettings,
   SystemSettings,
   PRESET_ADMIN_USERS
 } from '@/lib/store';
 import { PRODUCTS, Product } from '@/data/products';
+import ProspectsPanel from '@/components/admin/ProspectsPanel';
+import UsersPanel from '@/components/admin/UsersPanel';
+import { ROLE_INFO, can, isAdminRole } from '@/lib/roles';
 import { 
   Layers, 
   LayoutDashboard, 
@@ -71,18 +71,18 @@ import {
   Edit3,
   Copy,
   Code,
-  CheckSquare
+  CheckSquare,
+  Target
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [activeMenu, setActiveMenu] = useState<'overview' | 'leads' | 'appointments' | 'muhasebe' | 'roller' | 'domains' | 'seo-geo' | 'glm' | 'settings'>('overview');
+  const [activeMenu, setActiveMenu] = useState<'overview' | 'leads' | 'prospects' | 'appointments' | 'muhasebe' | 'roller' | 'domains' | 'seo-geo' | 'glm' | 'settings'>('overview');
   
   // States
   const [leads, setLeads] = useState<Lead[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -101,6 +101,10 @@ export default function AdminDashboardPage() {
   });
   const [sitePings, setSitePings] = useState<Record<string, { latency: number; status: string; checkedAt: string }>>({});
   const [siteActionMessage, setSiteActionMessage] = useState<string | null>(null);
+  // Köprü belirteçleri pakete gömülmez; oturum doğrulandıktan sonra sunucudan alınır
+  const [bridgeTokens, setBridgeTokens] = useState<{ master: string; sites: Record<string, string> }>({ master: '', sites: {} });
+  const tokenForDomain = (displayDomain: string) =>
+    bridgeTokens.sites[displayDomain.toLowerCase().replace(/^www\./, '')] || '';
 
   // SEO & GEO Automation States
   const [geoConfig, setGeoConfig] = useState<GeoSettings>({
@@ -131,7 +135,7 @@ export default function AdminDashboardPage() {
     host: 'mail.ysnsoft.com',
     port: 587,
     user: 'noreply@ysnsoft.com',
-    pass: 'Deniz2026?!',
+    pass: '',
     fromName: 'YSNSOFT Bilişim Teknolojileri',
     fromEmail: 'noreply@ysnsoft.com',
     secure: true
@@ -175,37 +179,33 @@ export default function AdminDashboardPage() {
     paymentType: 'Havale / EFT' as const
   });
 
-  const [teamModalOpen, setTeamModalOpen] = useState(false);
-  const [newMemberData, setNewMemberData] = useState({
-    name: '',
-    email: '',
-    role: 'sales' as const,
-    roleTitle: 'Satış & Müşteri Temsilcisi',
-    status: 'Aktif' as const,
-    permissions: ['Teklif Talepleri', 'Müşteri CRM']
-  });
-
   // Load from store on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isAuth = sessionStorage.getItem('ysn_admin_auth');
-      if (isAuth !== 'true') {
+    let cancelled = false;
+
+    // Oturum sunucuda doğrulanır (httpOnly çerez); tarayıcıda saklanan bir bayrağa güvenilmez.
+    (async () => {
+      let session: { authenticated: boolean; user?: { email: string; name: string; role: string } };
+      try {
+        const res = await fetch('/api/admin/session', { cache: 'no-store' });
+        session = await res.json();
+      } catch {
+        session = { authenticated: false };
+      }
+      if (cancelled) return;
+
+      if (!session.authenticated || !session.user) {
         setIsAuthenticated(false);
         router.replace('/admin/login');
         return;
       }
       setIsAuthenticated(true);
-
-      const r = sessionStorage.getItem('ysn_admin_role') || 'superadmin';
-      const e = sessionStorage.getItem('ysn_admin_email') || 'yasin@ysnsoft.com';
-      const n = sessionStorage.getItem('ysn_admin_name') || 'Yasin Yıldırım';
-      setActiveUserRole(r);
-      setActiveUserEmail(e);
-      setActiveUserName(n);
+      setActiveUserRole(session.user.role);
+      setActiveUserEmail(session.user.email);
+      setActiveUserName(session.user.name);
 
       setLeads(getStoredLeads());
       setAppointments(getStoredAppointments());
-      setTeamMembers(getStoredTeamMembers());
       setInvoices(getStoredInvoices());
       setSmtpSettings(getStoredSmtpSettings());
       setSystemSettings(getStoredSystemSettings());
@@ -216,7 +216,22 @@ export default function AdminDashboardPage() {
       const savedModel = localStorage.getItem('ysn_glm_model') || 'glm-4-plus';
       setAdminGlmKey(savedKey);
       setAdminGlmModel(savedModel);
-    }
+
+      try {
+        const bridge = await (await fetch('/api/bridge', { cache: 'no-store' })).json();
+        if (!cancelled && bridge?.success) {
+          const sites: Record<string, string> = {};
+          for (const site of bridge.sites ?? []) sites[site.domain] = site.token || '';
+          setBridgeTokens({ master: bridge.masterToken || '', sites });
+        }
+      } catch {
+        // belirteçler alınamazsa ilgili alanlar "tanımlı değil" gösterir
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   // Site Control Center Handlers
@@ -261,7 +276,7 @@ export default function AdminDashboardPage() {
   const handleAddNewSite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSiteData.name || !newSiteData.displayDomain) {
-      alert('Lütfen proje adı ve alan adını giriniz.');
+      notify('Lütfen proje adı ve alan adını giriniz.');
       return;
     }
 
@@ -322,7 +337,7 @@ export default function AdminDashboardPage() {
         setSeoAuditOverallScore(data.overallScore || 90);
       }
     } catch (err) {
-      alert('SEO denetimi sırasında bağlantı hatası oluştu.');
+      notify('SEO denetimi sırasında bağlantı hatası oluştu.');
     } finally {
       setSeoAuditLoading(false);
     }
@@ -356,7 +371,7 @@ export default function AdminDashboardPage() {
         setSeoGeneratedCode(data.snippets);
       }
     } catch {
-      alert('Kod üretimi sırasında hata oluştu.');
+      notify('Kod üretimi sırasında hata oluştu.');
     } finally {
       setSeoGenerating(false);
     }
@@ -367,14 +382,14 @@ export default function AdminDashboardPage() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('ysn_glm_api_key', adminGlmKey.trim());
       localStorage.setItem('ysn_glm_model', adminGlmModel);
-      alert('Yapay Zeka API Anahtarı ve Model konfigürasyonu başarıyla kaydedildi!');
+      notify('Yapay Zeka API Anahtarı ve Model konfigürasyonu başarıyla kaydedildi!');
     }
   };
 
   const handleSaveSmtp = (e: React.FormEvent) => {
     e.preventDefault();
     saveSmtpSettings(smtpSettings);
-    alert('SMTP E-Posta ayarları başarıyla güncellendi!');
+    notify('SMTP E-Posta ayarları başarıyla güncellendi!');
   };
 
   const handleTestSmtp = () => {
@@ -389,7 +404,7 @@ export default function AdminDashboardPage() {
   const handleSaveSystemSettings = (e: React.FormEvent) => {
     e.preventDefault();
     saveSystemSettings(systemSettings);
-    alert('Sistem ve şirket iletişim ayarları başarıyla kaydedildi!');
+    notify('Sistem ve şirket iletişim ayarları başarıyla kaydedildi!');
   };
 
   const handleTestGlm = async () => {
@@ -465,40 +480,38 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const handleCreateTeamMember = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMemberData.name || !newMemberData.email) return;
-
-    saveTeamMember({
-      name: newMemberData.name,
-      email: newMemberData.email,
-      role: newMemberData.role,
-      roleTitle: newMemberData.roleTitle,
-      status: newMemberData.status,
-      permissions: newMemberData.permissions
-    });
-
-    setTeamMembers(getStoredTeamMembers());
-    setTeamModalOpen(false);
-    setNewMemberData({
-      name: '',
-      email: '',
-      role: 'sales',
-      roleTitle: 'Satış & Müşteri Temsilcisi',
-      status: 'Aktif',
-      permissions: ['Teklif Talepleri', 'Müşteri CRM']
-    });
+  // Tarayıcı alert() yerine sayfa içi bildirim
+  const [toast, setToast] = useState<{ id: number; message: string; tone: 'success' | 'error' } | null>(null);
+  const notify = (message: string) => {
+    const tone = /hata|lütfen|bulunamadı|geçersiz/i.test(message) ? 'error' : 'success';
+    setToast({ id: Date.now(), message, tone });
   };
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('ysn_admin_auth');
-      sessionStorage.removeItem('ysn_admin_role');
-      sessionStorage.removeItem('ysn_admin_email');
-      sessionStorage.removeItem('ysn_admin_name');
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (proposalLead) setProposalLead(null);
+      else if (selectedLead) setSelectedLead(null);
+      else if (invoiceModalOpen) setInvoiceModalOpen(false);
+      else if (siteModalOpen) setSiteModalOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [proposalLead, selectedLead, invoiceModalOpen, siteModalOpen]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+    } catch {
+      // ağ hatasında da giriş sayfasına dön; çerez süresi dolunca oturum zaten biter
     }
     setIsAuthenticated(false);
-    router.push('/admin/login');
+    router.replace('/admin/login');
   };
 
   const filteredLeads = leads.filter(l => {
@@ -535,6 +548,62 @@ export default function AdminDashboardPage() {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(val);
   };
 
+  type MenuId = typeof activeMenu;
+  const newLeadCount = leads.filter(l => l.status === 'Yeni').length;
+
+  const NAV_GROUPS: {
+    label: string;
+    items: { id: MenuId; label: string; icon: typeof Layers; badge?: number; highlight?: boolean }[];
+  }[] = [
+    {
+      label: 'Genel',
+      items: [{ id: 'overview', label: 'Genel Bakış', icon: LayoutDashboard }],
+    },
+    {
+      label: 'Satış',
+      items: [
+        { id: 'leads', label: 'Teklif Talepleri', icon: Inbox, badge: newLeadCount, highlight: true },
+        { id: 'prospects', label: 'Müşteri Adayları', icon: Target },
+        { id: 'appointments', label: 'Randevular', icon: Calendar, badge: appointments.length },
+        { id: 'muhasebe', label: 'Muhasebe & Finans', icon: Receipt },
+      ],
+    },
+    {
+      label: 'Platform',
+      items: [
+        { id: 'domains', label: 'Site Kontrol Merkezi', icon: Globe, badge: products.length },
+        { id: 'seo-geo', label: 'SEO & GEO', icon: Compass },
+        { id: 'glm', label: 'Yapay Zekâ Stüdyosu', icon: Sparkles },
+      ],
+    },
+    {
+      label: 'Yönetim',
+      items: [
+        { id: 'roller', label: 'Roller & Yetkiler', icon: Users },
+        { id: 'settings', label: 'Sistem Ayarları', icon: Settings },
+      ],
+    },
+  ];
+
+  // Menü yalnızca görünüm içindir; yetki kontrolü API rotalarında sunucuda yapılır
+  const VISIBLE_NAV_GROUPS = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => can(activeUserRole, it.id)) })).filter(
+    (g) => g.items.length > 0
+  );
+
+  const PAGE_META: Record<MenuId, { title: string; desc: string }> = {
+    overview: { title: 'Genel Bakış', desc: 'Talepler, randevular ve gelirin anlık özeti.' },
+    leads: { title: 'Teklif Talepleri', desc: 'Siteden gelen teklif ve iletişim talepleri.' },
+    prospects: { title: 'Müşteri Adayları', desc: 'Bölge ve işletme türü seçin; teklif verilebilecek işletmeleri bulun.' },
+    appointments: { title: 'Randevular', desc: 'Planlanan canlı demo görüşmeleri.' },
+    muhasebe: { title: 'Muhasebe & Finans', desc: 'E-fatura, tahsilat ve kasa yönetimi.' },
+    roller: { title: 'Roller & Yetkiler', desc: 'Ekip üyeleri ve yetki matrisi.' },
+    domains: { title: 'Site Kontrol Merkezi', desc: 'Canlı projeler, alan adları ve durumları.' },
+    'seo-geo': { title: 'SEO & GEO', desc: 'Otomatik yapılandırma ve denetim stüdyosu.' },
+    glm: { title: 'Yapay Zekâ Stüdyosu', desc: 'Asistan modeli ve API yapılandırması.' },
+    settings: { title: 'Sistem Ayarları', desc: 'Şirket, iletişim ve e-posta ayarları.' },
+  };
+
+
   if (isAuthenticated !== true) {
     return (
       <div className="min-h-screen bg-[#F5F5F7] flex flex-col items-center justify-center p-6 text-[#1D1D1F]">
@@ -542,246 +611,173 @@ export default function AdminDashboardPage() {
           <div className="w-12 h-12 rounded-2xl bg-[#1D1D1F] text-white flex items-center justify-center shadow-sm animate-pulse">
             <Lock className="w-5 h-5 text-white" />
           </div>
-          <p className="text-xs font-semibold text-[#86868B]">Yönetici oturumu kontrol ediliyor, yönlendiriliyorsunuz...</p>
+          <p className="text-xs font-semibold text-[#6E6E73]">Yönetici oturumu kontrol ediliyor, yönlendiriliyorsunuz...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex flex-col md:flex-row">
+    <div className="admin-ui min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex flex-col md:flex-row">
       
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-white border-r border-black/[0.08] p-5 flex flex-col justify-between shrink-0">
-        <div>
-          {/* Brand Logo */}
-          <div className="flex items-center gap-2.5 pb-6 border-b border-black/[0.06] mb-6">
-            <div className="w-9 h-9 rounded-xl bg-[#1D1D1F] text-white flex items-center justify-center shadow-xs">
-              <Layers className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-bold text-base tracking-tight text-[#1D1D1F] block leading-none">
+      {/* Bildirim (toast) */}
+      {toast && (
+        <div
+          key={toast.id}
+          role={toast.tone === 'error' ? 'alert' : 'status'}
+          aria-live="polite"
+          className="fixed bottom-6 inset-x-4 z-[70] flex justify-center pointer-events-none print:hidden"
+        >
+          <div className="flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-3xl pointer-events-auto bg-[#1D1D1F] text-white text-[13px] font-medium shadow-[0_12px_40px_rgba(0,0,0,0.25)] animate-in fade-in slide-in-from-bottom-3 duration-200">
+            {toast.tone === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-[#FF6B6B] shrink-0" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-[#34D399] shrink-0" aria-hidden="true" />
+            )}
+            <span>{toast.message}</span>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              aria-label="Bildirimi kapat"
+              className="ml-1 px-2.5 py-1 rounded-full text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Kenar çubuğu — masaüstünde sabit sütun, mobilde yatay kayan üst şerit */}
+      <aside className="w-full md:w-64 md:h-screen md:sticky md:top-0 sticky top-0 z-30 bg-white/90 md:bg-white backdrop-blur-xl border-b md:border-b-0 md:border-r border-black/[0.08] flex flex-col shrink-0 print:hidden">
+        {/* Marka */}
+        <div className="flex items-center justify-between gap-3 px-4 md:px-5 pt-3 md:pt-5 pb-3 md:pb-5">
+          <a href="/admin" className="flex items-center gap-2.5 rounded-xl">
+            <span className="w-9 h-9 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center">
+              <Layers className="w-[18px] h-[18px]" aria-hidden="true" />
+            </span>
+            <span>
+              <span className="font-semibold text-[15px] tracking-tight text-[#1D1D1F] block leading-none">
                 YSN<span className="text-[#0071E3]">SOFT</span>
               </span>
-              <span className="text-[10px] text-[#86868B] font-semibold uppercase tracking-wider mt-1 block">
-                Yönetim Konsolu
-              </span>
-            </div>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="space-y-1.5">
-            <button
-              onClick={() => setActiveMenu('overview')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'overview'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Genel Bakış</span>
-            </button>
-
-            <button
-              onClick={() => setActiveMenu('leads')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'leads'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Inbox className="w-4 h-4" />
-                <span>Teklif Talepleri</span>
-              </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                activeMenu === 'leads' ? 'bg-white/20 text-white' : 'bg-[#0071E3]/10 text-[#0071E3]'
-              }`}>
-                {leads.filter(l => l.status === 'Yeni').length} Yeni
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveMenu('appointments')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'appointments'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Calendar className="w-4 h-4" />
-                <span>Canlı Randevular</span>
-              </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                activeMenu === 'appointments' ? 'bg-white/20 text-white' : 'bg-[#10B981]/15 text-[#10B981]'
-              }`}>
-                {appointments.length}
-              </span>
-            </button>
-
-            {/* Muhasebe & Finans Tab */}
-            <button
-              onClick={() => setActiveMenu('muhasebe')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'muhasebe'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Receipt className="w-4 h-4" />
-                <span>Muhasebe & Finans</span>
-              </div>
-              <span className="text-[10px] font-bold text-[#10B981]">GİB E-Fatura</span>
-            </button>
-
-            {/* Roller & Ekip Yetkileri Tab */}
-            <button
-              onClick={() => setActiveMenu('roller')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'roller'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Users className="w-4 h-4" />
-                <span>Roller & Yetkiler</span>
-              </div>
-              <span className="text-[10px] font-bold text-[#8B5CF6]">{teamMembers.length} Üye</span>
-            </button>
-
-            {/* Site Kontrol Merkezi & Yeni Projeler Tab */}
-            <button
-              onClick={() => setActiveMenu('domains')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'domains'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Globe className="w-4 h-4" />
-                <span>Site Kontrol Merkezi</span>
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                {products.length} Site
-              </span>
-            </button>
-
-            {/* SEO & GEO Otomasyon Stüdyosu Tab */}
-            <button
-              onClick={() => setActiveMenu('seo-geo')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'seo-geo'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Compass className="w-4 h-4 text-emerald-500" />
-                <span>SEO & GEO Otomasyon</span>
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Oto Betik</span>
-            </button>
-
-            {/* AI Studio Tab */}
-            <button
-              onClick={() => setActiveMenu('glm')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'glm'
-                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span>Yapay Zeka & Asistan Stüdyosu</span>
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Aktif</span>
-            </button>
-
-            <button
-              onClick={() => setActiveMenu('settings')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                activeMenu === 'settings'
-                  ? 'bg-[#0071E3] text-white shadow-xs'
-                  : 'text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/5'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Sistem Ayarları</span>
-            </button>
-          </nav>
+              <span className="text-[11px] text-[#6E6E73] font-medium mt-1 block leading-none">Yönetim Konsolu</span>
+            </span>
+          </a>
+          <button
+            type="button"
+            onClick={handleLogout}
+            aria-label="Çıkış yap"
+            className="md:hidden w-10 h-10 flex items-center justify-center rounded-full text-[#515154] hover:bg-black/[0.05]"
+          >
+            <LogOut className="w-4 h-4" aria-hidden="true" />
+          </button>
         </div>
 
-        {/* Bottom Actions */}
-        <div className="pt-6 border-t border-black/[0.06] space-y-2">
-          <div className="p-2.5 bg-[#F5F5F7] rounded-xl text-[11px] text-[#6E6E73]">
-            <span className="text-[#86868B] block">Aktif Oturum:</span>
-            <strong className="text-[#1D1D1F] truncate block">{activeUserName}</strong>
-            <span className="text-[#86868B] text-[10px] truncate block">{activeUserEmail}</span>
-            <span className="text-[#0071E3] font-bold uppercase tracking-wider text-[10px]">
-              {activeUserRole}
-            </span>
-          </div>
+        {/* Gezinme */}
+        <nav
+          aria-label="Yönetim menüsü"
+          className="flex md:flex-col md:flex-1 gap-1 md:gap-5 overflow-x-auto md:overflow-x-visible md:overflow-y-auto no-scrollbar px-3 pb-3 md:pb-4"
+        >
+          {VISIBLE_NAV_GROUPS.map((group) => (
+            <div key={group.label} className="flex md:flex-col gap-1 md:gap-0.5 shrink-0">
+              <span className="hidden md:block px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#6E6E73]">
+                {group.label}
+              </span>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = activeMenu === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveMenu(item.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={`shrink-0 md:w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium rounded-full md:rounded-xl whitespace-nowrap transition-colors ${
+                      active
+                        ? 'bg-[#1D1D1F] text-white md:bg-black/[0.06] md:text-[#1D1D1F]'
+                        : 'text-[#515154] hover:text-[#1D1D1F] hover:bg-black/[0.04]'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${active ? 'md:text-[#0071E3]' : ''}`} aria-hidden="true" />
+                    <span className="md:flex-1 text-left">{item.label}</span>
+                    {item.badge !== undefined && item.badge !== 0 && (
+                      <span
+                        className={`min-w-5 px-1.5 py-0.5 rounded-full text-[11px] font-semibold text-center tabular ${
+                          item.highlight
+                            ? 'bg-[#0071E3] text-white'
+                            : active
+                              ? 'bg-white/20 md:bg-black/[0.08] md:text-[#515154]'
+                              : 'bg-black/[0.06] text-[#515154]'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
 
+        {/* Alt bölüm: oturum ve kısayollar (yalnızca masaüstü) */}
+        <div className="hidden md:block p-3 border-t border-black/[0.06] space-y-1">
           <a
             href="/portal"
             target="_blank"
             rel="noreferrer"
-            className="w-full flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+            className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] font-medium text-[#515154] hover:text-[#1D1D1F] hover:bg-black/[0.04] rounded-xl transition-colors"
           >
             <span>Müşteri Portalı</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
           </a>
-
           <a
             href="/"
-            className="w-full flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-medium text-[#1D1D1F] bg-[#F5F5F7] rounded-xl hover:bg-black/[0.08] transition-colors"
+            className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] font-medium text-[#515154] hover:text-[#1D1D1F] hover:bg-black/[0.04] rounded-xl transition-colors"
           >
-            <span>Canlı Siteye Git</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Canlı Site</span>
+            <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
           </a>
 
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Çıkış Yap</span>
-          </button>
+          <div className="mt-2 flex items-center gap-2.5 p-2 rounded-2xl bg-[#F5F5F7]">
+            <span className="w-9 h-9 shrink-0 rounded-full bg-white border border-black/[0.08] flex items-center justify-center text-[13px] font-semibold text-[#1D1D1F]" aria-hidden="true">
+              {activeUserName.split(' ').map((w) => w[0]).slice(0, 2).join('').toLocaleUpperCase('tr-TR')}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold text-[#1D1D1F] truncate">{activeUserName}</span>
+              <span className="block text-[11px] text-[#6E6E73] truncate">{activeUserEmail}</span>
+            </span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Çıkış yap"
+              title="Çıkış yap"
+              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[#515154] hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-5 sm:p-8 max-w-7xl mx-auto w-full overflow-y-auto">
-        
-        {/* Top Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-black/[0.06] mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1D1D1F]">
-              {activeMenu === 'overview' && 'Yönetim Konsolu • Genel Bakış'}
-              {activeMenu === 'leads' && 'Gelen Teklif & İletişim Talepleri'}
-              {activeMenu === 'appointments' && 'Planlanan Canlı Demo Görüşmeleri'}
-              {activeMenu === 'muhasebe' && 'Muhasebe, E-Fatura & Kasa Yönetimi'}
-              {activeMenu === 'roller' && 'Ekip Üyeleri, Roller & Yetki Matrisi'}
-              {activeMenu === 'domains' && 'Site Kontrol Merkezi & Canlı Proje Yönetimi'}
-              {activeMenu === 'seo-geo' && 'SEO & GEO Otomatik Yapılandırma ve Denetim Stüdyosu'}
-              {activeMenu === 'glm' && 'Yapay Zeka & Asistan Mimarisi Stüdyosu'}
-              {activeMenu === 'settings' && 'Şirket, İletişim ve Sistem Ayarları'}
+      {/* Ana içerik */}
+      <main className="flex-1 min-w-0 p-4 sm:p-8 max-w-7xl mx-auto w-full">
+
+        {/* Sayfa başlığı */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-6 border-b border-black/[0.06] mb-8 print:hidden">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-[#1D1D1F]">
+              {PAGE_META[activeMenu].title}
             </h1>
-            <p className="text-xs text-[#86868B] mt-0.5">
-              Giriş yapan: {activeUserEmail} | Yetki Düzeyi: {activeUserRole.toUpperCase()}
-            </p>
+            <p className="text-sm text-[#6E6E73] mt-1">{PAGE_META[activeMenu].desc}</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-3 py-1 rounded-full flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-              Sistem Aktif (%99.99 Uptime)
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-medium text-[#515154] bg-white border border-black/[0.08] px-3 py-1.5 rounded-full">
+              {isAdminRole(activeUserRole) ? ROLE_INFO[activeUserRole].label : activeUserRole}
+            </span>
+            <span className="text-xs font-medium text-[#0B815A] bg-[#0E9F6E]/10 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0E9F6E]" aria-hidden="true" />
+              Sistem aktif
             </span>
           </div>
         </div>
@@ -792,7 +788,7 @@ export default function AdminDashboardPage() {
             {/* 4 Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#86868B] font-medium">Toplam Teklif Talebi</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Toplam Teklif Talebi</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-3xl font-bold text-[#1D1D1F]">{leads.length}</span>
                   <span className="text-xs font-semibold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded-full">
@@ -802,7 +798,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#86868B] font-medium">Bu Ay Kesilen E-Fatura</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Bu Ay Kesilen E-Fatura</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#10B981]">{formatTRY(totalInvoiced)}</span>
                   <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full">
@@ -812,7 +808,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#86868B] font-medium">Canlı Demo Randevuları</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Canlı Demo Randevuları</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-3xl font-bold text-[#8B5CF6]">{appointments.length}</span>
                   <span className="text-xs font-semibold text-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-0.5 rounded-full">
@@ -822,9 +818,9 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#86868B] font-medium">Aktif Ekip & Roller</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Rolünüz</span>
                 <div className="flex items-baseline justify-between mt-2">
-                  <span className="text-3xl font-bold text-[#F59E0B]">{teamMembers.length} Kişi</span>
+                  <span className="text-2xl font-bold text-[#F59E0B]">{isAdminRole(activeUserRole) ? ROLE_INFO[activeUserRole].label : activeUserRole}</span>
                   <span className="text-xs font-semibold text-[#10B981] flex items-center gap-0.5">
                     <UserCheck className="w-3.5 h-3.5" /> RBAC Aktif
                   </span>
@@ -853,16 +849,16 @@ export default function AdminDashboardPage() {
                     { month: 'Eki', count: 54, pct: 100 }
                   ].map((bar, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                      <span className="text-[10px] font-semibold text-[#1D1D1F]">{bar.count}</span>
+                      <span className="text-[11px] font-semibold text-[#1D1D1F]">{bar.count}</span>
                       <div className="w-full bg-[#F5F5F7] rounded-t-lg h-32 flex items-end">
                         <div
                           style={{ height: `${bar.pct}%` }}
                           className={`w-full rounded-t-lg transition-all ${
-                            i === 5 ? 'bg-[#0071E3]' : 'bg-[#D2D2D7] hover:bg-[#86868B]'
+                            i === 5 ? 'bg-[#0071E3]' : 'bg-[#D2D2D7] hover:bg-[#6E6E73]'
                           }`}
                         />
                       </div>
-                      <span className="text-[10px] text-[#86868B]">{bar.month}</span>
+                      <span className="text-[11px] text-[#6E6E73]">{bar.month}</span>
                     </div>
                   ))}
                 </div>
@@ -874,7 +870,7 @@ export default function AdminDashboardPage() {
                     <PieChart className="w-4 h-4 text-[#8B5CF6]" />
                     <h4 className="text-sm font-bold text-[#1D1D1F]">Ürün İlgi Dağılımı</h4>
                   </div>
-                  <span className="text-[11px] text-[#86868B]">Canlı Veri</span>
+                  <span className="text-[11px] text-[#6E6E73]">Canlı Veri</span>
                 </div>
 
                 <div className="space-y-3">
@@ -909,7 +905,7 @@ export default function AdminDashboardPage() {
                   <h3 className="text-base font-semibold text-[#1D1D1F]">
                     Son Gelen Teklif Talepleri
                   </h3>
-                  <p className="text-xs text-[#86868B]">Siteden müşterilerin gönderdiği anlık leadler</p>
+                  <p className="text-xs text-[#6E6E73]">Siteden müşterilerin gönderdiği anlık leadler</p>
                 </div>
                 <button
                   onClick={() => setActiveMenu('leads')}
@@ -923,7 +919,7 @@ export default function AdminDashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-black/[0.06] text-[#86868B]">
+                    <tr className="border-b border-black/[0.06] text-[#6E6E73]">
                       <th className="pb-3 font-semibold">Tarih</th>
                       <th className="pb-3 font-semibold">Müşteri</th>
                       <th className="pb-3 font-semibold">Şirket / Büro</th>
@@ -936,13 +932,13 @@ export default function AdminDashboardPage() {
                   <tbody className="divide-y divide-black/[0.04]">
                     {leads.slice(0, 5).map(lead => (
                       <tr key={lead.id} className="hover:bg-[#F5F5F7]/60 transition-colors">
-                        <td className="py-3 text-[#86868B] whitespace-nowrap">{lead.date}</td>
+                        <td className="py-3 text-[#6E6E73] whitespace-nowrap">{lead.date}</td>
                         <td className="py-3 font-semibold text-[#1D1D1F]">{lead.name}</td>
                         <td className="py-3 text-[#1D1D1F]">{lead.company}</td>
                         <td className="py-3 font-medium text-[#0071E3]">{lead.product}</td>
-                        <td className="py-3 text-[#6E6E73]">{lead.budget}</td>
+                        <td className="py-3 text-[#515154]">{lead.budget}</td>
                         <td className="py-3">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                             lead.status === 'Yeni' ? 'bg-blue-100 text-blue-700' :
                             lead.status === 'İnceleniyor' ? 'bg-amber-100 text-amber-700' :
                             lead.status === 'Teklif Gönderildi' ? 'bg-purple-100 text-purple-700' :
@@ -994,7 +990,7 @@ export default function AdminDashboardPage() {
                     onChange={e => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-3.5 py-2 text-xs bg-[#F5F5F7] rounded-xl border border-black/[0.08] focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
                   />
-                  <Search className="w-4 h-4 text-[#86868B] absolute left-3 top-2.5" />
+                  <Search className="w-4 h-4 text-[#6E6E73] absolute left-3 top-2.5" />
                 </div>
 
                 <select
@@ -1024,7 +1020,7 @@ export default function AdminDashboardPage() {
             <div className="apple-card bg-white border border-black/[0.07] overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#86868B]">
+                  <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#6E6E73]">
                     <tr>
                       <th className="p-4 font-semibold">Tarih</th>
                       <th className="p-4 font-semibold">Ad Soyad</th>
@@ -1039,15 +1035,15 @@ export default function AdminDashboardPage() {
                   <tbody className="divide-y divide-black/[0.04]">
                     {filteredLeads.map(lead => (
                       <tr key={lead.id} className="hover:bg-[#F5F5F7]/50 transition-colors">
-                        <td className="p-4 text-[#86868B] whitespace-nowrap">{lead.date}</td>
+                        <td className="p-4 text-[#6E6E73] whitespace-nowrap">{lead.date}</td>
                         <td className="p-4 font-bold text-[#1D1D1F]">{lead.name}</td>
                         <td className="p-4 text-[#1D1D1F] font-medium">{lead.company}</td>
                         <td className="p-4">
                           <div className="text-[#1D1D1F] font-semibold">{lead.phone}</div>
-                          <span className="text-[#86868B] text-[11px]">{lead.email}</span>
+                          <span className="text-[#6E6E73] text-[11px]">{lead.email}</span>
                         </td>
                         <td className="p-4 font-semibold text-[#0071E3]">{lead.product}</td>
-                        <td className="p-4 text-[#6E6E73]">{lead.budget}</td>
+                        <td className="p-4 text-[#515154]">{lead.budget}</td>
                         <td className="p-4">
                           <select
                             value={lead.status}
@@ -1090,33 +1086,31 @@ export default function AdminDashboardPage() {
             </div>
 
             {selectedLead && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+              <div role="dialog" aria-modal="true" aria-label="Talep detayı" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedLead(null); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
                 <div className="apple-card bg-white p-6 sm:p-8 max-w-lg w-full border border-black/[0.1] shadow-2xl relative">
                   <div className="flex items-center justify-between pb-4 border-b border-black/[0.06] mb-5">
                     <div>
-                      <span className="text-xs font-bold text-[#86868B]">{selectedLead.id}</span>
+                      <span className="text-xs font-bold text-[#6E6E73]">{selectedLead.id}</span>
                       <h4 className="text-lg font-bold text-[#1D1D1F]">{selectedLead.name}</h4>
                     </div>
-                    <button onClick={() => setSelectedLead(null)} className="p-1 text-[#86868B] hover:text-[#1D1D1F]">
-                      ✕
-                    </button>
+                    <button type="button" onClick={() => setSelectedLead(null)} aria-label="Kapat" className="admin-close">✕</button>
                   </div>
 
                   <div className="space-y-4 text-xs">
                     <div>
-                      <span className="text-[#86868B] block">Şirket / Büro:</span>
+                      <span className="text-[#6E6E73] block">Şirket / Büro:</span>
                       <strong className="text-sm text-[#1D1D1F]">{selectedLead.company}</strong>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <span className="text-[#86868B] block">E-Posta:</span>
+                        <span className="text-[#6E6E73] block">E-Posta:</span>
                         <a href={`mailto:${selectedLead.email}`} className="text-[#0071E3] font-semibold underline">
                           {selectedLead.email}
                         </a>
                       </div>
                       <div>
-                        <span className="text-[#86868B] block">Telefon:</span>
+                        <span className="text-[#6E6E73] block">Telefon:</span>
                         <a href={`tel:${selectedLead.phone}`} className="text-[#0071E3] font-semibold underline">
                           {selectedLead.phone}
                         </a>
@@ -1124,24 +1118,24 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div>
-                      <span className="text-[#86868B] block">Talep Edilen Sistem:</span>
+                      <span className="text-[#6E6E73] block">Talep Edilen Sistem:</span>
                       <strong className="text-sm text-[#0071E3]">{selectedLead.product}</strong>
                     </div>
 
                     <div>
-                      <span className="text-[#86868B] block">Öngörülen Bütçe Ölçeği:</span>
+                      <span className="text-[#6E6E73] block">Öngörülen Bütçe Ölçeği:</span>
                       <span className="font-semibold text-[#1D1D1F]">{selectedLead.budget}</span>
                     </div>
 
                     <div className="p-3.5 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                      <span className="text-[#86868B] block mb-1">Müşteri Notu:</span>
+                      <span className="text-[#6E6E73] block mb-1">Müşteri Notu:</span>
                       <p className="text-[#1D1D1F] leading-relaxed">
                         {selectedLead.message || 'Özel bir not belirtilmedi.'}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-[#86868B] block mb-1">Talep Durumu Değiştir:</span>
+                      <span className="text-[#6E6E73] block mb-1">Talep Durumu Değiştir:</span>
                       <div className="flex gap-2">
                         {['Yeni', 'İnceleniyor', 'Teklif Gönderildi', 'Tamamlandı'].map(st => (
                           <button
@@ -1184,6 +1178,9 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* MÜŞTERİ ADAYLARI (prospects): WebScout'un bulduğu, bizim gideceğimiz işletmeler */}
+        {activeMenu === 'prospects' && <ProspectsPanel notify={notify} />}
+
         {/* TAB 3: APPOINTMENTS */}
         {activeMenu === 'appointments' && (
           <div className="space-y-6 animate-in fade-in duration-200">
@@ -1191,7 +1188,7 @@ export default function AdminDashboardPage() {
               <h3 className="text-base font-bold text-[#1D1D1F] mb-1">
                 Planlanmış Canlı Demo Takvimi
               </h3>
-              <p className="text-xs text-[#86868B] mb-6">
+              <p className="text-xs text-[#6E6E73] mb-6">
                 Müşterilerin 30 dakikalık Google Meet randevuları
               </p>
 
@@ -1211,7 +1208,7 @@ export default function AdminDashboardPage() {
                         </span>
                       </div>
                       <h4 className="text-base font-bold text-[#1D1D1F]">{apt.name} — {apt.company}</h4>
-                      <p className="text-xs text-[#6E6E73] mt-0.5">Konu: {apt.topic} | E-Posta: {apt.email}</p>
+                      <p className="text-xs text-[#515154] mt-0.5">Konu: {apt.topic} | E-Posta: {apt.email}</p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1245,7 +1242,7 @@ export default function AdminDashboardPage() {
             {/* Top Financial Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#86868B] font-medium">Toplam Tahsil Edilen</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Toplam Tahsil Edilen</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#10B981]">{formatTRY(paidInvoices)}</span>
                   <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full">
@@ -1255,7 +1252,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#86868B] font-medium">Bekleyen Tahsilatlar</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Bekleyen Tahsilatlar</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#F59E0B]">{formatTRY(pendingInvoices)}</span>
                   <span className="text-xs font-semibold text-[#F59E0B] bg-[#F59E0B]/10 px-2 py-0.5 rounded-full">
@@ -1265,7 +1262,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#86868B] font-medium">GİB E-Fatura Hacmi</span>
+                <span className="text-xs text-[#6E6E73] font-medium">GİB E-Fatura Hacmi</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#0071E3]">{formatTRY(totalInvoiced)}</span>
                   <span className="text-xs font-semibold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded-full">
@@ -1283,7 +1280,7 @@ export default function AdminDashboardPage() {
                     <Receipt className="w-4 h-4 text-[#0071E3]" />
                     <span>E-Fatura, E-Arşiv & Cari Hesap Hareketleri</span>
                   </h3>
-                  <p className="text-xs text-[#86868B]">Resmi GİB onaylı faturalar ve tahsilat takibi</p>
+                  <p className="text-xs text-[#6E6E73]">Resmi GİB onaylı faturalar ve tahsilat takibi</p>
                 </div>
 
                 <button
@@ -1297,7 +1294,7 @@ export default function AdminDashboardPage() {
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#86868B]">
+                  <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#6E6E73]">
                     <tr>
                       <th className="p-3.5 font-semibold">Fatura No</th>
                       <th className="p-3.5 font-semibold">Müşteri / Cari</th>
@@ -1312,16 +1309,16 @@ export default function AdminDashboardPage() {
                   <tbody className="divide-y divide-black/[0.04]">
                     {invoices.map(inv => (
                       <tr key={inv.id} className="hover:bg-[#F5F5F7]/50 transition-colors">
-                        <td className="p-3.5 font-mono text-[#86868B]">{inv.invoiceNo}</td>
+                        <td className="p-3.5 font-mono text-[#6E6E73]">{inv.invoiceNo}</td>
                         <td className="p-3.5">
                           <strong className="text-[#1D1D1F] block">{inv.client}</strong>
-                          <span className="text-[#86868B] text-[10px]">VN: {inv.taxNumber}</span>
+                          <span className="text-[#6E6E73] text-[11px]">VN: {inv.taxNumber}</span>
                         </td>
                         <td className="p-3.5 font-medium text-[#0071E3]">{inv.product}</td>
-                        <td className="p-3.5 text-[#6E6E73]">{formatTRY(inv.amount)}</td>
-                        <td className="p-3.5 text-[#86868B]">{formatTRY(inv.totalAmount - inv.amount)}</td>
+                        <td className="p-3.5 text-[#515154]">{formatTRY(inv.amount)}</td>
+                        <td className="p-3.5 text-[#6E6E73]">{formatTRY(inv.totalAmount - inv.amount)}</td>
                         <td className="p-3.5 font-bold text-[#1D1D1F]">{formatTRY(inv.totalAmount)}</td>
-                        <td className="p-3.5 text-[#6E6E73]">{inv.paymentType}</td>
+                        <td className="p-3.5 text-[#515154]">{inv.paymentType}</td>
                         <td className="p-3.5">
                           <select
                             value={inv.status}
@@ -1347,11 +1344,11 @@ export default function AdminDashboardPage() {
 
             {/* New Invoice Modal */}
             {invoiceModalOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+              <div role="dialog" aria-modal="true" aria-label="Yeni fatura" onMouseDown={(e) => { if (e.target === e.currentTarget) setInvoiceModalOpen(false); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
                 <div className="apple-card bg-white p-6 sm:p-8 max-w-md w-full border border-black/[0.1] shadow-2xl">
                   <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-4">
                     <h4 className="text-base font-bold text-[#1D1D1F]">Yeni E-Fatura / Tahsilat Kaydı</h4>
-                    <button onClick={() => setInvoiceModalOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F]">✕</button>
+                    <button type="button" onClick={() => setInvoiceModalOpen(false)} aria-label="Kapat" className="admin-close">✕</button>
                   </div>
 
                   <form onSubmit={handleCreateInvoice} className="space-y-3.5 text-xs">
@@ -1420,7 +1417,7 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between">
-                      <div className="text-xs text-[#86868B]">
+                      <div className="text-xs text-[#6E6E73]">
                         Toplam KDV Dahil: <strong className="text-[#1D1D1F]">{formatTRY(newInvoiceData.amount * 1.2)}</strong>
                       </div>
                       <button
@@ -1438,200 +1435,7 @@ export default function AdminDashboardPage() {
         )}
 
         {/* TAB 5: ROLLER & EKİP YETKİLERİ (NEW) */}
-        {activeMenu === 'roller' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Header info */}
-            <div className="apple-card bg-white border border-black/[0.07] p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-black/[0.06] mb-6">
-                <div>
-                  <h3 className="text-base font-bold text-[#1D1D1F] flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#8B5CF6]" />
-                    <span>Rol Tabanlı Yetkilendirme (RBAC) & Ekip Üyeleri</span>
-                  </h3>
-                  <p className="text-xs text-[#86868B]">
-                    Hangi ekip üyesinin muhasebe, teklif onayı veya teknik loglara erişebileceğini yönetin
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setTeamModalOpen(true)}
-                  className="apple-pill-btn px-4 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Yeni Ekip Üyesi Ekle</span>
-                </button>
-              </div>
-
-              {/* Team Members List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {teamMembers.map(member => (
-                  <div key={member.id} className="p-5 rounded-2xl bg-[#F5F5F7] border border-black/[0.06] flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                          member.role === 'superadmin' ? 'bg-blue-100 text-blue-700' :
-                          member.role === 'accounting' ? 'bg-emerald-100 text-emerald-700' :
-                          member.role === 'sales' ? 'bg-purple-100 text-purple-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
-                          {member.roleTitle}
-                        </span>
-                        <span className="text-xs text-[#10B981] font-semibold flex items-center gap-1">
-                          <Check className="w-3 h-3" />
-                          {member.status}
-                        </span>
-                      </div>
-
-                      <h4 className="text-base font-bold text-[#1D1D1F]">{member.name}</h4>
-                      <p className="text-xs text-[#86868B] mb-3">{member.email}</p>
-
-                      <div className="space-y-1">
-                        <span className="text-[10px] text-[#86868B] font-bold uppercase tracking-wider block">Yetki Alanları:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {member.permissions.map((p, idx) => (
-                            <span key={idx} className="bg-white px-2 py-0.5 rounded text-[10px] font-medium text-[#1D1D1F] border border-black/[0.04]">
-                              {p}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-black/[0.06] text-[10px] text-[#86868B] mt-4 flex justify-between items-center">
-                      <span>Son Görülme: {member.lastLogin}</span>
-                      <span className="text-[#0071E3] font-semibold cursor-pointer hover:underline">Düzenle</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Role Permissions Matrix Table */}
-              <div className="pt-4 border-t border-black/[0.06]">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#86868B] mb-3">
-                  Sistem Yetki Matrisi
-                </h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border border-black/[0.06] rounded-xl overflow-hidden">
-                    <thead className="bg-[#F5F5F7] text-[#86868B]">
-                      <tr>
-                        <th className="p-3 font-semibold">Modül / İşlem</th>
-                        <th className="p-3 font-semibold text-center">Süper Admin</th>
-                        <th className="p-3 font-semibold text-center">Muhasebe Müdürü</th>
-                        <th className="p-3 font-semibold text-center">Satış / Lead</th>
-                        <th className="p-3 font-semibold text-center">Çözüm Mimarı</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-black/[0.04]">
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Gelen Teklif Taleplerini Görme & Düzenleme</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#0071E3]">Yalnızca Okuma</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Resmi Teklif Mektubu PDF Basma & Fiyatlandırma</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#0071E3]">Onaylama</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Taslak & Basım</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">E-Fatura Kesme, Kasa & Banka Tahsilatı</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Canlı Siteler & DNS/SSL Sağlık İzleme</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                        <td className="p-3 text-center text-[#0071E3]">Yalnızca Okuma</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium text-[#1D1D1F]">Kullanıcı Ekleme, Silme ve Rol Değiştirme</td>
-                        <td className="p-3 text-center text-[#10B981] font-bold">✓ Tam Yetki</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                        <td className="p-3 text-center text-[#86868B]">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* New Member Modal */}
-            {teamModalOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-                <div className="apple-card bg-white p-6 sm:p-8 max-w-md w-full border border-black/[0.1] shadow-2xl">
-                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-4">
-                    <h4 className="text-base font-bold text-[#1D1D1F]">Yeni Ekip Üyesi & Rol Tanımı</h4>
-                    <button onClick={() => setTeamModalOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F]">✕</button>
-                  </div>
-
-                  <form onSubmit={handleCreateTeamMember} className="space-y-3.5 text-xs">
-                    <div>
-                      <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Ad Soyad *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Örn: Ayşe Demir"
-                        value={newMemberData.name}
-                        onChange={e => setNewMemberData({ ...newMemberData, name: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Kurumsal E-Posta *</label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="ayse@ysnsoft.com"
-                        value={newMemberData.email}
-                        onChange={e => setNewMemberData({ ...newMemberData, email: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Rol Tanımı</label>
-                      <select
-                        value={newMemberData.role}
-                        onChange={e => {
-                          const r = e.target.value as any;
-                          const title = 
-                            r === 'superadmin' ? 'Süper Admin' :
-                            r === 'accounting' ? 'Mali İşler & Muhasebe' :
-                            r === 'sales' ? 'Satış & Müşteri Yöneticisi' : 'Kıdemli Çözüm Mimarı';
-                          setNewMemberData({ ...newMemberData, role: r, roleTitle: title });
-                        }}
-                        className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                      >
-                        <option value="sales">Satış & Müşteri Yöneticisi</option>
-                        <option value="accounting">Mali İşler & Muhasebe</option>
-                        <option value="engineer">Kıdemli Çözüm Mimarı</option>
-                        <option value="superadmin">Süper Admin</option>
-                      </select>
-                    </div>
-
-                    <div className="pt-3 border-t border-black/[0.06] flex justify-end">
-                      <button
-                        type="submit"
-                        className="apple-pill-btn px-6 py-2 text-xs font-semibold"
-                      >
-                        Üyeyi Kaydet
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {activeMenu === 'roller' && <UsersPanel notify={notify} />}
 
         {/* TAB 6: SITE KONTROL MERKEZİ & YENİ İŞ EKLEME */}
         {activeMenu === 'domains' && (
@@ -1643,7 +1447,7 @@ export default function AdminDashboardPage() {
                   <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>{siteActionMessage}</span>
                 </div>
-                <button onClick={() => setSiteActionMessage(null)} className="text-blue-500 hover:text-blue-700">✕</button>
+                <button type="button" onClick={() => setSiteActionMessage(null)} aria-label="Kapat" className="admin-close">✕</button>
               </div>
             )}
 
@@ -1655,7 +1459,7 @@ export default function AdminDashboardPage() {
                     <Globe className="w-5 h-5 text-[#0071E3]" />
                     Site Kontrol Merkezi & Canlı Portföy
                   </h3>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     Canlıdaki web projelerini yönetin, anlık ping/sağlık testi yapın, uzaktan önbellek temizleyin ve sisteme yeni web siteleri ekleyin.
                   </p>
                 </div>
@@ -1675,19 +1479,19 @@ export default function AdminDashboardPage() {
               {/* Status Summary Banner */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-center text-xs">
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[11px] text-[#86868B] block">Toplam Kayıtlı Proje</span>
+                  <span className="text-[11px] text-[#6E6E73] block">Toplam Kayıtlı Proje</span>
                   <strong className="text-base text-[#1D1D1F] block mt-0.5 font-mono">{products.length} Site</strong>
                 </div>
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[11px] text-[#86868B] block">Genel Uptime</span>
+                  <span className="text-[11px] text-[#6E6E73] block">Genel Uptime</span>
                   <strong className="text-base text-emerald-600 block mt-0.5 font-mono">%99.99 Uptime</strong>
                 </div>
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[11px] text-[#86868B] block">SSL Güvenlik Düzeyi</span>
+                  <span className="text-[11px] text-[#6E6E73] block">SSL Güvenlik Düzeyi</span>
                   <strong className="text-base text-blue-600 block mt-0.5 font-mono">256-Bit TLS</strong>
                 </div>
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[11px] text-[#86868B] block">Yönetim Köprüsü</span>
+                  <span className="text-[11px] text-[#6E6E73] block">Yönetim Köprüsü</span>
                   <strong className="text-base text-purple-600 block mt-0.5 font-mono">Bridge v2.6</strong>
                 </div>
               </div>
@@ -1712,9 +1516,9 @@ export default function AdminDashboardPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <h4 className="text-base font-bold text-[#1D1D1F] mb-1">{prod.name}</h4>
-                            <p className="text-xs text-[#6E6E73] mb-3">{prod.tagline}</p>
+                            <p className="text-xs text-[#515154] mb-3">{prod.tagline}</p>
                           </div>
-                          <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-white text-gray-700 border border-black/[0.06] shrink-0">
+                          <span className="text-[11px] px-2 py-0.5 rounded font-mono font-bold bg-white text-gray-700 border border-black/[0.06] shrink-0">
                             {prod.badge}
                           </span>
                         </div>
@@ -1728,7 +1532,7 @@ export default function AdminDashboardPage() {
                       </div>
 
                       <div className="pt-3 border-t border-black/[0.06] flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-[11px] text-[#86868B]">
+                        <span className="text-[11px] text-[#6E6E73]">
                           Uptime: {prod.liveStats?.uptime || '%99.99'}
                         </span>
                         
@@ -1785,7 +1589,7 @@ export default function AdminDashboardPage() {
                     <ShieldCheck className="w-5 h-5 text-blue-600" />
                     Sitelerin .env Erişim Tokenı & Frame İzin Yapılandırması
                   </h3>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     Sitelerin YSNSOFT vitrininde ve panelinde gömülebilmesi ("bağlanmayı reddetti" hatasını çözmek) ve uzaktan kontrolü için gereken ayarlar
                   </p>
                 </div>
@@ -1816,17 +1620,17 @@ export default function AdminDashboardPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(`YSN_MANAGEMENT_TOKEN=ysn_live_sec_2026_kglex\nYSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`);
-                        alert('.env yapılandırması panoya kopyalandı!');
+                        navigator.clipboard.writeText(`YSN_MANAGEMENT_TOKEN=${bridgeTokens.master || '<tanımlı değil>'}\nYSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`);
+                        notify('.env yapılandırması panoya kopyalandı!');
                       }}
-                      className="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded text-[10px] font-mono transition-colors"
+                      className="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded text-[11px] font-mono transition-colors"
                     >
                       Kopyala
                     </button>
                   </div>
                   <pre className="text-xs font-mono text-emerald-400 overflow-x-auto p-1 leading-relaxed">
 {`# YSNSOFT Merkezi Yönetim ve Iframe Tokenı
-YSN_MANAGEMENT_TOKEN=ysn_live_sec_2026_kglex
+YSN_MANAGEMENT_TOKEN=${bridgeTokens.master || '<tanımlı değil>'}
 YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                   </pre>
                 </div>
@@ -1841,9 +1645,9 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                       type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(`async headers() {\n  return [{\n    source: '/:path*',\n    headers: [{\n      key: 'Content-Security-Policy',\n      value: "frame-ancestors 'self' http://localhost:3000 https://ysnsoft.com;"\n    }]\n  }];\n}`);
-                        alert('next.config.js başlık kodu kopyalandı!');
+                        notify('next.config.js başlık kodu kopyalandı!');
                       }}
-                      className="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded text-[10px] font-mono transition-colors"
+                      className="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded text-[11px] font-mono transition-colors"
                     >
                       Kopyala
                     </button>
@@ -1866,7 +1670,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               <div className="border border-black/[0.06] rounded-2xl overflow-hidden text-xs">
                 <div className="bg-[#F5F5F7] px-4 py-3 font-bold text-[#1D1D1F] flex items-center justify-between">
                   <span>Üretilen Canlı Site Token Listesi (YSN Bridge Tokens)</span>
-                  <span className="text-[11px] text-[#86868B] font-normal">Tüm siteler 256-bit şifrelenmiştir</span>
+                  <span className="text-[11px] text-[#6E6E73] font-normal">Tüm siteler 256-bit şifrelenmiştir</span>
                 </div>
                 <div className="divide-y divide-black/[0.04]">
                   {(products.length > 0 ? products : PRODUCTS).map(p => (
@@ -1877,18 +1681,19 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                           <code className="text-[11px] text-blue-600 font-mono">({p.displayDomain})</code>
                         </div>
                         <div className="text-[11px] font-mono text-gray-500 mt-0.5">
-                          Token: <span className="text-gray-800 font-semibold">ysn_live_{p.id.replace(/[^a-zA-Z0-9]/g, '_')}_2026_sec</span>
+                          Token: <span className="text-gray-800 font-semibold">{tokenForDomain(p.displayDomain) || 'tanımlı değil'}</span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           type="button"
+                          disabled={!tokenForDomain(p.displayDomain)}
                           onClick={() => {
-                            navigator.clipboard.writeText(`YSN_MANAGEMENT_TOKEN=ysn_live_${p.id.replace(/[^a-zA-Z0-9]/g, '_')}_2026_sec`);
-                            alert(`${p.displayDomain} tokenı panoya kopyalandı!`);
+                            navigator.clipboard.writeText(`YSN_MANAGEMENT_TOKEN=${tokenForDomain(p.displayDomain)}`);
+                            notify(`${p.displayDomain} tokenı panoya kopyalandı!`);
                           }}
-                          className="px-3 py-1 bg-white border border-gray-200 hover:bg-gray-100 rounded-lg text-[11px] font-semibold text-gray-700 transition-colors"
+                          className="px-3 py-1 bg-white border border-gray-200 hover:bg-gray-100 rounded-lg text-[11px] font-semibold text-gray-700 transition-colors disabled:opacity-50"
                         >
                           Token Kopyala
                         </button>
@@ -1909,14 +1714,14 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
             {/* MODAL: YENİ SİTE / PROJE EKLE */}
             {siteModalOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+              <div role="dialog" aria-modal="true" aria-label="Yeni site" onMouseDown={(e) => { if (e.target === e.currentTarget) setSiteModalOpen(false); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
                 <div className="apple-card bg-white max-w-lg w-full p-6 border border-black/[0.08] shadow-2xl rounded-3xl animate-in zoom-in-95">
                   <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-4">
                     <h3 className="font-bold text-base text-[#1D1D1F] flex items-center gap-2">
                       <Plus className="w-4 h-4 text-[#0071E3]" />
                       Yeni Web Sitesi / Proje Ekle
                     </h3>
-                    <button onClick={() => setSiteModalOpen(false)} className="text-gray-400 hover:text-black">✕</button>
+                    <button type="button" onClick={() => setSiteModalOpen(false)} aria-label="Kapat" className="admin-close">✕</button>
                   </div>
 
                   <form onSubmit={handleAddNewSite} className="space-y-3.5 text-xs">
@@ -2031,7 +1836,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     <Compass className="w-5 h-5 text-emerald-600" />
                     SEO, GEO & Schema.org Otomasyon Motoru
                   </h3>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     Google arama motoru, yerel harita koordinatları (Pendik/İstanbul TR-34), Schema.org Multi-Graph, sitemap.xml ve robots.txt kurallarını otomatik test edin ve üretin.
                   </p>
                 </div>
@@ -2054,7 +1859,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                   <div className="text-3xl font-extrabold text-emerald-700 mt-1 font-mono">
                     {seoAuditOverallScore !== null ? `${seoAuditOverallScore}/100` : '100/100'}
                   </div>
-                  <span className="text-[10px] text-emerald-800 mt-1 block">Google Rich Snippets & GEO Uyumlu</span>
+                  <span className="text-[11px] text-emerald-800 mt-1 block">Google Rich Snippets & GEO Uyumlu</span>
                 </div>
 
                 <div className="p-4 bg-[#F5F5F7] rounded-2xl border border-black/[0.04]">
@@ -2073,7 +1878,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                   <div className="text-sm font-bold text-purple-700 mt-1 font-mono">
                     scripts/generate-seo-geo.js
                   </div>
-                  <span className="text-[10px] text-gray-500 mt-1 block">
+                  <span className="text-[11px] text-gray-500 mt-1 block">
                     Terminalden: <code>node scripts/generate-seo-geo.js</code>
                   </span>
                 </div>
@@ -2085,7 +1890,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                   <div className="bg-[#F5F5F7] px-4 py-3 font-bold text-[#1D1D1F] flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span>Canlı SEO & GEO Tarama Raporu</span>
-                      <span className="text-[11px] text-[#86868B] font-normal">({seoAuditResults.length} Domain Doğrulandı)</span>
+                      <span className="text-[11px] text-[#6E6E73] font-normal">({seoAuditResults.length} Domain Doğrulandı)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -2112,7 +1917,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                             `${r.domain}: Skor ${r.score}/100 | SSL: ${r.hasSsl ? 'OK' : 'Yok'} | GEO: ${r.hasGeoTags ? 'OK' : 'Eksik'} | Schema: ${r.hasSchemaOrg ? 'OK' : 'Eksik'} | Gecikme: ${r.latencyMs}ms`
                           ).join('\n');
                           navigator.clipboard.writeText(summary);
-                          alert('Özet denetim raporu panoya kopyalandı!');
+                          notify('Özet denetim raporu panoya kopyalandı!');
                         }}
                         className="px-2.5 py-1 bg-white hover:bg-gray-100 border border-black/[0.08] text-gray-700 rounded-lg text-[11px] font-semibold flex items-center gap-1 shadow-2xs transition-colors"
                       >
@@ -2171,7 +1976,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     <Code className="w-5 h-5 text-blue-600" />
                     Otomatik Kod ve Yapılandırma Üreticisi
                   </h4>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     İstediğiniz siteyi ve lokasyonu seçin; tek tıkla Next.js metadata, Schema JSON-LD, sitemap ve robots kodlarını üretin.
                   </p>
                 </div>
@@ -2285,7 +2090,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                             seoActiveSnippetTab === 'robots' ? seoGeneratedCode.robotsTxt :
                             seoGeneratedCode.geoMetaHtml;
                           navigator.clipboard.writeText(code);
-                          alert('Kod başarıyla panoya kopyalandı!');
+                          notify('Kod başarıyla panoya kopyalandı!');
                         }}
                         className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-sans font-semibold flex items-center gap-1 transition-colors"
                       >
@@ -2314,21 +2119,21 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
             {/* Top Status Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="apple-card bg-white p-5 border border-black/[0.07]">
-                <div className="flex items-center justify-between text-xs text-[#86868B] mb-2 font-medium">
+                <div className="flex items-center justify-between text-xs text-[#6E6E73] mb-2 font-medium">
                   <span>Yapay Zeka Motor Durumu</span>
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 </div>
                 <div className="text-xl font-bold text-emerald-600 flex items-center gap-2">
                   <span>Bağlandı</span>
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">200 OK</span>
+                  <span className="text-[11px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">200 OK</span>
                 </div>
-                <div className="text-[11px] text-[#86868B] mt-1 font-mono">
+                <div className="text-[11px] text-[#6E6E73] mt-1 font-mono">
                   YSNSOFT Neural Gateway
                 </div>
               </div>
 
               <div className="apple-card bg-white p-5 border border-black/[0.07]">
-                <div className="text-xs text-[#86868B] mb-2 font-medium">Aktif Çekirdek Model</div>
+                <div className="text-xs text-[#6E6E73] mb-2 font-medium">Aktif Çekirdek Model</div>
                 <div className="text-xl font-bold text-[#1D1D1F]">
                   {adminGlmModel === 'glm-4-plus' ? 'Plus Enterprise' : adminGlmModel.toUpperCase()}
                 </div>
@@ -2338,7 +2143,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               </div>
 
               <div className="apple-card bg-white p-5 border border-black/[0.07]">
-                <div className="text-xs text-[#86868B] mb-2 font-medium">Yetkili API Anahtarı</div>
+                <div className="text-xs text-[#6E6E73] mb-2 font-medium">Yetkili API Anahtarı</div>
                 <div className="text-sm font-mono font-bold text-[#1D1D1F] truncate">
                   1efef9eb...CfrWA
                 </div>
@@ -2348,11 +2153,11 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               </div>
 
               <div className="apple-card bg-white p-5 border border-black/[0.07]">
-                <div className="text-xs text-[#86868B] mb-2 font-medium">Son İstek Gecikmesi</div>
+                <div className="text-xs text-[#6E6E73] mb-2 font-medium">Son İstek Gecikmesi</div>
                 <div className="text-xl font-bold text-indigo-600">
                   {glmTestLatency ? `${glmTestLatency} ms` : 'Hazır'}
                 </div>
-                <div className="text-[11px] text-[#86868B] mt-1">
+                <div className="text-[11px] text-[#6E6E73] mt-1">
                   Edge Streaming
                 </div>
               </div>
@@ -2366,7 +2171,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     <Sparkles className="w-5 h-5 text-purple-600" />
                     YSNSOFT Akıllı Çözüm & Mimari Simülatörü
                   </h3>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     Hukuk UYAP botları, imar mevzuatı (3194 Md. 18) ve sistem tekliflerini canlı test edin.
                   </p>
                 </div>
@@ -2377,7 +2182,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
               {/* Quick Preset Buttons */}
               <div>
-                <span className="text-[11px] font-semibold text-[#86868B] block mb-2">Hazır Test Senaryoları:</span>
+                <span className="text-[11px] font-semibold text-[#6E6E73] block mb-2">Hazır Test Senaryoları:</span>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -2425,7 +2230,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="text-xs text-[#86868B] flex items-center gap-2">
+                <div className="text-xs text-[#6E6E73] flex items-center gap-2">
                   <span>Model Çekirdeği: <strong>{adminGlmModel}</strong></span>
                   <span>•</span>
                   <span>Sıcaklık: <strong>0.7</strong></span>
@@ -2457,7 +2262,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     <span className="flex items-center gap-1.5 text-purple-700">
                       <Sparkles className="w-4 h-4" /> YSNSOFT AI Model Çıktısı
                     </span>
-                    <span className="text-[#86868B] font-normal">
+                    <span className="text-[#6E6E73] font-normal">
                       {glmTestLatency ? `${glmTestLatency} milisaniye` : ''}
                     </span>
                   </div>
@@ -2473,7 +2278,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               <h4 className="text-sm font-bold text-[#1D1D1F] mb-1">
                 Yapay Zeka API & Model Yapılandırması
               </h4>
-              <p className="text-xs text-[#86868B] mb-4">
+              <p className="text-xs text-[#6E6E73] mb-4">
                 API anahtarınız sunucu tarafında güvenli şekilde saklanmaktadır. Dilerseniz buradan güncelleyebilirsiniz.
               </p>
 
@@ -2484,7 +2289,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     type="password"
                     value={adminGlmKey}
                     onChange={e => setAdminGlmKey(e.target.value)}
-                    placeholder="1efef9eb03bb45519b8b049bda266650.N8vckn65Qs8CfrWA"
+                    placeholder="API anahtarınızı yapıştırın"
                     className="w-full px-3.5 py-2 text-xs bg-[#F5F5F7] rounded-xl border border-black/[0.08] font-mono"
                   />
                 </div>
@@ -2523,7 +2328,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                   <h3 className="text-base font-bold text-[#1D1D1F]">
                     Şirket & Sistem İletişim Bilgileri
                   </h3>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     Sitede, teklif belgelerinde ve e-postalarda görünen resmi bilgiler
                   </p>
                 </div>
@@ -2660,7 +2465,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     <Mail className="w-5 h-5 text-blue-600" />
                     SMTP E-Posta Sunucu Yapılandırması
                   </h3>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     Gelen teklif talepleri, randevu teyitleri ve fatura PDF gönderimleri için giden sunucu
                   </p>
                 </div>
@@ -2788,32 +2593,32 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
                     KGLEX LegalTech & UYAP Robot Entegrasyon Durumu
                   </h4>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#6E6E73] mt-0.5">
                     D:\hukuk\kglex sistem mimarisi ve canlı üretim parametreleri
                   </p>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md">
+                <span className="text-[11px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md">
                   Canlıda (v0.33.45)
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[#86868B] block text-[10px] uppercase font-semibold">UYAP Bot Servisi</span>
+                  <span className="text-[#6E6E73] block text-[11px] uppercase font-semibold">UYAP Bot Servisi</span>
                   <strong className="text-emerald-700 block mt-0.5">Port 3006 (Aktif)</strong>
-                  <span className="text-[10px] text-[#86868B]">MariaDB lawdba (Multi-Tenant)</span>
+                  <span className="text-[11px] text-[#6E6E73]">MariaDB lawdba (Multi-Tenant)</span>
                 </div>
 
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[#86868B] block text-[10px] uppercase font-semibold">Gece Evrak Taraması</span>
+                  <span className="text-[#6E6E73] block text-[11px] uppercase font-semibold">Gece Evrak Taraması</span>
                   <strong className="text-[#1D1D1F] block mt-0.5">02:00 - 06:00</strong>
-                  <span className="text-[10px] text-emerald-600">500+ Büro Otomatik Takip</span>
+                  <span className="text-[11px] text-emerald-600">500+ Büro Otomatik Takip</span>
                 </div>
 
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[#86868B] block text-[10px] uppercase font-semibold">Kiracı İzolasyonu</span>
+                  <span className="text-[#6E6E73] block text-[11px] uppercase font-semibold">Kiracı İzolasyonu</span>
                   <strong className="text-[#1D1D1F] block mt-0.5">AsyncLocalStorage</strong>
-                  <span className="text-[10px] text-blue-600">companyId Filtresi Aktif</span>
+                  <span className="text-[11px] text-blue-600">companyId Filtresi Aktif</span>
                 </div>
               </div>
             </div>
@@ -2824,7 +2629,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
       {/* OFFICIAL PROPOSAL / PDF PRINT MODAL */}
       {proposalLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white">
+        <div role="dialog" aria-modal="true" aria-label="Teklif önizleme" onMouseDown={(e) => { if (e.target === e.currentTarget) setProposalLead(null); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white">
           <div className="bg-white rounded-3xl p-8 sm:p-12 max-w-3xl w-full border border-black/[0.1] shadow-2xl my-8 print:shadow-none print:border-0 print:p-0">
             
             <div className="flex items-center justify-between pb-6 border-b border-black/[0.1] mb-6">
@@ -2834,37 +2639,37 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-[#1D1D1F]">YSNSOFT BİLİŞİM TEKNOLOJİLERİ A.Ş.</h2>
-                  <p className="text-[11px] text-[#86868B]">Kurumsal SaaS & Yazılım Mühendisliği • Teklif Belgesi</p>
+                  <p className="text-[11px] text-[#6E6E73]">Kurumsal SaaS & Yazılım Mühendisliği • Teklif Belgesi</p>
                 </div>
               </div>
 
               <div className="text-right text-xs">
                 <div className="font-bold text-[#1D1D1F]">TEKLİF NO: YSN-{proposalLead.id}</div>
-                <div className="text-[#86868B]">Tarih: {new Date().toLocaleDateString('tr-TR')}</div>
+                <div className="text-[#6E6E73]">Tarih: {new Date().toLocaleDateString('tr-TR')}</div>
               </div>
             </div>
 
             <div className="bg-[#F5F5F7] p-5 rounded-2xl border border-black/[0.06] mb-6 text-xs">
-              <span className="text-[#86868B] uppercase font-bold text-[10px] block mb-1">Müşteri / Kurum Bilgileri:</span>
+              <span className="text-[#6E6E73] uppercase font-bold text-[11px] block mb-1">Müşteri / Kurum Bilgileri:</span>
               <h4 className="text-base font-bold text-[#1D1D1F] mb-1">{proposalLead.name}</h4>
-              <p className="text-[#6E6E73] font-medium">{proposalLead.company}</p>
-              <div className="text-[#86868B] mt-1">İletişim: {proposalLead.email} | {proposalLead.phone}</div>
+              <p className="text-[#515154] font-medium">{proposalLead.company}</p>
+              <div className="text-[#6E6E73] mt-1">İletişim: {proposalLead.email} | {proposalLead.phone}</div>
             </div>
 
             <div className="space-y-4 text-xs mb-8">
               <div>
-                <span className="text-[#86868B] uppercase font-bold text-[10px] block mb-1">1. Proje Kapsamı</span>
+                <span className="text-[#6E6E73] uppercase font-bold text-[11px] block mb-1">1. Proje Kapsamı</span>
                 <p className="text-sm font-semibold text-[#1D1D1F]">
                   {proposalLead.product} — Anahtar Teslim Kurulum ve Entegrasyon
                 </p>
-                <p className="text-[#6E6E73] mt-1 leading-relaxed">
+                <p className="text-[#515154] mt-1 leading-relaxed">
                   İşbu teklif; talep edilen sistemin şirket altyapısına kurulması, veri aktarımı, UYAP/CAD/Sanal POS entegrasyonu ve 12 aylık 7/24 SLA teknik destek güvencesini kapsar.
                 </p>
               </div>
 
               <div className="border border-black/[0.08] rounded-xl overflow-hidden">
                 <table className="w-full text-left">
-                  <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#86868B]">
+                  <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#6E6E73]">
                     <tr>
                       <th className="p-3 font-semibold">Hizmet / Modül</th>
                       <th className="p-3 font-semibold">Teslim Süresi</th>
@@ -2874,22 +2679,22 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                   <tbody className="divide-y divide-black/[0.05]">
                     <tr>
                       <td className="p-3 font-medium text-[#1D1D1F]">SaaS Çekirdek Kurulumu & Veritabanı</td>
-                      <td className="p-3 text-[#6E6E73]">Sprint 1 (1. Hafta)</td>
+                      <td className="p-3 text-[#515154]">Sprint 1 (1. Hafta)</td>
                       <td className="p-3 text-right font-bold text-[#10B981]">Dahil</td>
                     </tr>
                     <tr>
                       <td className="p-3 font-medium text-[#1D1D1F]">Özel Entegrasyonlar (Robot/API/Ödeme)</td>
-                      <td className="p-3 text-[#6E6E73]">Sprint 2 (2. Hafta)</td>
+                      <td className="p-3 text-[#515154]">Sprint 2 (2. Hafta)</td>
                       <td className="p-3 text-right font-bold text-[#10B981]">Dahil</td>
                     </tr>
                     <tr>
                       <td className="p-3 font-medium text-[#1D1D1F]">Eski Sistemden Sıfır Kayıpla Veri Aktarımı</td>
-                      <td className="p-3 text-[#6E6E73]">Sprint 3 (3. Hafta)</td>
+                      <td className="p-3 text-[#515154]">Sprint 3 (3. Hafta)</td>
                       <td className="p-3 text-right font-bold text-[#10B981]">Dahil</td>
                     </tr>
                     <tr>
                       <td className="p-3 font-medium text-[#1D1D1F]">Kullanıcı Eğitimi & 1 Yıllık 7/24 SLA Bakım</td>
-                      <td className="p-3 text-[#6E6E73]">Sürekli</td>
+                      <td className="p-3 text-[#515154]">Sürekli</td>
                       <td className="p-3 text-right font-bold text-[#10B981]">Garantili</td>
                     </tr>
                   </tbody>
@@ -2898,10 +2703,10 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
               <div className="bg-[#0071E3]/5 p-4 rounded-xl border border-[#0071E3]/15 flex items-center justify-between">
                 <div>
-                  <span className="text-[#86868B] block text-[11px]">Öngörülen Bütçe Ölçeği</span>
+                  <span className="text-[#6E6E73] block text-[11px]">Öngörülen Bütçe Ölçeği</span>
                   <span className="text-base font-bold text-[#0071E3]">{proposalLead.budget}</span>
                 </div>
-                <div className="text-right text-[11px] text-[#6E6E73]">
+                <div className="text-right text-[11px] text-[#515154]">
                   Ödeme Koşulu: %30 Avans, %40 Sprint Kabulü, %30 Canlı Teslimat
                 </div>
               </div>
@@ -2909,14 +2714,14 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
             <div className="pt-6 border-t border-black/[0.1] grid grid-cols-2 gap-8 text-xs text-center mb-6">
               <div>
-                <span className="text-[#86868B] block mb-1">Teklifi Hazırlayan</span>
+                <span className="text-[#6E6E73] block mb-1">Teklifi Hazırlayan</span>
                 <strong className="text-[#1D1D1F] block">YSNSOFT Bilişim Teknolojileri A.Ş.</strong>
-                <span className="text-[#86868B] text-[10px] block mt-4">İmza & Kaşe</span>
+                <span className="text-[#6E6E73] text-[11px] block mt-4">İmza & Kaşe</span>
               </div>
               <div>
-                <span className="text-[#86868B] block mb-1">Müşteri Kabul Onayı</span>
+                <span className="text-[#6E6E73] block mb-1">Müşteri Kabul Onayı</span>
                 <strong className="text-[#1D1D1F] block">{proposalLead.company}</strong>
-                <span className="text-[#86868B] text-[10px] block mt-4">İmza & Kaşe</span>
+                <span className="text-[#6E6E73] text-[11px] block mt-4">İmza & Kaşe</span>
               </div>
             </div>
 

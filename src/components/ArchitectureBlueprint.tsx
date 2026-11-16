@@ -69,20 +69,20 @@ export default function ArchitectureBlueprint() {
   const current = layers.find(l => l.id === activeLayer) || layers[0];
 
   return (
-    <section className="py-24 bg-[#F5F5F7] border-b border-black/[0.06]">
+    <section className="py-16 sm:py-24 bg-[#F5F5F7] border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4 shadow-xs">
-            <Cpu className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Cpu className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Mühendislik & Sistem Mimarisi</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Büyük ölçekler için <br />
-            <span className="text-[#0071E3]">kaya gibi sağlam mimari.</span>
+            <span>kaya gibi sağlam mimari.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Sistemlerimizin arkasındaki 5 katmanlı yüksek performanslı bulut topolojisini interaktif olarak inceleyin.
           </p>
         </div>
@@ -114,7 +114,7 @@ export default function ArchitectureBlueprint() {
                     </div>
                     <div>
                       <h4 className="text-sm font-semibold text-[#1D1D1F]">{layer.title}</h4>
-                      <span className="text-[11px] text-[#86868B]">{layer.badge}</span>
+                      <span className="text-[11px] text-[#6E6E73]">{layer.badge}</span>
                     </div>
                   </div>
                   <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#0071E3]' : 'bg-transparent'}`} />
@@ -135,7 +135,7 @@ export default function ArchitectureBlueprint() {
                     <current.icon className="w-4 h-4" />
                     <span>{current.badge}</span>
                   </span>
-                  <span className="text-xs text-[#86868B] font-medium">
+                  <span className="text-xs text-[#6E6E73] font-medium">
                     Aktif Katman Özellikleri
                   </span>
                 </div>
@@ -143,13 +143,13 @@ export default function ArchitectureBlueprint() {
                 <h3 className="text-2xl font-semibold text-[#1D1D1F] mb-3">
                   {current.title}
                 </h3>
-                <p className="text-sm text-[#6E6E73] leading-relaxed mb-6">
+                <p className="text-sm text-[#515154] leading-relaxed mb-6">
                   {current.description}
                 </p>
 
                 {/* Tech Badges in this layer */}
                 <div className="mb-6">
-                  <span className="text-xs font-bold text-[#86868B] uppercase tracking-wider block mb-2.5">
+                  <span className="text-xs font-bold text-[#6E6E73] uppercase tracking-wider block mb-2.5">
                     Kullanılan Kütüphaneler & Motorlar:
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

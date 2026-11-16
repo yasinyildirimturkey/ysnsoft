@@ -72,20 +72,20 @@ export default function WorkProcess({ onOpenContact }: { onOpenContact: () => vo
   const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <section className="py-24 bg-white border-b border-black/[0.06]">
+    <section className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4 shadow-xs">
-            <Clock className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Clock className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Şeffaf & Hızlı İş Süreci</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Fikirden canlı sisteme, <br />
-            <span className="text-[#0071E3]">4 adımda pürüzsüz geçiş.</span>
+            <span>4 adımda pürüzsüz geçiş.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Sürpriz maliyetler veya aylar süren belirsizlikler yok. Şeffaf sprintler ve haftalık canlı test ortamlarıyla projenizi zamanında teslim ediyoruz.
           </p>
         </div>
@@ -128,7 +128,7 @@ export default function WorkProcess({ onOpenContact }: { onOpenContact: () => vo
                   <h3 className="text-base font-semibold text-[#1D1D1F] mb-2">
                     {s.title}
                   </h3>
-                  <p className="text-xs text-[#6E6E73] leading-relaxed mb-4">
+                  <p className="text-xs text-[#515154] leading-relaxed mb-4">
                     {s.summary}
                   </p>
                 </div>
@@ -174,7 +174,7 @@ export default function WorkProcess({ onOpenContact }: { onOpenContact: () => vo
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-black/[0.06]">
-            <span className="text-xs text-[#6E6E73]">
+            <span className="text-xs text-[#515154]">
               Projeniz için ücretsiz teknik fizibilite toplantısı talep edin.
             </span>
             <button

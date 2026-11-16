@@ -6,20 +6,20 @@ import { Star, Quote, Award, TrendingUp, CheckCircle, Building } from 'lucide-re
 
 export default function Testimonials() {
   return (
-    <section id="testimonials" className="py-24 bg-white border-b border-black/[0.06]">
+    <section id="testimonials" className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4">
-            <Award className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Award className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Müşteri Başarı Hikayeleri</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Gerçek şirketler, <br />
-            <span className="text-[#0071E3]">ölçülebilir başarılar.</span>
+            <span>ölçülebilir başarılar.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Yazılım çözümlerimizle dijital dönüşümünü tamamlayan ve operasyonlarını katlayan iş ortaklarımızın deneyimleri.
           </p>
         </div>
@@ -28,19 +28,19 @@ export default function Testimonials() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
           <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
             <span className="text-3xl sm:text-4xl font-semibold text-[#1D1D1F] tracking-tight">45+</span>
-            <p className="text-xs sm:text-sm text-[#86868B] mt-1 font-medium">Teslim Edilen Proje</p>
+            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">Teslim Edilen Proje</p>
           </div>
           <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
             <span className="text-3xl sm:text-4xl font-semibold text-[#10B981] tracking-tight">%99.8</span>
-            <p className="text-xs sm:text-sm text-[#86868B] mt-1 font-medium">Müşteri Memnuniyeti</p>
+            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">Müşteri Memnuniyeti</p>
           </div>
           <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
             <span className="text-3xl sm:text-4xl font-semibold text-[#0071E3] tracking-tight">10x</span>
-            <p className="text-xs sm:text-sm text-[#86868B] mt-1 font-medium">Ortalama Verimlilik Artışı</p>
+            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">Ortalama Verimlilik Artışı</p>
           </div>
           <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
             <span className="text-3xl sm:text-4xl font-semibold text-[#8B5CF6] tracking-tight">₺150M+</span>
-            <p className="text-xs sm:text-sm text-[#86868B] mt-1 font-medium">İşlenen Aylık Veri Hacmi</p>
+            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">İşlenen Aylık Veri Hacmi</p>
           </div>
         </div>
 
@@ -74,7 +74,7 @@ export default function Testimonials() {
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-semibold text-[#1D1D1F]">{t.name}</h4>
-                  <p className="text-xs text-[#86868B]">{t.role} — {t.company}</p>
+                  <p className="text-xs text-[#6E6E73]">{t.role} — {t.company}</p>
                 </div>
               </div>
             </div>

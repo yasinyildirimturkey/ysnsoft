@@ -25,10 +25,24 @@ if (Test-Path public) {
 # Gerekli kök dosyaları ve klasörleri ekle
 Copy-Item package.json, package-lock.json, next.config.ts, start.js, web.config _deploy\www\
 if (Test-Path data) {
-  robocopy data _deploy\www\data /E /NFL /NDL /NJH /NJS /NP | Out-Null
+  # Canlı veritabanı dosyaları pakete girmez: sunucudaki gerçek talepler, randevular,
+  # faturalar, site listesi, yonetici hesaplari (sifre ozetleri) ve islem kaydi
+  # yerel kopyalarla ezilmesin. (Yoksa sunucu varsayılanları üretir.)
+  robocopy data _deploy\www\data /E /XF leads.json appointments.json invoices.json sites.json geo-settings.json admin-users.json admin-audit.log *.tmp /NFL /NDL /NJH /NJS /NP | Out-Null
 }
 if (Test-Path scripts) {
   robocopy scripts _deploy\www\scripts /E /NFL /NDL /NJH /NJS /NP | Out-Null
+}
+if (Test-Path tools\webscout\src) {
+  # WebScout (yonetim paneli > Musteri Adaylari): yalnizca arac kodu pakete girer.
+  # Sunucudaki aday veritabani (tools\webscout\data) ASLA ezilmez: durumlar ve ziyaret notlari orada yasar.
+  robocopy tools\webscout _deploy\www\tools\webscout /E /XD data out node_modules seed /XF *.log /NFL /NDL /NJH /NJS /NP | Out-Null
+  if (Test-Path tools\webscout\data\webscout.db) {
+    # Ilk kurulum tohumu: sunucuda veritabani yoksa SUNUCUDA-UYGULA bunu data\ altina kopyalar, varsa siler.
+    node --no-warnings tools\webscout\src\cli.js snapshot _deploy\www\tools\webscout\seed\webscout.db
+    if ($LASTEXITCODE -ne 0) { Write-Host '*** WebScout veritabani kopyasi alinamadi. Paketleme iptal. ***' -ForegroundColor Red; return }
+  }
+  Write-Host '  [OK] WebScout araci pakete eklendi.' -ForegroundColor Green
 }
 if (Test-Path .env.local) {
   Copy-Item .env.local _deploy\www\.env.production
@@ -67,9 +81,51 @@ if (Test-Path "$WwwKlasoru\.next") {
   Rename-Item "$WwwKlasoru\.next" "$WwwKlasoru\.next_yedek_$damga" -Force -ErrorAction SilentlyContinue
 }
 
+# Sunucuya ozel ayarlar paketteki .env.production ile ezilmesin:
+# asagidaki anahtarlar sunucuda zaten tanimliysa sunucudaki deger korunur.
+$KorunanAnahtarlar = @('ADMIN_PASSWORD_HASH', 'ADMIN_SESSION_SECRET')
+$EnvDosyasi = Join-Path $WwwKlasoru '.env.production'
+$Korunan = @{}
+if (Test-Path $EnvDosyasi) {
+  foreach ($satir in [System.IO.File]::ReadAllLines($EnvDosyasi)) {
+    foreach ($anahtar in $KorunanAnahtarlar) {
+      if ($satir.StartsWith("$anahtar=") -and $satir.Length -gt ($anahtar.Length + 1)) { $Korunan[$anahtar] = $satir }
+    }
+  }
+}
+
 # Zip'i aç
 Expand-Archive -Path $ZipDosyasi -DestinationPath $WwwKlasoru -Force
 Write-Host "  [OK] Dosyalar açıldı." -ForegroundColor Green
+
+if ($Korunan.Count -gt 0 -and (Test-Path $EnvDosyasi)) {
+  $yeni = New-Object System.Collections.Generic.List[string]
+  $yazilan = @{}
+  foreach ($satir in [System.IO.File]::ReadAllLines($EnvDosyasi)) {
+    $eslesen = $null
+    foreach ($anahtar in $Korunan.Keys) { if ($satir.StartsWith("$anahtar=")) { $eslesen = $anahtar } }
+    if ($eslesen) { $yeni.Add($Korunan[$eslesen]); $yazilan[$eslesen] = $true } else { $yeni.Add($satir) }
+  }
+  foreach ($anahtar in $Korunan.Keys) { if (-not $yazilan[$anahtar]) { $yeni.Add($Korunan[$anahtar]) } }
+  # BOM'suz UTF-8: Next.js ilk satirdaki anahtari BOM yuzunden kacirmasin
+  [System.IO.File]::WriteAllLines($EnvDosyasi, $yeni, (New-Object System.Text.UTF8Encoding($false)))
+  Write-Host ("  [OK] Sunucu ayarlari korundu: " + (($Korunan.Keys | Sort-Object) -join ', ')) -ForegroundColor Green
+}
+
+# WebScout aday veritabani: yalnizca ilk kurulumda tohumlanir, mevcut veri korunur
+$WsTohum = Join-Path $WwwKlasoru 'tools\webscout\seed'
+if (Test-Path "$WsTohum\webscout.db") {
+  $WsVeri = Join-Path $WwwKlasoru 'tools\webscout\data'
+  if (-not (Test-Path "$WsVeri\webscout.db")) {
+    New-Item -ItemType Directory -Path $WsVeri -Force | Out-Null
+    # Copy (Move degil): dosya hedef klasorun izinlerini devralsin, uygulama havuzu yazabilsin
+    Copy-Item "$WsTohum\webscout.db" "$WsVeri\webscout.db"
+    Write-Host "  [OK] WebScout aday veritabani ilk kez kuruldu." -ForegroundColor Green
+  } else {
+    Write-Host "  [OK] WebScout aday veritabani korundu (sunucudaki veri gecerli)." -ForegroundColor Green
+  }
+  Remove-Item $WsTohum -Recurse -Force
+}
 
 # Bagimliliklar kontrol
 if (-not (Test-Path "$WwwKlasoru\node_modules\next")) {
@@ -84,9 +140,10 @@ if (-not (Test-Path "$WwwKlasoru\node_modules\next")) {
 # IIS Havuzunu yeniden baslat
 Write-Host "3. IIS Uygulama Havuzu yenileniyor..." -ForegroundColor Yellow
 try {
-  Stop-Process -Name node -Force -ErrorAction SilentlyContinue
+  # Yalnizca bu sitenin uygulamasi yenilenir (iisnode watchedFiles=web.config).
+  # "Stop-Process -Name node" KULLANILMAZ: ayni sunucudaki diger siteleri de durdurur.
   (Get-Item "$WwwKlasoru\web.config").LastWriteTime = Get-Date
-  Write-Host "  [OK] IIS node yenilendi ve web.config guncellendi." -ForegroundColor Green
+  Write-Host "  [OK] web.config guncellendi, uygulama yenilendi." -ForegroundColor Green
 } catch {
   Write-Host "  [BILGI] Havuz IIS uzerinden veya web.config touch ile yenilenebilir." -ForegroundColor Gray
 }

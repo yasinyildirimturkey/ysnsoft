@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/admin-auth';
 import { getStoredInvoices, saveInvoice, InvoiceItem } from '@/lib/server-db';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = requireRole(request, 'muhasebe', 'read');
+  if (denied) return denied;
+
   const invoices = getStoredInvoices();
   const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((acc, i) => acc + i.grandTotal, 0);
   const pendingRevenue = invoices.filter(i => i.status === 'pending').reduce((acc, i) => acc + i.grandTotal, 0);
@@ -18,6 +22,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const denied = requireRole(request, 'muhasebe', 'write');
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     if (!body.clientName || !body.grandTotal) {

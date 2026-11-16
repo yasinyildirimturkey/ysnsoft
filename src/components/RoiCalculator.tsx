@@ -23,20 +23,20 @@ export default function RoiCalculator({ onOpenContact }: RoiCalculatorProps) {
   };
 
   return (
-    <section className="py-24 bg-white border-b border-black/[0.06]">
+    <section className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4">
-            <Calculator className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Calculator className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Finansal Getiri (ROI) Simülatörü</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Yazılım bir masraf değil, <br />
-            <span className="text-[#0071E3]">en karlı yatırımınızdır.</span>
+            <span>en karlı yatırımınızdır.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Şirket büyüklüğünüzü ve işlem hacminizi girin; YSNSOFT SaaS altyapısının yılda kaç saat ve kaç lira tasarruf ettireceğini görün.
           </p>
         </div>
@@ -66,7 +66,7 @@ export default function RoiCalculator({ onOpenContact }: RoiCalculatorProps) {
                 onChange={e => setEmployees(Number(e.target.value))}
                 className="w-full accent-[#0071E3] cursor-pointer"
               />
-              <div className="flex justify-between text-[11px] text-[#86868B] mt-1.5">
+              <div className="flex justify-between text-[11px] text-[#6E6E73] mt-1.5">
                 <span>5 Kişi</span>
                 <span>100 Kişi</span>
                 <span>250+ Kişi</span>
@@ -92,14 +92,14 @@ export default function RoiCalculator({ onOpenContact }: RoiCalculatorProps) {
                 onChange={e => setMonthlyTransactions(Number(e.target.value))}
                 className="w-full accent-[#0071E3] cursor-pointer"
               />
-              <div className="flex justify-between text-[11px] text-[#86868B] mt-1.5">
+              <div className="flex justify-between text-[11px] text-[#6E6E73] mt-1.5">
                 <span>200 İşlem</span>
                 <span>15.000 İşlem</span>
                 <span>30.000+ İşlem</span>
               </div>
             </div>
 
-            <div className="p-3.5 bg-white rounded-2xl border border-black/[0.06] text-xs text-[#6E6E73] flex items-center gap-2">
+            <div className="p-3.5 bg-white rounded-2xl border border-black/[0.06] text-xs text-[#515154] flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#0071E3] shrink-0" />
               <span>
                 Hesaplama; otomatik e-fatura kesimi, stok senkronizasyonu ve AI müşteri desteğinin rutin iş gücünden tasarruf ettiği verilerle modellenmiştir.
@@ -110,13 +110,13 @@ export default function RoiCalculator({ onOpenContact }: RoiCalculatorProps) {
 
           {/* Results Output (5 Cols) */}
           <div className="lg:col-span-5 apple-card p-6 sm:p-8 bg-white border border-black/[0.08] shadow-md">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#86868B] block mb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] block mb-4">
               Öngörülen Yıllık Tasarruf
             </span>
 
             <div className="space-y-5 mb-8">
               <div className="bg-[#F5F5F7] p-4 rounded-2xl border border-black/[0.04]">
-                <div className="flex items-center gap-2 text-xs text-[#86868B] mb-1">
+                <div className="flex items-center gap-2 text-xs text-[#6E6E73] mb-1">
                   <DollarSign className="w-4 h-4 text-[#10B981]" />
                   <span>Tahmini Yıllık Finansal Kazanç</span>
                 </div>
@@ -127,7 +127,7 @@ export default function RoiCalculator({ onOpenContact }: RoiCalculatorProps) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#F5F5F7] p-3.5 rounded-2xl border border-black/[0.04]">
-                  <div className="flex items-center gap-1.5 text-xs text-[#86868B] mb-1">
+                  <div className="flex items-center gap-1.5 text-xs text-[#6E6E73] mb-1">
                     <Clock className="w-3.5 h-3.5 text-[#0071E3]" />
                     <span>Zaman Tasarrufu</span>
                   </div>
@@ -137,7 +137,7 @@ export default function RoiCalculator({ onOpenContact }: RoiCalculatorProps) {
                 </div>
 
                 <div className="bg-[#F5F5F7] p-3.5 rounded-2xl border border-black/[0.04]">
-                  <div className="flex items-center gap-1.5 text-xs text-[#86868B] mb-1">
+                  <div className="flex items-center gap-1.5 text-xs text-[#6E6E73] mb-1">
                     <TrendingUp className="w-3.5 h-3.5 text-[#8B5CF6]" />
                     <span>Geri Dönüş (ROI)</span>
                   </div>

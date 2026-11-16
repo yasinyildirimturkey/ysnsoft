@@ -21,7 +21,7 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
           <h3 className="text-3xl sm:text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-4">
             Şirketinizi kanıtlanmış yazılım gücüyle ölçeklendirin.
           </h3>
-          <p className="text-base text-[#6E6E73] max-w-xl mx-auto mb-8 font-normal">
+          <p className="text-base text-[#515154] max-w-xl mx-auto mb-8 font-normal">
             KGLEX, HaritaPlan, Panelde gibi çalışan büyük SaaS ürünlerimizi keşfedin veya şirketinizin vizyonunu birlikte hayata geçirelim.
           </p>
 
@@ -46,7 +46,7 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
         </div>
 
         {/* Links Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16 text-xs text-[#6E6E73]">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16 text-xs text-[#515154]">
           
           {/* Brand Info (2 Cols) */}
           <div className="col-span-2">
@@ -58,14 +58,14 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
                 YSN<span className="text-[#0071E3]">SOFT</span>
               </span>
             </div>
-            <p className="leading-relaxed text-[#86868B] max-w-sm mb-3">
+            <p className="leading-relaxed text-[#6E6E73] max-w-sm mb-3">
               Hukuk teknolojileri (KGLEX), Harita & CBS (HaritaPlan), Multi-Tenant yönetim (Panelde) ve e-ticaret alanında canlıda çalışan büyük SaaS ve web sistemleri üreten yazılım evi.
             </p>
             <div className="text-xs text-[#1D1D1F] font-semibold mb-3 flex flex-col gap-1">
               <a href="tel:05327255098" className="hover:text-blue-600 transition-colors">
                 📞 0532 725 50 98
               </a>
-              <span className="text-[#86868B] font-normal text-[11px]">
+              <span className="text-[#6E6E73] font-normal text-[11px]">
                 📍 Pendik / İstanbul • destek@ysnsoft.com
               </span>
             </div>
@@ -143,19 +143,19 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
               <li>
                 <a href="/blog" className="hover:text-[#1D1D1F] transition-colors flex items-center gap-1.5">
                   <span>Ar-Ge & Mühendislik Blogu</span>
-                  <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">Yeni</span>
+                  <span className="text-[11px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">Yeni</span>
                 </a>
               </li>
               <li>
                 <a href="/portal" className="text-blue-600 font-semibold hover:underline flex items-center gap-1.5">
                   <span>Müşteri Takip Portalı</span>
-                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">Canlı</span>
+                  <span className="text-[11px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">Canlı</span>
                 </a>
               </li>
               <li>
                 <a href="/admin" className="text-[#0071E3] font-semibold hover:underline flex items-center gap-1">
                   <span>Yönetim Portalı (Admin)</span>
-                  <span className="text-[10px] bg-[#0071E3]/10 px-1.5 py-0.5 rounded">Giriş</span>
+                  <span className="text-[11px] bg-[#0071E3]/10 px-1.5 py-0.5 rounded">Giriş</span>
                 </a>
               </li>
             </ul>
@@ -164,7 +164,7 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
         </div>
 
         {/* Bottom Copyright */}
-        <div className="pt-8 border-t border-black/[0.06] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#86868B] gap-4">
+        <div className="pt-8 border-t border-black/[0.06] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#6E6E73] gap-4">
           <p>© 2026 YSNSOFT Bilişim Teknolojileri A.Ş. Tüm hakları saklıdır.</p>
           <div className="flex items-center gap-6">
             <span>Türkiye & Global Bulut Altyapısı</span>

@@ -87,7 +87,7 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[#6E6E73] hover:text-[#1D1D1F] rounded-full hover:bg-black/5 transition-colors"
+            className="p-1.5 text-[#515154] hover:text-[#1D1D1F] rounded-full hover:bg-black/5 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -103,12 +103,12 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
               <h4 className="text-2xl font-semibold text-[#1D1D1F] mb-2">
                 Talebiniz Alındı!
               </h4>
-              <p className="text-sm text-[#6E6E73] max-w-md mx-auto mb-6">
+              <p className="text-sm text-[#515154] max-w-md mx-auto mb-6">
                 Teşekkür ederiz. Proje detaylarınız teknik ekibimize iletildi. En geç 24 saat içinde size özel fizibilite ve teklif dosyasıyla dönüş yapacağız.
               </p>
               
               <div className="bg-[#F5F5F7] p-4 rounded-2xl border border-black/[0.04] text-xs text-[#1D1D1F] max-w-sm mx-auto mb-6">
-                <span className="text-[#86868B] block mb-1">Doğrudan İletişim</span>
+                <span className="text-[#6E6E73] block mb-1">Doğrudan İletişim</span>
                 <strong>destek@ysnsoft.com</strong> | <strong>+90 532 725 50 98</strong>
               </div>
 
@@ -232,7 +232,7 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
                 />
               </div>
 
-              <div className="flex items-center gap-2 text-[11px] text-[#86868B] pt-1">
+              <div className="flex items-center gap-2 text-[11px] text-[#6E6E73] pt-1">
                 <ShieldCheck className="w-4 h-4 text-[#10B981]" />
                 <span>Bilgileriniz KVKK standartlarına uygun olarak gizlilikle korunur.</span>
               </div>

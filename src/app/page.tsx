@@ -22,6 +22,7 @@ import ProductModal from '@/components/ProductModal';
 import ContactModal from '@/components/ContactModal';
 import FloatingActions from '@/components/FloatingActions';
 import AiAssistant from '@/components/AiAssistant';
+import Reveal from '@/components/Reveal';
 import { Product, PRODUCTS } from '@/data/products';
 
 export default function Home() {
@@ -69,59 +70,59 @@ export default function Home() {
       />
 
       {/* 3. Real Product Bento Grid (KGLEX, HaritaPlan, Panelde, Flamantyou, Samatya, Bodrum) */}
-      <ProductBentoGrid 
+      <Reveal><ProductBentoGrid 
         onSelectProduct={setSelectedProduct}
         onOpenContact={handleOpenContact}
-      />
+      /></Reveal>
 
       {/* 4. Canlı Web Siteleri İstasyonu & Cihaz Konsolu */}
-      <LiveSiteShowcase />
+      <Reveal><LiveSiteShowcase /></Reveal>
 
       {/* 4. Live Interactive Experience Simulator */}
-      <InteractiveSandbox />
+      <Reveal><InteractiveSandbox /></Reveal>
 
       {/* 5. Documented Case Studies & Real Results */}
       <div id="cases">
-        <CaseStudies onOpenContact={handleOpenContact} />
+        <Reveal><CaseStudies onOpenContact={handleOpenContact} /></Reveal>
       </div>
 
       {/* 6. 4-Step Agile Work & Delivery Process */}
-      <WorkProcess onOpenContact={() => handleOpenContact('İş Süreci & Proje Başlatma')} />
+      <Reveal><WorkProcess onOpenContact={() => handleOpenContact('İş Süreci & Proje Başlatma')} /></Reveal>
 
       {/* 7. Interactive Scope & Cost Configurator */}
-      <ProjectCalculator 
+      <Reveal><ProjectCalculator 
         onConfigureSubmit={handleConfigureSubmit}
-      />
+      /></Reveal>
 
       {/* 8. 5-Layer Enterprise Cloud Architecture & Security */}
       <div id="architecture">
-        <ArchitectureBlueprint />
+        <Reveal><ArchitectureBlueprint /></Reveal>
       </div>
 
       {/* 9. Engineering Code Radar */}
-      <CodeRadar />
+      <Reveal><CodeRadar /></Reveal>
 
       {/* 10. Comparison Matrix: Traditional Software vs YSNSOFT */}
-      <ComparisonTable />
+      <Reveal><ComparisonTable /></Reveal>
 
       {/* 11. Interactive Financial ROI Simulator */}
-      <RoiCalculator 
+      <Reveal><RoiCalculator 
         onOpenContact={handleOpenContact}
-      />
+      /></Reveal>
 
       {/* 12. 30-Minute Live 1-on-1 Google Meet Scheduler */}
-      <MeetingScheduler />
+      <Reveal><MeetingScheduler /></Reveal>
 
       {/* 13. Technology Stack & Modern Tooling */}
-      <TechStack />
+      <Reveal><TechStack /></Reveal>
 
       {/* 14. Client Stories & Ratings */}
-      <Testimonials />
+      <Reveal><Testimonials /></Reveal>
 
       {/* 15. FAQ Accordion */}
-      <FaqSection 
+      <Reveal><FaqSection 
         onOpenContact={() => handleOpenContact('Genel Danışmanlık')}
-      />
+      /></Reveal>
 
       {/* 16. Footer & High-Conversion Banner */}
       <Footer 

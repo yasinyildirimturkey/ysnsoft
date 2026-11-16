@@ -111,20 +111,20 @@ export default function CaseStudies({ onOpenContact }: { onOpenContact: (summary
   const currentStudy = CASE_STUDIES.find(c => c.id === activeTab) || CASE_STUDIES[0];
 
   return (
-    <section className="py-24 bg-white border-b border-black/[0.06]">
+    <section className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4 shadow-xs">
-            <TrendingUp className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Kanıtlanmış Sonuçlar & Vaka İncelemeleri</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Gerçek projeler, <br />
-            <span className="text-[#0071E3]">belgelenmiş dönüşüm hikayeleri.</span>
+            <span>belgelenmiş dönüşüm hikayeleri.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Sektöründe lider şirketlerin YSNSOFT SaaS ürünleriyle nasıl hızlandığını ve karlılığını artırdığını adım adım inceleyin.
           </p>
 
@@ -137,7 +137,7 @@ export default function CaseStudies({ onOpenContact }: { onOpenContact: (summary
                 className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-full transition-all ${
                   activeTab === study.id
                     ? 'bg-[#1D1D1F] text-white shadow-xs'
-                    : 'bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] border border-black/[0.06]'
+                    : 'bg-[#F5F5F7] text-[#515154] hover:text-[#1D1D1F] border border-black/[0.06]'
                 }`}
               >
                 {study.client.split(' ')[0]} ({study.productUsed.split(' ')[0]})
@@ -156,7 +156,7 @@ export default function CaseStudies({ onOpenContact }: { onOpenContact: (summary
                 <span className="text-xs font-semibold text-[#0071E3] bg-[#0071E3]/10 px-3 py-0.5 rounded-full">
                   {currentStudy.sector}
                 </span>
-                <span className="text-xs text-[#86868B] font-medium">
+                <span className="text-xs text-[#6E6E73] font-medium">
                   {currentStudy.productUsed}
                 </span>
               </div>
@@ -179,7 +179,7 @@ export default function CaseStudies({ onOpenContact }: { onOpenContact: (summary
             <h4 className="text-xl sm:text-2xl font-semibold text-[#1D1D1F] mb-3">
               "{currentStudy.title}"
             </h4>
-            <p className="text-sm sm:text-base text-[#6E6E73] leading-relaxed">
+            <p className="text-sm sm:text-base text-[#515154] leading-relaxed">
               {currentStudy.summary}
             </p>
           </div>
@@ -190,7 +190,7 @@ export default function CaseStudies({ onOpenContact }: { onOpenContact: (summary
               <span className="text-xs font-bold text-[#FF5F56] uppercase tracking-wider block mb-2">
                 Eski Durum & Zorluklar
               </span>
-              <p className="text-xs sm:text-sm text-[#6E6E73] leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#515154] leading-relaxed">
                 {currentStudy.before}
               </p>
             </div>
@@ -209,7 +209,7 @@ export default function CaseStudies({ onOpenContact }: { onOpenContact: (summary
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             {currentStudy.kpis.map((kpi, idx) => (
               <div key={idx} className="bg-white p-4 rounded-2xl border border-black/[0.06] shadow-2xs text-center">
-                <span className="text-xs text-[#86868B] block mb-1">{kpi.label}</span>
+                <span className="text-xs text-[#6E6E73] block mb-1">{kpi.label}</span>
                 <div className="text-2xl sm:text-3xl font-bold text-[#1D1D1F]">{kpi.value}</div>
                 <span className="text-[11px] font-semibold text-[#10B981] mt-1 inline-block">
                   {kpi.growth}
@@ -229,7 +229,7 @@ export default function CaseStudies({ onOpenContact }: { onOpenContact: (summary
               </p>
               <div className="text-xs">
                 <span className="font-semibold text-[#1D1D1F]">{currentStudy.author}</span>
-                <span className="text-[#86868B]"> — {currentStudy.role}, {currentStudy.client}</span>
+                <span className="text-[#6E6E73]"> — {currentStudy.role}, {currentStudy.client}</span>
               </div>
             </div>
           </div>

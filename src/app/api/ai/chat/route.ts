@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const apiKey = clientApiKey || process.env.GLM_API_KEY || '1efef9eb03bb45519b8b049bda266650.N8vckn65Qs8CfrWA';
+    const apiKey = clientApiKey || process.env.GLM_API_KEY || '';
     const baseUrl = process.env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4';
     let targetModel = model || process.env.GLM_MODEL || 'glm-4-plus';
 

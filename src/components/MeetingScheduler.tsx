@@ -56,20 +56,20 @@ export default function MeetingScheduler() {
   };
 
   return (
-    <section id="demo" className="py-24 bg-white border-b border-black/[0.06]">
+    <section id="demo" className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F5F7] border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] mb-4">
-            <Video className="w-3.5 h-3.5 text-[#0071E3]" />
+          <div className="section-eyebrow">
+            <Video className="w-3.5 h-3.5" aria-hidden="true" />
             <span>30 Dakikalık Birebir Canlı Demo</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[#1D1D1F] mb-4">
+          <h2 className="section-title">
             Mühendislerimizle görüşün, <br />
-            <span className="text-[#0071E3]">ürünleri canlıda test edin.</span>
+            <span>ürünleri canlıda test edin.</span>
           </h2>
-          <p className="text-base sm:text-lg text-[#6E6E73]">
+          <p className="section-lead">
             Şirketinizin ihtiyaçlarını dinleyelim; KGLEX, HaritaPlan veya Panelde üzerinde size özel ekranları canlı Google Meet oturumunda gösterelim.
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function MeetingScheduler() {
               <h3 className="text-2xl font-semibold text-[#1D1D1F] mb-2">
                 Randevunuz Onaylandı!
               </h3>
-              <p className="text-sm text-[#6E6E73] max-w-md mx-auto mb-6">
+              <p className="text-sm text-[#515154] max-w-md mx-auto mb-6">
                 <strong>{selectedDay.label}, {selectedDay.date} saat {selectedTime}</strong> için Google Meet takvim davetiniz <strong>{email}</strong> adresine gönderildi.
               </p>
 
@@ -109,7 +109,7 @@ export default function MeetingScheduler() {
               {/* Left Column: Date & Time (6 Cols) */}
               <div className="md:col-span-6 space-y-6">
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#86868B] block mb-3">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] block mb-3">
                     1. Tarih Seçin
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -125,14 +125,14 @@ export default function MeetingScheduler() {
                         }`}
                       >
                         <span className="text-xs font-semibold text-[#1D1D1F] block">{day.label}</span>
-                        <span className="text-[11px] text-[#86868B]">{day.date}</span>
+                        <span className="text-[11px] text-[#6E6E73]">{day.date}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#86868B] block mb-3">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] block mb-3">
                     2. Saat Dilimi Seçin (TSİ)
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -153,7 +153,7 @@ export default function MeetingScheduler() {
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-white rounded-2xl border border-black/[0.06] text-xs text-[#6E6E73] flex items-center gap-2">
+                <div className="p-3.5 bg-white rounded-2xl border border-black/[0.06] text-xs text-[#515154] flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#0071E3] shrink-0" />
                   <span>
                     Toplantılar kıdemli çözüm mimarlarımız eşliğinde birebir Google Meet üzerinden gerçekleşir.
@@ -163,7 +163,7 @@ export default function MeetingScheduler() {
 
               {/* Right Column: Contact Details (6 Cols) */}
               <div className="md:col-span-6 space-y-4 bg-white p-5 rounded-2xl border border-black/[0.06]">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#86868B] block mb-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] block mb-1">
                   3. Katılımcı Bilgileri
                 </label>
 
