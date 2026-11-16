@@ -320,27 +320,69 @@ async function cmdDraft(db, opt) {
   console.log(`${r.biz.name}: /demo/${r.token}  (şablon: ${r.kit.template}, ${r.kit.photos.length} görsel (${r.kit.uploads} saha), saatler: ${r.kit.hours?.source ?? 'yok'}, metin: ${r.kit.copy.placeholder ? `yer tutucu${r.kit.copy.llmError ? ` — ${r.kit.copy.llmError}` : ''}` : r.kit.copy.model})`);
 }
 
+/**
+ * Toplu taslak için en iyi adaylar: gerçek sitesi olan (metin ve görsel oradan gelir), zincir olmayan,
+ * henüz taslağı olmayan yenileme adayları; geçerli puana (doğrulama sonrası) göre.
+ */
+function draftTop(db, { country, city, categories, areaId, minScore = 40, limit }) {
+  const where = [
+    'b.website IS NOT NULL', 'b.brand IS NULL', "b.status NOT IN ('do_not_contact','won','lost')",
+    'NOT EXISTS (SELECT 1 FROM drafts d WHERE d.business_id = b.id)',
+    'COALESCE(p.adjusted_score, s.score) >= ?', `s.findings NOT LIKE '%"social_only"%'`, `s.findings NOT LIKE '%"placeholder"%'`,
+  ];
+  const params = [minScore];
+  if (country) { where.push('b.country = ?'); params.push(country); }
+  if (city) { where.push('b.city = ?'); params.push(city); }
+  if (categories?.length) { where.push(`b.category IN (${categories.map(() => '?').join(',')})`); params.push(...categories); }
+  if (areaId) { where.push('EXISTS (SELECT 1 FROM business_areas ba WHERE ba.business_id = b.id AND ba.area_id = ?)'); params.push(Number(areaId)); }
+  return db
+    .prepare(`SELECT b.id FROM businesses b
+              JOIN scans s ON s.id = (SELECT MAX(id) FROM scans WHERE business_id = b.id)
+              LEFT JOIN profiles p ON p.business_id = b.id
+              WHERE ${where.join(' AND ')} ORDER BY COALESCE(p.adjusted_score, s.score) DESC, b.name LIMIT ?`)
+    .all(...params, limit)
+    .map((r) => r.id);
+}
+
 async function cmdJobDraft(db, opt) {
   const running = readJob();
   if (running?.state === 'running' && running.pid !== process.pid) {
     printJson({ ok: false, error: 'Zaten çalışan bir tarama var; bitmesini bekleyin.' });
     process.exit(1);
   }
-  const [id] = parseIds(opt.id);
+  const ids = opt.id
+    ? parseIds(opt.id).slice(0, 25)
+    : draftTop(db, {
+      country: str(opt.country), city: str(opt.city), categories: str(opt.category)?.split(','), areaId: opt.area,
+      minScore: Number(opt['min-score'] ?? 40), limit: Math.max(1, Math.min(25, Number(opt.top ?? 10))),
+    });
   const job = {
     id: Date.now(), pid: process.pid, state: 'running', startedAt: new Date().toISOString(),
-    params: { draft: true, ids: id ? [id] : [] },
-    step: 'draft', message: 'Şablon taslağı başlıyor…', progress: { done: 0, total: 1 },
+    params: { draft: true, ids },
+    step: 'draft', message: 'Şablon taslağı başlıyor…', progress: { done: 0, total: ids.length },
     results: [], errors: [],
   };
   writeJob(job);
   try {
-    if (!id) throw new Error('Geçersiz kayıt.');
-    const r = await runDraft(db, id, (m) => { job.message = m; writeJob(job); });
+    if (!ids.length) throw new Error(opt.id ? 'Geçersiz kayıt.' : 'Bu seçimde taslağı üretilecek yeni aday yok.');
+    let made = 0;
+    let last = null;
+    // Sırayla: her taslak siteyi gezer ve GLM'e gider; bir aday hata verirse diğerleri sürer
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        last = await runDraft(db, ids[i], (m) => { job.message = ids.length > 1 ? `[${i + 1}/${ids.length}] ${m}` : m; writeJob(job); });
+        made++;
+      } catch (e) {
+        job.errors.push(`#${ids[i]}: ${String(e.message).slice(0, 160)}`);
+      }
+      job.progress = { done: i + 1, total: ids.length };
+      writeJob(job);
+    }
+    if (!made) throw new Error(job.errors[0] ?? 'Taslak üretilemedi.');
     job.state = 'done';
     job.step = 'done';
-    job.progress = { done: 1, total: 1 };
-    job.message = `${r.biz.name}: şablon taslağı hazır.`;
+    job.drafted = made;
+    job.message = ids.length === 1 ? `${last.biz.name}: şablon taslağı hazır.` : `${made} adayın şablon taslağı hazır${job.errors.length ? ` (${job.errors.length} hata)` : ''}.`;
   } catch (e) {
     job.state = 'error';
     job.message = e.message;

@@ -213,14 +213,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, started: true }, { headers: NO_STORE });
     }
 
-    // Seviye 3: tek aday için şablon taslağı (gizli /demo/<belirteç> sayfası) üret ya da yenile
+    // Seviye 3: şablon taslağı (gizli /demo/<belirteç> sayfası) — tek aday (id) ya da süzgeçteki en iyi N aday (top)
     if (body.action === 'draft') {
-      const id = Number(body.id);
-      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      let args: string[];
+      if (body.id !== undefined) {
+        const id = Number(body.id);
+        if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+        args = ['--id', String(id)];
+      } else {
+        const region = regionArgs({ get: (k) => body[k] }, false);
+        if (typeof region === 'string') return fail(region);
+        const top = Number(body.top ?? 10);
+        const minScore = Number(body.minScore ?? 40);
+        args = [
+          ...region,
+          '--top', String(Number.isInteger(top) ? Math.max(1, Math.min(25, top)) : 10),
+          '--min-score', String(Number.isFinite(minScore) ? Math.max(0, Math.min(100, Math.round(minScore))) : 40),
+        ];
+      }
       const current = await runWebscout<{ job: { state?: string } | null }>(['job-status']);
       if (current.job?.state === 'running') return fail('Zaten çalışan bir tarama var; bitmesini bekleyin.', 409);
 
-      startWebscoutJob(['--id', String(id)], 'job-draft');
+      startWebscoutJob(args, 'job-draft');
       return NextResponse.json({ success: true, started: true }, { headers: NO_STORE });
     }
 

@@ -102,6 +102,7 @@ interface Summary {
   unscanned: number;
   ok: number;
   chain: number;
+  drafts?: number;
 }
 
 interface Breakdown {
@@ -126,6 +127,7 @@ const KIND_FILTERS: { id: string; label: string }[] = [
   { id: 'no_site', label: 'Sitesi yok' },
   { id: 'redesign', label: 'Yenileme adayı' },
   { id: 'unscanned', label: 'Taranmadı' },
+  { id: 'draft', label: 'Taslak hazır' },
   { id: 'all', label: 'Tümü' },
 ];
 
@@ -358,6 +360,21 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
       setJob({ state: 'running', step: 'draft', message: 'Şablon taslağı başlıyor…', progress: { done: 0, total: 1 } });
     } catch (e) {
       notify(`Hata: ${e instanceof Error ? e.message : 'Şablon taslağı başlatılamadı.'}`);
+    }
+  };
+
+  /** Seviye 3 toplu: geçerli süzgeçteki en iyi adaylara taslak üretir (bitince "Taslak hazır" süzgecine geçer). */
+  const startDraftTop = async () => {
+    try {
+      await api('/api/admin/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'draft', top: AUTO_ENRICH_TOP, minScore, country, city: cityTrim || undefined, area: areaId || undefined, category: cats.join(',') || undefined }),
+      });
+      setJob({ state: 'running', step: 'draft', message: 'Toplu taslak başlıyor…', progress: { done: 0, total: AUTO_ENRICH_TOP } });
+      setKind('draft');
+    } catch (e) {
+      notify(`Hata: ${e instanceof Error ? e.message : 'Toplu taslak başlatılamadı.'}`);
     }
   };
 
@@ -616,6 +633,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
               }`}
             >
               {k.label}
+              {k.id === 'draft' && summary?.drafts ? <span className="ml-1 tabular opacity-80">({summary.drafts.toLocaleString('tr-TR')})</span> : null}
             </button>
           ))}
         </div>
@@ -656,6 +674,16 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
           >
             <ScanSearch className="w-3.5 h-3.5" aria-hidden="true" />
             <span>İlk {AUTO_ENRICH_TOP}’u derin tara</span>
+          </button>
+          <button
+            type="button"
+            onClick={startDraftTop}
+            disabled={jobRunning}
+            title={`Bu süzgeçte puanı en yüksek, sitesi olan ve henüz taslağı olmayan ${AUTO_ENRICH_TOP} yenileme adayına örnek site üretir (gerekirse önce derin tarar; aday başına ~1 dk)`}
+            className="apple-pill-btn-secondary px-4 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <LayoutTemplate className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>İlk {AUTO_ENRICH_TOP}’a taslak üret</span>
           </button>
           <button
             type="button"
@@ -718,6 +746,17 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                         <span className={`mt-1 block w-fit px-1.5 py-0.5 rounded-md text-[10px] font-bold ${ACTIVITY_META[r.activity].cls}`} title="Derin profil çıkarıldı (Detay’da)">
                           {ACTIVITY_META[r.activity].label}
                         </span>
+                      )}
+                      {r.draft_token && (
+                        <a
+                          href={`/demo/${r.draft_token}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 w-fit px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1"
+                          title="Örnek siteyi yeni sekmede aç"
+                        >
+                          <LayoutTemplate className="w-3 h-3" aria-hidden="true" /> Taslak hazır
+                        </a>
                       )}
                     </td>
                     <td className="p-4 max-w-52">
