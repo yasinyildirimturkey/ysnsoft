@@ -26,8 +26,8 @@ export interface OfferProspect {
 }
 
 /** QR kodu tek bir SVG yolu olarak çizer (yazıcıda keskin çıkar; dış istek ya da görsel dosyası yok). */
-function QrCode({ value, size }: { value: string; size: number }) {
-  const qr = qrcode(0, 'M');
+export function QrCode({ value, size, label = 'QR-Code zum Entwurf', level = 'M' }: { value: string; size: number; label?: string; level?: 'L' | 'M' }) {
+  const qr = qrcode(0, level);
   qr.addData(value);
   qr.make();
   const n = qr.getModuleCount();
@@ -35,7 +35,7 @@ function QrCode({ value, size }: { value: string; size: number }) {
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
   // 4 modüllük boş çerçeve: tarayıcıların kodu tanıması için gerekli
   return (
-    <svg viewBox={`-4 -4 ${n + 8} ${n + 8}`} width={size} height={size} shapeRendering="crispEdges" role="img" aria-label="QR-Code zum Entwurf">
+    <svg viewBox={`-4 -4 ${n + 8} ${n + 8}`} width={size} height={size} shapeRendering="crispEdges" role="img" aria-label={label}>
       <rect x={-4} y={-4} width={n + 8} height={n + 8} fill="#fff" />
       <path d={d} fill="#000" />
     </svg>

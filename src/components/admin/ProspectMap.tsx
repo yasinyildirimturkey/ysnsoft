@@ -6,12 +6,14 @@
  * Harita: OpenStreetMap (Leaflet) — ücretsiz, API anahtarı gerekmez. Google'ın gömülü haritası ücretli anahtar ister.
  * Rota: seçilen duraklar en yakın komşu sırasıyla dizilir ve tek tıkla Google Maps'te (telefonda uygulamada) açılır;
  * başlangıç noktası verilmez, Google Maps kullanıcının o anki konumundan başlatır.
- * Rota yalnızca bu tarayıcıda saklanır (localStorage); erişilemezse sayfa yine çalışır.
+ * Rota yalnızca bu tarayıcıda saklanır (localStorage); erişilemezse sayfa yine çalışır. Telefona QR kodu ya da
+ * paylaşım/kopyalama ile Google Maps bağlantısı olarak aktarılır.
  */
 import 'leaflet/dist/leaflet.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CircleMarker, LayerGroup, Map as LeafletMap } from 'leaflet';
-import { ExternalLink, MapPin, Navigation, Phone, Route, Trash2, X } from 'lucide-react';
+import { Check, Copy, ExternalLink, MapPin, Navigation, Phone, Route, Share2, Smartphone, Trash2, X } from 'lucide-react';
+import { QrCode } from './ProspectOffer';
 
 export interface MapProspect {
   id: number;
@@ -100,6 +102,35 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
   const [ready, setReady] = useState(false);
   const [stops, setStops] = useState<Stop[]>([]);
   const [notice, setNotice] = useState('');
+  const [showQr, setShowQr] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  // Bilgisayarda hazırlanan rota telefona: paylaşım menüsü (WhatsApp vb.) ya da panoya kopyalama
+  const shareRoute = async (url: string) => {
+    if (canShare) {
+      try { await navigator.share({ title: 'Ziyaret rotası', url }); return; } catch (e) {
+        if ((e as Error)?.name === 'AbortError') return; // kullanıcı vazgeçti
+      }
+    }
+    let ok = false;
+    try { await navigator.clipboard.writeText(url); ok = true; } catch {
+      // Pano izni yoksa (gömülü tarayıcı, eski Safari) seçip kopyalama yedeği
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+    }
+    if (ok) {
+      setNotice('');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else setNotice('Bağlantı kopyalanamadı; QR kodunu kullanın.');
+  };
 
   const located = useMemo(
     () => rows.filter((r): r is MapProspect & { lat: number; lon: number } => Number.isFinite(r.lat) && Number.isFinite(r.lon)),
@@ -107,11 +138,14 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
   );
 
   // Kayıtlı rota (yalnızca istemcide)
+  // Yükleme bitmeden yazılmaz: yoksa ilk (boş) durum kayıtlı rotanın üzerine yazılır ve rota her açılışta silinir
+  const loaded = useRef(false);
   useEffect(() => {
-    const t = setTimeout(() => setStops(loadStops()), 0);
+    const t = setTimeout(() => { setStops(loadStops()); loaded.current = true; }, 0);
     return () => clearTimeout(t);
   }, []);
   useEffect(() => {
+    if (!loaded.current) return;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stops)); } catch { /* gizli pencere vb. */ }
   }, [stops]);
 
@@ -332,6 +366,33 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
               <ExternalLink className="w-3 h-3" aria-hidden="true" />
             </a>
             <p className="text-[#6E6E73] leading-relaxed">Rota bulunduğunuz konumdan başlar; telefonda Google Maps uygulamasında açılır.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setShowQr((v) => !v)}
+                aria-expanded={showQr}
+                className="px-3 py-2 rounded-full border border-black/[0.12] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] flex items-center justify-center gap-1.5"
+              >
+                <Smartphone className="w-3.5 h-3.5" aria-hidden="true" /> Telefona aktar
+              </button>
+              <button
+                type="button"
+                onClick={() => shareRoute(googleRouteUrl(stops))}
+                className="px-3 py-2 rounded-full border border-black/[0.12] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] flex items-center justify-center gap-1.5"
+              >
+                {copied
+                  ? <><Check className="w-3.5 h-3.5 text-green-600" aria-hidden="true" /> Kopyalandı</>
+                  : canShare
+                    ? <><Share2 className="w-3.5 h-3.5" aria-hidden="true" /> Paylaş</>
+                    : <><Copy className="w-3.5 h-3.5" aria-hidden="true" /> Bağlantıyı kopyala</>}
+              </button>
+            </div>
+            {showQr && (
+              <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#F5F5F7]">
+                <QrCode value={googleRouteUrl(stops)} size={232} level="L" label="Rotayı telefonda açmak için QR kodu" />
+                <p className="text-[#6E6E73] text-center leading-relaxed">Telefonun kamerasıyla okutun; rota Google Maps&apos;te açılır.</p>
+              </div>
+            )}
           </>
         )}
 
