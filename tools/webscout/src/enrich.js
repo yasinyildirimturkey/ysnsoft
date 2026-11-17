@@ -7,6 +7,7 @@
 // Hepsi ücretsiz kaynaklardır. E-posta adresi BİLEREK toplanmaz (UWG §7: soğuk e-posta yok).
 // Çıkan her şey göstergedir; ziyaretten önce elle doğrulanır.
 
+import { siteMismatch } from './sitematch.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DATA_DIR } from './db.js';
@@ -753,5 +754,7 @@ export async function enrichBusiness(biz, scan) {
   const activity = activityOf({ site, osm, wayback: wb, scanInfo: findings.info });
   const ai = site?.ok ? await aiSummary(biz, site.content) : null;
 
-  return { version: 1, site, hours, osm, wayback: wb, psi, activity, ai };
+  // Kayıtlı adres başka bir firmanın sitesine yönleniyorsa (devralma, satılmış alan adı): panelde uyarı, taslak yok
+  const mismatch = siteMismatch(biz, site);
+  return { version: 1, site, hours, osm, wayback: wb, psi, activity, ai, mismatch };
 }

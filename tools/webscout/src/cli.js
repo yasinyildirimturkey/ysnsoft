@@ -10,6 +10,7 @@ import { writeReports, summary } from './report.js';
 import { funnelReport, queryProspects, STATUS_LABELS } from './prospects.js';
 import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
+import { siteMismatch } from './sitematch.js';
 
 const HELP = `WebScout – yerel işletme sitelerini tara, puanla, takip et
 
@@ -42,6 +43,7 @@ Kullanım:  node --no-warnings src/cli.js <komut> [seçenekler]
   visits --id N                               Adayın saha kayıtları.
   plan-visits --date YYYY-MM-DD --ids 3,1,2   O günün ziyaret planı (sıra = rota sırası; önceki plan değişir).
   hours-sync [--city X] [--limit 2000]        Kayıtlı adayların açılış saatlerini OSM'den toplu çeker.
+  site-check                                  Kayıtlı adresi başka firmaya giden profilleri işaretler.
 `;
 
 function parseArgs(argv) {
@@ -316,6 +318,12 @@ async function runDraft(db, id, onStep = () => {}) {
     await runEnrich(db, [biz], false, () => {});
   }
   const profile = JSON.parse(readProfile.get(id).profile);
+  // Kayıtlı adres başka firmanın sitesine gidiyorsa taslak o firmanın logosu/metniyle çıkar: üretme, panelde uyar
+  const mismatch = siteMismatch(biz, profile.site);
+  if (mismatch) {
+    if (!profile.mismatch) db.prepare('UPDATE profiles SET profile=? WHERE business_id=?').run(JSON.stringify({ ...profile, mismatch }), id);
+    throw new Error(`Web adresi başka bir firmaya gidiyor (${mismatch.host}${mismatch.owner ? `, Impressum: ${mismatch.owner}` : ''}); doğru adresi girin, taslak üretilmedi`);
+  }
   onStep(`Şablon taslağı: ${biz.name}…`);
   const token = db.prepare('SELECT token FROM drafts WHERE business_id=?').get(id)?.token ?? newToken();
   // Vorher/Nachher için son tarama (bulgular, son adres)
@@ -675,6 +683,21 @@ function cmdPlanVisits(db, opt) {
   printJson({ ok: true, date, planned: ids.length });
 }
 
+/** Kayıtlı tüm profillerde "site başka firmaya mı ait" kontrolünü yeniden yapar ve sonucu profile yazar. */
+function cmdSiteCheck(db) {
+  const rows = db.prepare('SELECT b.id, b.name, b.website, p.profile FROM profiles p JOIN businesses b ON b.id = p.business_id').all();
+  const save = db.prepare('UPDATE profiles SET profile=? WHERE business_id=?');
+  let flagged = 0;
+  for (const r of rows) {
+    const profile = JSON.parse(r.profile);
+    const mismatch = siteMismatch(r, profile.site);
+    if (JSON.stringify(mismatch ?? null) === JSON.stringify(profile.mismatch ?? null)) { if (mismatch) flagged++; continue; }
+    save.run(JSON.stringify({ ...profile, mismatch }), r.id);
+    if (mismatch) { flagged++; console.log(`#${r.id} ${r.name}: ${r.website} → ${mismatch.host}`); }
+  }
+  console.log(`${rows.length} profil kontrol edildi, ${flagged} tanesinde site başka firmaya gidiyor.`);
+}
+
 /** Açılış saatlerini toplu çeker; OSM'de saati olmayanlar '' ile işaretlenir (tekrar sorulmaz). */
 async function cmdHoursSync(db, opt) {
   const where = ['osm_id IS NOT NULL', 'opening_hours IS NULL'];
@@ -793,6 +816,7 @@ try {
     case 'visits': cmdVisits(db, opt); break;
     case 'plan-visits': cmdPlanVisits(db, opt); break;
     case 'hours-sync': await cmdHoursSync(db, opt); break;
+    case 'site-check': cmdSiteCheck(db); break;
     default: console.log(HELP); process.exit(1);
   }
 } catch (e) {

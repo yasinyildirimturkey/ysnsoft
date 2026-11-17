@@ -121,6 +121,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
               ${KIND_SQL} AS kind,
               p.activity, p.enriched_at,
               json_extract(p.profile, '$.site.verification') AS verification,
+              json_extract(p.profile, '$.mismatch') AS site_mismatch,
               (SELECT d.token FROM drafts d WHERE d.business_id = b.id) AS draft_token,
               (SELECT d.expires_at FROM drafts d WHERE d.business_id = b.id) AS draft_expires,
               (SELECT group_concat(a.name, ' · ') FROM business_areas ba JOIN areas a ON a.id = ba.area_id WHERE ba.business_id = b.id) AS districts
@@ -141,12 +142,14 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
       let verification = {};
       try { if (r.verification) verification = JSON.parse(r.verification) ?? {}; } catch { /* bozuk kayıt */ }
       const items = (findings.items ?? []).map((f) => (verification[f.code] ? { ...f, verified: verification[f.code].status } : f));
+      let mismatch = null;
+      try { if (r.site_mismatch) mismatch = JSON.parse(r.site_mismatch); } catch { /* bozuk kayıt */ }
       let lastVisit = null;
       try { if (r.last_visit) lastVisit = JSON.parse(r.last_visit); } catch { /* bozuk kayıt */ }
       // Haftalık açılış aralıkları (dakika); anlaşılmayan biçimde null → "saat bilinmiyor"
       const views = demoViews(r.draft_token);
       const row = { ...r, findings: items, tech: findings.info?.tech ?? null, last_visit: lastVisit, week: osmWeek(r.opening_hours),
-        appointment: byAppointment(r.opening_hours), demo_views: views?.count ?? 0, demo_last_view: views?.last ?? null };
+        appointment: byAppointment(r.opening_hours), demo_views: views?.count ?? 0, demo_last_view: views?.last ?? null, site_mismatch: mismatch };
       delete row.verification; // ham JSON panele gitmesin; bilgi bulguların içinde
       return row;
   });
