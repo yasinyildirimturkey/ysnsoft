@@ -318,7 +318,9 @@ async function runDraft(db, id, onStep = () => {}) {
   const profile = JSON.parse(readProfile.get(id).profile);
   onStep(`Şablon taslağı: ${biz.name}…`);
   const token = db.prepare('SELECT token FROM drafts WHERE business_id=?').get(id)?.token ?? newToken();
-  const { kit, expiresAt } = await buildDraft(biz, profile, token);
+  // Vorher/Nachher için son tarama (bulgular, son adres)
+  const scan = db.prepare('SELECT final_url, findings FROM scans WHERE business_id=? ORDER BY id DESC LIMIT 1').get(id) ?? null;
+  const { kit, expiresAt } = await buildDraft(biz, profile, token, scan);
   db.prepare(
     `INSERT INTO drafts (business_id, token, template, created_at, expires_at, kit) VALUES (?, ?, ?, datetime('now'), ?, ?)
      ON CONFLICT(business_id) DO UPDATE SET template=excluded.template, created_at=excluded.created_at, expires_at=excluded.expires_at, kit=excluded.kit`,
@@ -330,7 +332,7 @@ async function cmdDraft(db, opt) {
   const [id] = parseIds(opt.id);
   if (!id) { console.log('Kullanım: draft --id <n>'); process.exit(1); }
   const r = await runDraft(db, id, (m) => console.log(m));
-  console.log(`${r.biz.name}: /demo/${r.token}  (şablon: ${r.kit.template}, ${r.kit.photos.length} görsel (${r.kit.uploads} saha), saatler: ${r.kit.hours?.source ?? 'yok'}, metin: ${r.kit.copy.placeholder ? `yer tutucu${r.kit.copy.llmError ? ` — ${r.kit.copy.llmError}` : ''}` : r.kit.copy.model})`);
+  console.log(`${r.biz.name}: /demo/${r.token}  (şablon: ${r.kit.template}, ${r.kit.photos.length} görsel (${r.kit.uploads} saha), saatler: ${r.kit.hours?.source ?? 'yok'}, vorher: ${r.kit.before ? `${r.kit.before.shot ? 'görüntü + ' : ''}${r.kit.before.pairs.length} madde` : 'yok'}, metin: ${r.kit.copy.placeholder ? `yer tutucu${r.kit.copy.llmError ? ` — ${r.kit.copy.llmError}` : ''}` : r.kit.copy.model})`);
 }
 
 /**

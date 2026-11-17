@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import { DATA_DIR } from './db.js';
 import { llmConfigured, llmJson } from './llm.js';
 import { fetchInsecure } from './scan.js';
+import { captureMobileShot } from './shot.js';
 
 export const DRAFT_DIR = join(DATA_DIR, 'drafts');
 export const UPLOAD_DIR = join(DATA_DIR, 'uploads');
@@ -446,6 +447,7 @@ const UI = {
   clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+  cross: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
 };
 const SOCIAL_LABEL = { facebook: 'Facebook', instagram: 'Instagram', youtube: 'YouTube', tiktok: 'TikTok', linkedin: 'LinkedIn', xing: 'XING', twitter: 'X', pinterest: 'Pinterest', tripadvisor: 'Tripadvisor', googlemaps: 'Google Maps' };
@@ -574,6 +576,19 @@ linear-gradient(115deg,transparent 46%,color-mix(in srgb,var(--a) 45%,transparen
 .socials{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
 .socials a{font-size:.88rem;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:6px 13px}
 /* Kapanış */
+/* Vorher / Nachher (teklif bölümü: sitenin parçası değil, öneri notu) */
+.compare{display:grid;gap:clamp(24px,4vw,48px);align-items:start}
+.phone{margin:0 auto;width:min(300px,82vw);border:10px solid #111;border-radius:34px;overflow:hidden;background:#111;box-shadow:var(--shadow)}
+.phone img{width:100%;height:auto;aspect-ratio:390/844;object-fit:cover;object-position:top;background:#fff}
+.phone figcaption{color:#cfd2d6;font-size:.8rem;text-align:center;padding:8px 6px 4px}
+.pairs{list-style:none;display:grid;gap:12px}
+.pairs li{display:grid;gap:8px;background:var(--sf);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.pairs .was,.pairs .neu{display:flex;gap:10px;align-items:flex-start;font-size:.98rem;line-height:1.45}
+.pairs .was{color:var(--mut)}.pairs .was svg{color:#c0392b;margin-top:3px}
+.pairs .neu{font-weight:600}.pairs .neu svg{color:#1e8e3e;margin-top:3px}
+.pairs .lbl{display:block;font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:2px}
+.cmp-note{color:var(--mut);font-size:.82rem;margin-top:16px}
+.draft a{color:#ffd166}
 .cta{background:radial-gradient(800px 400px at 90% 0%,color-mix(in srgb,var(--a) 30%,transparent),transparent 60%),linear-gradient(135deg,var(--p),var(--pd));color:#fff;border-radius:calc(var(--r) + 14px);padding:clamp(36px,6vw,64px);display:grid;gap:26px;align-items:center}
 .cta p{color:rgba(255,255,255,.86);margin-top:12px;font-size:1.06rem;max-width:36em}
 footer{background:#121315;color:#a9aeb6;font-size:.92rem;padding-block:56px 34px;margin-top:clamp(64px,10vw,112px)}
@@ -592,6 +607,7 @@ footer .legal{border-top:1px solid rgba(255,255,255,.1);margin-top:36px;padding-
  .gallery{grid-template-columns:repeat(4,1fr);grid-auto-rows:200px}.gallery.even{grid-template-columns:repeat(2,1fr)}
  .visit{grid-template-columns:1fr 1fr}
  .cta{grid-template-columns:1fr auto}
+ .compare{grid-template-columns:auto 1fr}.phone{margin:0}
  footer .cols{grid-template-columns:1.4fr 1fr 1fr}
 }
 @media(min-width:1040px){.cards{grid-template-columns:repeat(3,1fr)}}
@@ -646,6 +662,23 @@ export function renderHtml(kit, assetBase) {
       <p class="note">Angaben aus ${kit.hours.source === 'osm' ? 'OpenStreetMap' : 'Ihrer bisherigen Website'} – bitte vor der Veröffentlichung prüfen.</p>`
     : `<p>Unsere aktuellen Öffnungszeiten erfahren Sie telefonisch.</p><p class="note">Hier stehen in der fertigen Website Ihre Öffnungszeiten.</p>`;
 
+  // Vorher / Nachher: firmanın bugünkü sitesi (ekran görüntüsü + doğrulanmış bulgular) ile bu taslak
+  const b = kit.before;
+  const compare = b && (b.shot || b.pairs.length) ? `
+<section id="vorher-nachher"${(gallery.length ? gastro : !gastro) ? '' : ' class="tint"'}><div class="wrap">
+  <div class="head reveal"><p class="kicker">Vorher · Nachher</p><h2>Ihr Auftritt heute – und mit diesem Entwurf</h2></div>
+  <div class="compare">
+    ${b.shot ? `<figure class="phone reveal"><img src="${src(b.shot)}" alt="So sieht ${esc(b.host)} heute auf dem Smartphone aus" loading="lazy"><figcaption>Heute · ${esc(b.host)} auf dem Smartphone</figcaption></figure>` : ''}
+    <div class="reveal">
+      <ul class="pairs">
+        ${b.pairs.map(([was, neu]) => `<li><span class="was">${UI.cross}<span><span class="lbl">Heute</span>${esc(was)}</span></span><span class="neu">${UI.check}<span><span class="lbl">Neu</span>${esc(neu)}</span></span></li>`).join('\n        ')}
+        ${b.extra.map((neu) => `<li><span class="neu">${UI.check}<span><span class="lbl">Neu</span>${esc(neu)}</span></span></li>`).join('\n        ')}
+      </ul>
+      <p class="cmp-note">Aufnahme und Prüfung vom ${esc(b.date)}, automatisch erstellt – wir gehen die Punkte gern gemeinsam durch.</p>
+    </div>
+  </div>
+</div></section>` : '';
+
   return `<!doctype html>
 <html lang="de">
 <head>
@@ -658,7 +691,7 @@ export function renderHtml(kit, assetBase) {
 <style>${css(kit)}</style>
 </head>
 <body>
-<div class="draft"><b>Entwurf</b> · Unverbindlicher Gestaltungsvorschlag für ${esc(kit.name)} · ${c.placeholder ? 'Texte sind Platzhalter' : 'Texte auf Basis Ihrer bisherigen Website'}${kit.photos.length ? '' : ', Fotos folgen'} · nicht öffentlich auffindbar</div>
+<div class="draft"><b>Entwurf</b> · Unverbindlicher Gestaltungsvorschlag für ${esc(kit.name)} · ${c.placeholder ? 'Texte sind Platzhalter' : 'Texte auf Basis Ihrer bisherigen Website'}${kit.photos.length ? '' : ', Fotos folgen'} · nicht öffentlich auffindbar${compare ? ' · <a href="#vorher-nachher">Vorher / Nachher</a>' : ''}</div>
 <header class="top"><div class="wrap">
   <a class="brand" href="#top">${kit.logo ? `<img src="${src(kit.logo)}" alt="${esc(kit.name)}">` : `<i class="mono" aria-hidden="true">${esc(initials(kit.name) || '•')}</i><span>${esc(kit.name)}</span>`}</a>
   <nav class="main" aria-label="Hauptnavigation"><a href="#angebot">${esc(d.nav)}</a><a href="#ueber-uns">Über uns</a>${gallery.length ? '<a href="#eindruecke">Eindrücke</a>' : ''}<a href="#besuch">${gastro ? 'Öffnungszeiten' : 'Kontakt'}</a></nav>
@@ -723,7 +756,7 @@ ${gallery.length ? `
     </div>
   </div>
 </div></section>
-
+${compare}
 <section style="padding-bottom:0"><div class="wrap">
   <div class="cta reveal"><div><h2>${esc(d.ctaTitle)}</h2><p>${esc(d.ctaText)}</p></div>${phone ? `<a class="btn light" href="${phone}">${UI.phone}<span>${esc(kit.phone)}</span></a>` : ''}</div>
 </div></section>
@@ -750,7 +783,39 @@ ${gallery.length ? `
  * @param {object} profile  Seviye 2 profili
  * @param {string} token    gizli belirteç (yeniden üretimde aynı kalır: basılı bağlantı geçerliliğini korur)
  */
-export async function buildDraft(biz, profile, token) {
+// Bulgu → (bugün, yeni) çifti. Yalnızca teknik/görünür konular; hukuki konular (Impressum, çerez vb.)
+// müşteri sayfasında iddia olarak yazılmaz — onlar yüz yüze görüşmede "kontrol edilmeli" diye konuşulur.
+const BEFORE_PAIRS = [
+  [['no_viewport'], 'Auf dem Smartphone schwer zu bedienen – die Seite passt sich nicht an', 'Für das Smartphone gebaut: große Schrift, Anruf und Route mit einem Tipp'],
+  [['no_https'], 'Ohne HTTPS-Verschlüsselung – Browser zeigen „Nicht sicher“ an', 'Verschlüsselt über HTTPS'],
+  [['slow'], 'Lange Ladezeit, besonders unterwegs im Mobilfunk', 'Schlank gebaut und schnell geladen'],
+  [['old_copyright'], 'Seit längerer Zeit nicht aktualisiert', 'Aktuelle Öffnungszeiten, Angebote und Kontaktwege'],
+  [['legacy_markup', 'table_layout', 'old_jquery'], 'Veraltete Technik – Änderungen sind mühsam', 'Moderne Technik – Änderungen jederzeit möglich'],
+];
+const BEFORE_EXTRA = ['Ihre Fotos und Ihr Angebot stehen im Mittelpunkt', 'Öffnungszeiten, Anfahrt und Anruf auf einen Blick'];
+
+/**
+ * "Vorher" verisi: bugünkü sitenin mobil ekran görüntüsü + Seviye 2'de yanlış alarm çıkmamış bulgular.
+ * @returns {Promise<{host: string, shot: string|null, pairs: string[][], extra: string[], date: string} | null>}
+ */
+async function beforeKit(biz, profile, scan, dir) {
+  let items = [];
+  try { items = JSON.parse(scan?.findings ?? '{}').items ?? []; } catch { /* bozuk kayıt */ }
+  const codes = new Set(items.map((f) => f.code));
+  // Sitesi olmayan / park edilmiş / yalnızca sosyal medya: karşılaştırılacak site yok
+  if (!biz.website || codes.has('social_only') || codes.has('placeholder')) return null;
+  const url = scan?.final_url || biz.website;
+  let host = url;
+  try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* adres olduğu gibi */ }
+  const refuted = new Set(Object.entries(profile.site?.verification ?? {}).filter(([, v]) => v?.status === 'refuted').map(([k]) => k));
+  const pairs = BEFORE_PAIRS.filter(([cs]) => cs.some((c) => codes.has(c) && !refuted.has(c))).map(([, was, neu]) => [was, neu]);
+  const shot = await captureMobileShot(url, join(dir, 'vorher.png'), { insecure: Boolean(profile.site?.tlsError) }) ? 'vorher.png' : null;
+  if (!shot && !pairs.length) return null;
+  const now = new Date();
+  return { host, shot, pairs, extra: BEFORE_EXTRA, date: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}` };
+}
+
+export async function buildDraft(biz, profile, token, scan = null) {
   const dir = join(DRAFT_DIR, token);
   // Yeniden üretim: eski görseller kalmasın
   try { for (const f of readdirSync(dir)) rmSync(join(dir, f), { force: true }); } catch { /* klasör yok */ }
@@ -777,6 +842,7 @@ export async function buildDraft(biz, profile, token) {
     uploads: images.uploads,
     socials: (site?.ok ? site.socials ?? [] : []).filter((s) => s.type !== 'googlemaps').slice(0, 4),
     features: osmFeatures(profile.osm?.tags ?? {}, template),
+    before: await beforeKit(biz, profile, scan, dir),
   };
   kit.copy = await writeCopy(kit, site, profile.ai?.ok ? profile.ai : null);
 

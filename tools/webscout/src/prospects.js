@@ -1,5 +1,17 @@
 // Yönetim panelinin "Müşteri Adayları" (prospects) ekranı için sorgular.
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { DATA_DIR } from './db.js';
 import { byAppointment, osmWeek } from './hours.js';
+
+// Demo açılma sayacı: Next rotası yazar (data/views/<token>.json); yalnızca sayı ve zaman
+function demoViews(token) {
+  if (!token || !/^[A-Za-z0-9_-]{16}$/.test(token)) return null;
+  try {
+    const v = JSON.parse(readFileSync(join(DATA_DIR, 'views', `${token}.json`), 'utf8'));
+    return v.count > 0 ? { count: v.count, last: v.last } : null;
+  } catch { return null; }
+}
 // Prospect = bizim gideceğimiz işletme. (ysnsoft'taki "leads" = bize gelen talepler; karıştırma.)
 
 export const STATUS_LABELS = {
@@ -64,6 +76,8 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   const summary = { total: 0, no_site: 0, redesign: 0, unscanned: 0, ok: 0, chain: 0, drafts: 0 };
   for (const c of counts) { summary[c.kind] = c.n; summary.total += c.n; }
   summary.drafts = all(db, `SELECT COUNT(*) AS n ${FROM_SQL} WHERE ${region.where.join(' AND ')} AND ${HAS_DRAFT_SQL}`, region.params)[0].n;
+  summary.viewed = all(db, `SELECT d.token ${FROM_SQL} JOIN drafts d ON d.business_id = b.id WHERE ${region.where.join(' AND ')}`, region.params)
+    .filter((r) => demoViews(r.token)).length;
 
   const breakdown = all(
     db,
@@ -80,7 +94,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   const where = [...region.where];
   const params = { ...region.params, minScore };
   if (kind === 'offer') where.push(`${KIND_SQL} IN ('no_site','redesign')`);
-  else if (kind === 'draft') where.push(HAS_DRAFT_SQL);
+  else if (kind === 'draft' || kind === 'viewed') where.push(HAS_DRAFT_SQL);
   else if (kind && kind !== 'all') { where.push(`${KIND_SQL} = @kind`); params.kind = kind; }
   if (status) { where.push('b.status = @status'); params.status = status; }
   else if (!visitDay) where.push("b.status != 'do_not_contact'");
@@ -94,7 +108,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
     params.q = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
   }
 
-  const matched = all(db, `SELECT COUNT(*) AS n ${FROM_SQL} WHERE ${where.join(' AND ')}`, params)[0].n;
+  let matched = all(db, `SELECT COUNT(*) AS n ${FROM_SQL} WHERE ${where.join(' AND ')}`, params)[0].n;
   const rows = all(
     db,
       `SELECT b.id, b.name, b.category, b.country, b.city, b.address, b.postcode, b.suburb, b.website, b.phone,
@@ -119,11 +133,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
     { ...params, limit },
   );
 
-  return {
-    summary,
-    breakdown,
-    matched,
-    rows: rows.map((r) => {
+  let out = rows.map((r) => {
       let findings = { items: [], info: {} };
       try { if (r.findings) findings = JSON.parse(r.findings); } catch { /* bozuk kayıt: boş göster */ }
       // Seviye 2 doğrulaması varsa her bulguya işlenir: 'refuted' (yanlış alarm) olanlar müşteriye söylenmez
@@ -133,10 +143,16 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
       let lastVisit = null;
       try { if (r.last_visit) lastVisit = JSON.parse(r.last_visit); } catch { /* bozuk kayıt */ }
       // Haftalık açılış aralıkları (dakika); anlaşılmayan biçimde null → "saat bilinmiyor"
+      const views = demoViews(r.draft_token);
       const row = { ...r, findings: items, tech: findings.info?.tech ?? null, last_visit: lastVisit, week: osmWeek(r.opening_hours),
-        appointment: byAppointment(r.opening_hours) };
+        appointment: byAppointment(r.opening_hours), demo_views: views?.count ?? 0, demo_last_view: views?.last ?? null };
       delete row.verification; // ham JSON panele gitmesin; bilgi bulguların içinde
       return row;
-    }),
-  };
+  });
+  // "Demo açıldı": en son açılan üstte
+  if (kind === 'viewed') {
+    out = out.filter((r) => r.demo_views > 0).sort((a, b) => String(b.demo_last_view).localeCompare(String(a.demo_last_view)));
+    matched = out.length;
+  }
+  return { summary, breakdown, matched, rows: out };
 }

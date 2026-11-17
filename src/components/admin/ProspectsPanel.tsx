@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Globe,
   LayoutTemplate,
+  Eye,
   List,
   Map as MapIcon,
   MapPin,
@@ -72,6 +73,20 @@ interface Prospect {
   /** Seviye 3 şablon taslağı üretildiyse gizli demo adresinin belirteci (/demo/<token>) */
   draft_token: string | null;
   draft_expires: string | null;
+  /** Müşterinin demoyu kaç kez açtığı (biz/botlar hariç) ve en son ne zaman */
+  demo_views?: number;
+  demo_last_view?: string | null;
+}
+
+/** "dün 21:40", "bugün 09:12", "12.11. 18:05" */
+function whenShort(iso: string) {
+  const d = new Date(iso);
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(new Date()) - day(d)) / 86400000);
+  const t = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 0) return `bugün ${t}`;
+  if (diff === 1) return `dün ${t}`;
+  return `${d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' })} ${t}`;
 }
 
 interface District {
@@ -107,6 +122,7 @@ interface Summary {
   ok: number;
   chain: number;
   drafts?: number;
+  viewed?: number;
 }
 
 interface Breakdown {
@@ -132,6 +148,7 @@ const KIND_FILTERS: { id: string; label: string }[] = [
   { id: 'redesign', label: 'Yenileme adayı' },
   { id: 'unscanned', label: 'Taranmadı' },
   { id: 'draft', label: 'Taslak hazır' },
+  { id: 'viewed', label: 'Demo açıldı' },
   { id: 'all', label: 'Tümü' },
 ];
 
@@ -640,6 +657,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
             >
               {k.label}
               {k.id === 'draft' && summary?.drafts ? <span className="ml-1 tabular opacity-80">({summary.drafts.toLocaleString('tr-TR')})</span> : null}
+              {k.id === 'viewed' && summary?.viewed ? <span className="ml-1 tabular opacity-80">({summary.viewed.toLocaleString('tr-TR')})</span> : null}
             </button>
           ))}
         </div>
@@ -788,6 +806,14 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                           <LayoutTemplate className="w-3 h-3" aria-hidden="true" /> Taslak hazır
                         </a>
                       )}
+                      {r.demo_views && r.demo_last_view ? (
+                        <span
+                          className="mt-1 w-fit px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1"
+                          title="Müşteri demoyu açtı (panele girişli kullanıcılar ve bağlantı önizlemeleri sayılmaz)"
+                        >
+                          <Eye className="w-3 h-3" aria-hidden="true" /> {r.demo_views}× açıldı · {whenShort(r.demo_last_view)}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="p-4 max-w-52">
                       {r.website ? (

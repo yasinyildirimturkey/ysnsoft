@@ -62,7 +62,8 @@ export function readWebscoutShot(businessId: number): { data: Buffer; type: stri
 }
 
 const DRAFT_TOKEN_RE = /^[A-Za-z0-9_-]{16}$/;
-const DRAFT_ASSET_RE = /^(?:logo|foto[1-9])\.(jpg|png|gif|webp)$/;
+// vorher.png: firmanın bugünkü sitesinin mobil ekran görüntüsü (Vorher / Nachher bölümü)
+const DRAFT_ASSET_RE = /^(?:logo|foto[1-9]|vorher)\.(jpg|png|gif|webp)$/;
 const ASSET_TYPE: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
 
 export type DraftFile =
@@ -88,6 +89,29 @@ export function readWebscoutDraft(token: string, file?: string): DraftFile {
   } catch {
     return { state: 'missing' };
   }
+}
+
+// ── Demo açılma sayacı ───────────────────────────────────────
+// Müşteri demoyu açınca panelde "2× açıldı · dün 21:40" görünür (sıcak aday sinyali).
+// Yalnızca sayaç ve zaman tutulur: IP, tarayıcı, çerez SAKLANMAZ. Dosya taslak klasörünün dışındadır
+// (yeniden üretim taslak klasörünü siler, sayaç kalır): tools/webscout/data/views/<token>.json
+
+const VIEWS_DIR = path.join(TOOL_DIR, 'data', 'views');
+
+export interface DemoViews { count: number; first: string; last: string }
+
+export function recordDemoView(token: string): void {
+  if (!DRAFT_TOKEN_RE.test(token)) return;
+  const file = path.join(VIEWS_DIR, `${token}.json`);
+  const now = new Date().toISOString();
+  let v: DemoViews = { count: 0, first: now, last: now };
+  try { v = { ...v, ...JSON.parse(fs.readFileSync(file, 'utf8')) }; } catch { /* ilk açılış */ }
+  v.count += 1;
+  v.last = now;
+  try {
+    fs.mkdirSync(VIEWS_DIR, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(v));
+  } catch { /* sayaç yazılamazsa sayfa yine sunulur */ }
 }
 
 // ── Saha fotoğrafları ────────────────────────────────────────
