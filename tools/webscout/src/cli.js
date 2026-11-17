@@ -672,11 +672,15 @@ async function cmdHoursSync(db, opt) {
   let found = 0;
   let skipped = 0;
   const STEP = 150; // büyük sorgular yoğun Overpass sunucusunda zaman aşımına düşüyor
+  // Askıda kalan bir istek (sunucuda DNS/bağlantı kopması) olay döngüsünü boşaltınca Node sessizce çıkıyordu:
+  // döngüyü canlı tut ve her gruba kesin bir üst süre koy
+  const keepAlive = setInterval(() => {}, 60_000);
+  const withLimit = (p, ms) => Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error('grup süresi doldu')), ms))]);
   for (let i = 0; i < ids.length; i += STEP) {
     const batch = ids.slice(i, i + STEP);
     let hours;
     try {
-      hours = await fetchOpeningHours(batch);
+      hours = await withLimit(fetchOpeningHours(batch), 6 * 60_000);
     } catch (e) {
       // Tek grubun hatası tüm işi durdurmasın: bu grup NULL kalır, sonraki çalıştırmada yeniden sorulur
       skipped += batch.length;
@@ -690,6 +694,7 @@ async function cmdHoursSync(db, opt) {
     console.log(`${Math.min(i + STEP, ids.length)}/${ids.length} — saati olan: ${found}`);
     if (i + STEP < ids.length) await sleep(3000); // Overpass: aynı IP'den art arda sorgu sınırı
   }
+  clearInterval(keepAlive);
   console.log(`Bitti: ${ids.length - skipped} aday işlendi, ${found} tanesinde açılış saati var.${skipped ? ` ${skipped} aday atlandı: komutu yeniden çalıştırın.` : ''}`);
 }
 
