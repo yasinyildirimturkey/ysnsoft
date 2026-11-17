@@ -668,16 +668,27 @@ async function cmdHoursSync(db, opt) {
     .all(...params, Math.max(1, Math.min(20000, Number(opt.limit ?? 2000)))).map((r) => r.osm_id);
   const set = db.prepare('UPDATE businesses SET opening_hours=? WHERE osm_id=?');
   let found = 0;
-  for (let i = 0; i < ids.length; i += 250) {
-    const batch = ids.slice(i, i + 250);
-    const hours = await fetchOpeningHours(batch);
+  let skipped = 0;
+  const STEP = 150; // büyük sorgular yoğun Overpass sunucusunda zaman aşımına düşüyor
+  for (let i = 0; i < ids.length; i += STEP) {
+    const batch = ids.slice(i, i + STEP);
+    let hours;
+    try {
+      hours = await fetchOpeningHours(batch);
+    } catch (e) {
+      // Tek grubun hatası tüm işi durdurmasın: bu grup NULL kalır, sonraki çalıştırmada yeniden sorulur
+      skipped += batch.length;
+      console.log(`${Math.min(i + STEP, ids.length)}/${ids.length} — grup atlandı (${e.message}); sonra yeniden denenecek`);
+      await sleep(30000);
+      continue;
+    }
     db.exec('BEGIN');
     for (const id of batch) { const h = hours.get(id) ?? ''; if (h) found++; set.run(h, id); }
     db.exec('COMMIT');
-    console.log(`${Math.min(i + 250, ids.length)}/${ids.length} — saati olan: ${found}`);
-    if (i + 250 < ids.length) await sleep(3000); // Overpass: aynı IP'den art arda sorgu sınırı
+    console.log(`${Math.min(i + STEP, ids.length)}/${ids.length} — saati olan: ${found}`);
+    if (i + STEP < ids.length) await sleep(3000); // Overpass: aynı IP'den art arda sorgu sınırı
   }
-  console.log(`Bitti: ${ids.length} aday, ${found} tanesinde açılış saati var.`);
+  console.log(`Bitti: ${ids.length - skipped} aday işlendi, ${found} tanesinde açılış saati var.${skipped ? ` ${skipped} aday atlandı: komutu yeniden çalıştırın.` : ''}`);
 }
 
 /** Veritabanının tutarlı tek dosyalık kopyasını çıkarır (deploy tohumu / yedek için). */
