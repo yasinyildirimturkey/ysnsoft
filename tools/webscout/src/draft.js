@@ -176,6 +176,10 @@ export function isLightLogo(buf) {
 // Fotoğraf olmayan site görselleri: rozet, mühür, üyelik/ortak logoları, banner
 const NOT_PHOTO = /logo|badge|siegel|zertifikat|zertifiziert|award|auszeichnung|mitglied|partner|sponsor|innung|verband|handwerkskammer|tuev|t%c3%bcv|tüv|icon|banner|button|signet|emblem|wappen|qr[-_]?code|facebook|instagram|whatsapp|google|trustpilot|provenexpert|kununu/i;
 
+// Seviye 2'nin seçtiği "logo" dosya adı sosyal ağ simgesi ya da dernek/oda/denetim işaretiyse firmanın logosu değildir
+// (ör. f_logo.png = Facebook "f"; ZVDH-Logo.gif = çatıcılar birliği). Logosuz taslak, başkasının logosundan iyidir.
+const NOT_OWN_LOGO = /^(f|fb|tw|yt|ig|insta)[-_.]|facebook|instagram|twitter|youtube|tiktok|whatsapp|xing|linkedin|pinterest|google|zvdh|dehoga|innung|verband|handwerkskammer|^hwk|^ihk|tuev|tüv|dekra|siegel|partner|sponsor|mitglied|zertifi|award|meisterbetrieb[-_]?logo/i;
+
 /** Panelden yüklenen saha fotoğrafları (yükleme sırasıyla; ilki kapak). */
 function readUploads(businessId) {
   const dir = join(UPLOAD_DIR, String(businessId));
@@ -195,7 +199,7 @@ async function collectImages(businessId, site, dir) {
   out.uploads = uploads.length;
 
   const insecure = Boolean(site?.tlsError);
-  if (site?.ok && site.brand?.logo) {
+  if (site?.ok && site.brand?.logo && !NOT_OWN_LOGO.test(site.brand.logo.split(/[?#]/)[0].split('/').pop())) {
     const l = await download(site.brand.logo, 1_500_000, insecure);
     if (l) {
       out.logo = `logo.${l.ext}`;

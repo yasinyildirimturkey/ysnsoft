@@ -331,7 +331,7 @@ function socials(links) {
 }
 
 // Ortak/sponsor/üyelik logoları firmanın kendi logosu değildir
-const FOREIGN_LOGO = /partner|sponsor|mitglied|member|verband|innung|kammer|siegel|zertifi|award|auszeichnung|referenz|kunde|aroundhome|myhammer|check24|houzz|google|facebook|instagram|whatsapp|trustpilot|provenexpert|kununu|paypal|klarna|visa|mastercard|dhl|accessibility|onetap|cookie/i;
+const FOREIGN_LOGO = /partner|sponsor|mitglied|member|verband|innung|kammer|siegel|zertifi|award|auszeichnung|referenz|kunde|aroundhome|myhammer|check24|houzz|google|facebook|instagram|whatsapp|trustpilot|provenexpert|kununu|paypal|klarna|visa|mastercard|dhl|accessibility|onetap|cookie|twitter|youtube|tiktok|xing|linkedin|zvdh|dehoga|tuev|tüv|dekra|(^|\/)(f|fb|tw|yt|ig)[-_][^/]*$/i;
 
 // Firma logosu için aday puanı: başlıkta olmak, WordPress "custom-logo", dosya adında alan adı geçmesi artı;
 // ortak/sponsor işaretleri, başka alan adı, tembel yükleme (alt kısımdaki logo şeritleri) eksi.
