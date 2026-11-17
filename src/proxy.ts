@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SESSION_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { OWN_DEVICE_COOKIE, ownDeviceCookieOptions, SESSION_COOKIE, verifySessionToken } from '@/lib/admin-auth';
 
 /**
  * /admin sayfalarını oturumsuz ziyaretçilere kapatır.
@@ -21,7 +21,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/admin/login', request.url));
   }
 
-  return NextResponse.next();
+  // Zaten girişli cihazlar da işaretlensin (yalnızca girişte değil): demo açılışları bizden sayılmaz
+  const response = NextResponse.next();
+  if (request.cookies.get(OWN_DEVICE_COOKIE)?.value !== '1') {
+    response.cookies.set(OWN_DEVICE_COOKIE, '1', ownDeviceCookieOptions);
+  }
+  return response;
 }
 
 export const config = {

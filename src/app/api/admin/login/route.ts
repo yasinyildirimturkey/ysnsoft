@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
+  OWN_DEVICE_COOKIE,
+  ownDeviceCookieOptions,
   SESSION_COOKIE,
   authenticate,
   clearFailedAttempts,
@@ -71,5 +73,6 @@ export async function POST(request: Request) {
     { headers: noStore }
   );
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
+  response.cookies.set(OWN_DEVICE_COOKIE, '1', ownDeviceCookieOptions);
   return response;
 }
