@@ -27,6 +27,7 @@ import {
   Search,
 } from 'lucide-react';
 import ProspectOffer from './ProspectOffer';
+import ProspectFunnel from './ProspectFunnel';
 import ProspectMap from './ProspectMap';
 import ProspectPhotos from './ProspectPhotos';
 import ProspectVisits from './ProspectVisits';
@@ -442,6 +443,19 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
     return () => window.removeEventListener('keydown', onKey);
   }, [selected]);
 
+  /** Listede olmayan adayı (ör. hatırlatmadan) tek başına çekip detayını açar. */
+  const openById = async (id: number) => {
+    const inList = rows.find((r) => r.id === id);
+    if (inList) { openDetail(inList); return; }
+    try {
+      const res = await api<{ rows: Prospect[] }>(`/api/admin/prospects?kind=all&id=${id}`);
+      if (res.rows?.[0]) openDetail(res.rows[0]);
+      else notify('Aday bulunamadı.');
+    } catch (e) {
+      notify(`Hata: ${e instanceof Error ? e.message : 'Aday açılamadı.'}`);
+    }
+  };
+
   const exportCsv = () => {
     const cell = (v: unknown) => {
       const s = String(v ?? '');
@@ -641,6 +655,9 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
           ))}
         </div>
       )}
+
+      {/* 2b) Satış hunisi + yapılacaklar */}
+      {summary && <ProspectFunnel query={regionQuery().toString()} stamp={summary} onOpen={openById} />}
 
       {/* 3) Süzgeçler */}
       <div className="apple-card p-4 sm:p-5 bg-white border border-black/[0.07] flex flex-col lg:flex-row lg:items-center justify-between gap-4">

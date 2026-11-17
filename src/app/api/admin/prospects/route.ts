@@ -122,6 +122,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
     }
 
+    // Satış hunisi (seçili bölge) + hatırlatmalar (tüm şehirler)
+    if (view === 'funnel') {
+      const args = regionArgs(searchParams, false);
+      if (typeof args === 'string') return fail(args);
+      const res = await runWebscout(['funnel', ...args]);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
     if (view === 'districts') {
       const args = regionArgs(searchParams, true);
       if (typeof args === 'string') return fail(args);
@@ -137,6 +145,12 @@ export async function GET(request: Request) {
     if (kind) {
       if (!KEY_RE.test(kind)) return fail('Geçersiz tür.');
       args.push('--kind', kind);
+    }
+    // Tek aday (hatırlatmadan detay açmak için)
+    const one = searchParams.get('id');
+    if (one) {
+      if (!/^\d{1,9}$/.test(one)) return fail('Geçersiz kayıt.');
+      args.push('--id', one);
     }
     const st = searchParams.get('status');
     if (st) {

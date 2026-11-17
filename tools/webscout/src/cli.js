@@ -7,7 +7,7 @@ import {
 } from './osm.js';
 import { scanSite } from './scan.js';
 import { writeReports, summary } from './report.js';
-import { queryProspects, STATUS_LABELS } from './prospects.js';
+import { funnelReport, queryProspects, STATUS_LABELS } from './prospects.js';
 import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
 
@@ -37,7 +37,7 @@ Kullanım:  node --no-warnings src/cli.js <komut> [seçenekler]
   partner-set <aracı-id> <${PARTNER_STATUSES.join('|')}> [not...]
 
   Yönetim paneli için (JSON çıktı):
-  meta | query | job | job-enrich | job-draft | job-status | prospect-set | profile
+  meta | query [--id N] | funnel [bölge] | job | job-enrich | job-draft | job-status | prospect-set | profile
   visit-add --id N --outcome <${Object.keys(VISIT_OUTCOMES).join('|')}> [--note-b64 ..] [--next YYYY-MM-DD]
   visits --id N                               Adayın saha kayıtları.
   plan-visits --date YYYY-MM-DD --ids 3,1,2   O günün ziyaret planı (sıra = rota sırası; önceki plan değişir).
@@ -585,8 +585,22 @@ function cmdQuery(db, opt) {
       status: str(opt.status),
       q: str(opt.q),
       visitDay: str(opt['visit-day']),
+      id: opt.id ? Number(opt.id) : undefined,
       minScore: Number(opt['min-score'] ?? 40),
       limit: Math.max(1, Math.min(2000, Number(opt.limit ?? 500))),
+    }),
+  });
+}
+
+function cmdFunnel(db, opt) {
+  printJson({
+    ok: true,
+    ...funnelReport(db, {
+      country: str(opt.country),
+      city: str(opt.city),
+      areaId: opt.area ? Number(opt.area) : undefined,
+      categories: str(opt.category)?.split(','),
+      minScore: Number(opt['min-score'] ?? 40),
     }),
   });
 }
@@ -751,7 +765,7 @@ const { pos, opt } = parseArgs(process.argv.slice(2));
 const cmd = pos[0];
 if (!cmd || opt.help) { console.log(HELP); process.exit(cmd ? 0 : 1); }
 
-const JSON_COMMANDS = new Set(['meta', 'query', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
+const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
 try {
   const db = openDb();
   switch (cmd) {
@@ -765,6 +779,7 @@ try {
     case 'partner-set': setStatus(db, 'partners', PARTNER_STATUSES, pos); break;
     case 'meta': cmdMeta(db); break;
     case 'query': cmdQuery(db, opt); break;
+    case 'funnel': cmdFunnel(db, opt); break;
     case 'job': await cmdJob(db, opt); break;
     case 'job-enrich': await cmdJobEnrich(db, opt); break;
     case 'enrich': await cmdEnrich(db, opt); break;

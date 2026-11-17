@@ -157,6 +157,12 @@ export function openDb(path = process.env.WEBSCOUT_DB || join(DATA_DIR, 'webscou
       by_user     TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_visits_business ON visits(business_id, id);`);
+  // Durumun son değiştiği an (satış hunisi hatırlatmaları: "teklif verildi, 7 gündür ses yok").
+  // Tetikleyici her yoldan (panel, saha kaydı, plan, CLI) gelen değişikliği yakalar.
+  addColumn(db, 'businesses', 'status_at', 'TEXT');
+  db.exec(`CREATE TRIGGER IF NOT EXISTS trg_business_status_at AFTER UPDATE OF status ON businesses
+    WHEN NEW.status IS NOT OLD.status
+    BEGIN UPDATE businesses SET status_at = datetime('now') WHERE id = NEW.id; END;`);
   addColumn(db, 'partners', 'country', "TEXT NOT NULL DEFAULT 'DE'");
   // Seviye 2 doğrulamasından sonraki puan: yanlış alarm çıkan bulguların puanı düşülür (yoksa NULL)
   addColumn(db, 'profiles', 'adjusted_score', 'INTEGER');
