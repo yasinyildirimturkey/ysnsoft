@@ -10,6 +10,16 @@ export const OUT_DIR = join(TOOL_ROOT, 'out');
 export const BUSINESS_STATUSES = [
   'new', 'visit_planned', 'visited', 'offer_sent', 'won', 'lost', 'do_not_contact',
 ];
+// Sahadaki ziyaret sonucu → adayın durumu (null = durumu değiştirme). "Kazanıldı" hiçbir sonuçla geri alınmaz.
+export const VISIT_OUTCOMES = {
+  talked: 'visited',           // Görüşüldü
+  demo_shown: 'visited',       // Demo gösterildi
+  offer_requested: 'visited',  // Teklif istendi (teklif gidince "offer_sent" elle)
+  come_back: 'visit_planned',  // Tekrar gel (yetkili yoktu / müsait değildi)
+  closed: 'visit_planned',     // Kapalıydı
+  not_interested: 'lost',      // İlgilenmedi
+  won: 'won',                  // Anlaşıldı
+};
 export const PARTNER_STATUSES = [
   'new', 'contacted', 'meeting', 'active', 'declined', 'do_not_contact',
 ];
@@ -132,6 +142,21 @@ export function openDb(path = process.env.WEBSCOUT_DB || join(DATA_DIR, 'webscou
   addColumn(db, 'businesses', 'lon', 'REAL');
   addColumn(db, 'businesses', 'updated_at', 'TEXT');
   addColumn(db, 'businesses', 'brand', 'TEXT'); // OSM marka etiketi: zincir şubesi, aday değil
+  // Ziyaret planı: opening_hours = OSM etiketi (ham); visit_date/visit_order = planlanan gün ve rotadaki sıra
+  addColumn(db, 'businesses', 'opening_hours', 'TEXT');
+  addColumn(db, 'businesses', 'visit_date', 'TEXT');
+  addColumn(db, 'businesses', 'visit_order', 'INTEGER');
+  // Saha kayıtları: her ziyaret ayrı satır (sonuç, not, bir sonraki ziyaret tarihi). Kişisel veri/e-posta yok.
+  db.exec(`CREATE TABLE IF NOT EXISTS visits (
+      id          INTEGER PRIMARY KEY,
+      business_id INTEGER NOT NULL REFERENCES businesses(id),
+      at          TEXT NOT NULL DEFAULT (datetime('now')),
+      outcome     TEXT NOT NULL,
+      note        TEXT NOT NULL DEFAULT '',
+      next_at     TEXT,
+      by_user     TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_visits_business ON visits(business_id, id);`);
   addColumn(db, 'partners', 'country', "TEXT NOT NULL DEFAULT 'DE'");
   // Seviye 2 doğrulamasından sonraki puan: yanlış alarm çıkan bulguların puanı düşülür (yoksa NULL)
   addColumn(db, 'profiles', 'adjusted_score', 'INTEGER');

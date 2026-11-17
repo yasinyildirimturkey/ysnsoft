@@ -1,9 +1,9 @@
 import { writeFileSync, readFileSync, existsSync, renameSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { openDb, BUSINESS_STATUSES, PARTNER_STATUSES, DATA_DIR } from './db.js';
+import { openDb, BUSINESS_STATUSES, PARTNER_STATUSES, VISIT_OUTCOMES, DATA_DIR } from './db.js';
 import {
   COUNTRIES, LEAD_CATEGORIES, PARTNER_CATEGORIES, DEFAULT_CITIES, DEFAULT_COUNTRY,
-  fetchPlaces, resolveCity, listDistricts, assertPlaceName,
+  fetchPlaces, fetchOpeningHours, resolveCity, listDistricts, assertPlaceName,
 } from './osm.js';
 import { scanSite } from './scan.js';
 import { writeReports, summary } from './report.js';
@@ -38,6 +38,10 @@ Kullanım:  node --no-warnings src/cli.js <komut> [seçenekler]
 
   Yönetim paneli için (JSON çıktı):
   meta | query | job | job-enrich | job-draft | job-status | prospect-set | profile
+  visit-add --id N --outcome <${Object.keys(VISIT_OUTCOMES).join('|')}> [--note-b64 ..] [--next YYYY-MM-DD]
+  visits --id N                               Adayın saha kayıtları.
+  plan-visits --date YYYY-MM-DD --ids 3,1,2   O günün ziyaret planı (sıra = rota sırası; önceki plan değişir).
+  hours-sync [--city X] [--limit 2000]        Kayıtlı adayların açılış saatlerini OSM'den toplu çeker.
 `;
 
 function parseArgs(argv) {
@@ -71,11 +75,12 @@ function areaById(db, id) {
 async function fetchOne(db, area, cat, toPartners) {
   const places = await fetchPlaces(area, cat);
   const upsertBiz = db.prepare(
-    `INSERT INTO businesses (osm_id,name,category,country,city,address,postcode,suburb,website,phone,lat,lon,brand,updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
+    `INSERT INTO businesses (osm_id,name,category,country,city,address,postcode,suburb,website,phone,lat,lon,brand,opening_hours,updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
      ON CONFLICT(osm_id) DO UPDATE SET name=excluded.name, country=excluded.country, address=excluded.address,
        postcode=excluded.postcode, suburb=excluded.suburb, website=COALESCE(excluded.website, businesses.website),
-       phone=COALESCE(excluded.phone, businesses.phone), lat=excluded.lat, lon=excluded.lon, brand=excluded.brand, updated_at=datetime('now')`,
+       phone=COALESCE(excluded.phone, businesses.phone), lat=excluded.lat, lon=excluded.lon, brand=excluded.brand,
+       opening_hours=COALESCE(excluded.opening_hours, businesses.opening_hours), updated_at=datetime('now')`,
   );
   const upsertPartner = db.prepare(
     `INSERT INTO partners (osm_id,name,type,country,city,address,website,phone) VALUES (?,?,?,?,?,?,?,?)
@@ -91,7 +96,7 @@ async function fetchOne(db, area, cat, toPartners) {
       if (toPartners) {
         upsertPartner.run(p.osm_id, p.name, p.category, p.country, p.city, p.address, p.website, p.phone);
       } else {
-        upsertBiz.run(p.osm_id, p.name, p.category, p.country, p.city, p.address, p.postcode, p.suburb, p.website, p.phone, p.lat, p.lon, p.brand);
+        upsertBiz.run(p.osm_id, p.name, p.category, p.country, p.city, p.address, p.postcode, p.suburb, p.website, p.phone, p.lat, p.lon, p.brand, p.hours);
         if (area.kind === 'district') link.run(idOf.get(p.osm_id).id, area.id);
       }
     }
@@ -577,6 +582,7 @@ function cmdQuery(db, opt) {
       kind: str(opt.kind),
       status: str(opt.status),
       q: str(opt.q),
+      visitDay: str(opt['visit-day']),
       minScore: Number(opt['min-score'] ?? 40),
       limit: Math.max(1, Math.min(2000, Number(opt.limit ?? 500))),
     }),
@@ -605,6 +611,73 @@ function cmdProspectSet(db, opt) {
     db.prepare('UPDATE businesses SET website=? WHERE id=?').run(site, id);
   }
   printJson({ ok: true });
+}
+
+// ── Saha ziyaretleri ─────────────────────────────────────────
+
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const b64text = (v, max) => (v === undefined || v === true ? '' : Buffer.from(String(v), 'base64').toString('utf8').trim().slice(0, max));
+
+function cmdVisitAdd(db, opt) {
+  const id = Number(opt.id);
+  const biz = db.prepare('SELECT id, status FROM businesses WHERE id=?').get(id);
+  if (!biz) throw new Error(`#${opt.id} bulunamadı`);
+  const outcome = String(opt.outcome ?? '');
+  if (!Object.hasOwn(VISIT_OUTCOMES, outcome)) throw new Error('Geçersiz ziyaret sonucu');
+  const next = str(opt.next) ?? null;
+  if (next && !DAY_RE.test(next)) throw new Error('Geçersiz tarih');
+  db.prepare('INSERT INTO visits (business_id, outcome, note, next_at, by_user) VALUES (?,?,?,?,?)')
+    .run(id, outcome, b64text(opt['note-b64'], 2000), next, b64text(opt['user-b64'], 120) || null);
+  // "Kazanıldı" ya da "iletişime geçme" sahadaki bir sonuçla geri alınmaz
+  const status = ['won', 'do_not_contact'].includes(biz.status) ? biz.status : VISIT_OUTCOMES[outcome];
+  db.prepare('UPDATE businesses SET status=? WHERE id=?').run(status, id);
+  // Tekrar gelinecekse o güne planlanır; rotadaki sırası o günün planında belirlenir
+  if (next) db.prepare('UPDATE businesses SET visit_date=?, visit_order=NULL WHERE id=?').run(next, id);
+  printJson({ ok: true, status });
+}
+
+function cmdVisits(db, opt) {
+  const rows = db.prepare('SELECT id, at, outcome, note, next_at, by_user FROM visits WHERE business_id=? ORDER BY id DESC LIMIT 50')
+    .all(Number(opt.id));
+  printJson({ ok: true, visits: rows });
+}
+
+function cmdPlanVisits(db, opt) {
+  const date = str(opt.date);
+  if (!date || !DAY_RE.test(date)) throw new Error('Geçersiz tarih');
+  const ids = String(opt.ids === true ? '' : opt.ids ?? '').split(',').filter(Boolean).map(Number);
+  if (ids.some((n) => !Number.isInteger(n) || n <= 0) || ids.length > 30) throw new Error('Geçersiz aday listesi');
+  db.exec('BEGIN');
+  try {
+    // O günün planı yeniden kurulur: listeden çıkarılanların günü boşaltılır
+    db.prepare('UPDATE businesses SET visit_date=NULL, visit_order=NULL WHERE visit_date=?').run(date);
+    const set = db.prepare(`UPDATE businesses SET visit_date=?, visit_order=?,
+      status=CASE WHEN status='new' THEN 'visit_planned' ELSE status END WHERE id=?`);
+    ids.forEach((id, i) => set.run(date, i + 1, id));
+    db.exec('COMMIT');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+  printJson({ ok: true, date, planned: ids.length });
+}
+
+/** Açılış saatlerini toplu çeker; OSM'de saati olmayanlar '' ile işaretlenir (tekrar sorulmaz). */
+async function cmdHoursSync(db, opt) {
+  const where = ['osm_id IS NOT NULL', 'opening_hours IS NULL'];
+  const params = [];
+  if (str(opt.city)) { where.push('city = ?'); params.push(opt.city); }
+  const ids = db.prepare(`SELECT osm_id FROM businesses WHERE ${where.join(' AND ')} LIMIT ?`)
+    .all(...params, Math.max(1, Math.min(20000, Number(opt.limit ?? 2000)))).map((r) => r.osm_id);
+  const set = db.prepare('UPDATE businesses SET opening_hours=? WHERE osm_id=?');
+  let found = 0;
+  for (let i = 0; i < ids.length; i += 250) {
+    const batch = ids.slice(i, i + 250);
+    const hours = await fetchOpeningHours(batch);
+    db.exec('BEGIN');
+    for (const id of batch) { const h = hours.get(id) ?? ''; if (h) found++; set.run(h, id); }
+    db.exec('COMMIT');
+    console.log(`${Math.min(i + 250, ids.length)}/${ids.length} — saati olan: ${found}`);
+    if (i + 250 < ids.length) await sleep(3000); // Overpass: aynı IP'den art arda sorgu sınırı
+  }
+  console.log(`Bitti: ${ids.length} aday, ${found} tanesinde açılış saati var.`);
 }
 
 /** Veritabanının tutarlı tek dosyalık kopyasını çıkarır (deploy tohumu / yedek için). */
@@ -660,7 +733,7 @@ const { pos, opt } = parseArgs(process.argv.slice(2));
 const cmd = pos[0];
 if (!cmd || opt.help) { console.log(HELP); process.exit(cmd ? 0 : 1); }
 
-const JSON_COMMANDS = new Set(['meta', 'query', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile']);
+const JSON_COMMANDS = new Set(['meta', 'query', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
 try {
   const db = openDb();
   switch (cmd) {
@@ -683,6 +756,10 @@ try {
     case 'job-status': printJson({ ok: true, job: readJob() }); break;
     case 'prospect-set': cmdProspectSet(db, opt); break;
     case 'snapshot': cmdSnapshot(db, pos); break;
+    case 'visit-add': cmdVisitAdd(db, opt); break;
+    case 'visits': cmdVisits(db, opt); break;
+    case 'plan-visits': cmdPlanVisits(db, opt); break;
+    case 'hours-sync': await cmdHoursSync(db, opt); break;
     default: console.log(HELP); process.exit(1);
   }
 } catch (e) {

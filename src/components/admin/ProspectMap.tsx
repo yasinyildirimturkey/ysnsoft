@@ -12,8 +12,9 @@
 import 'leaflet/dist/leaflet.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CircleMarker, LayerGroup, Map as LeafletMap } from 'leaflet';
-import { Check, Copy, ExternalLink, MapPin, Navigation, Phone, Route, Share2, Smartphone, Trash2, X } from 'lucide-react';
+import { CalendarCheck, Check, Clock, Copy, ExternalLink, MapPin, Navigation, Phone, Route, Share2, Smartphone, Trash2, X } from 'lucide-react';
 import { QrCode } from './ProspectOffer';
+import { DAY_NAMES, fmtMin, fmtRanges, isoDay, km, planDay, PREF_HINT, STATE_LABEL, weekdayOf, type SlotState, type Week } from '@/lib/visit-plan';
 
 export interface MapProspect {
   id: number;
@@ -27,6 +28,9 @@ export interface MapProspect {
   score: number | null;
   status: string;
   draft_token: string | null;
+  category?: string | null;
+  week?: Week;
+  appointment?: boolean;
 }
 
 interface Stop {
@@ -37,6 +41,31 @@ interface Stop {
   phone: string | null;
   lat: number;
   lon: number;
+  category?: string | null;
+  week?: Week;
+  appointment?: boolean;
+}
+
+const STATE_STYLE: Record<SlotState, string> = {
+  ok: 'text-green-700',
+  outside: 'text-amber-700',
+  unknown: 'text-[#6E6E73]',
+  appointment: 'text-amber-700',
+  closed: 'text-red-600',
+  late: 'text-red-600',
+};
+
+/** Önümüzdeki 7 gün: "Bugün", "Yarın", sonra gün adı + tarih */
+function nextDays() {
+  const out: { value: string; label: string }[] = [];
+  const d = new Date();
+  for (let i = 0; i < 7; i++) {
+    const v = isoDay(d);
+    const name = DAY_NAMES[weekdayOf(v)];
+    out.push({ value: v, label: i === 0 ? `Bugün (${name})` : i === 1 ? `Yarın (${name})` : `${name} ${v.slice(8, 10)}.${v.slice(5, 7)}.` });
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
 }
 
 const KIND_STYLE: Record<string, { color: string; label: string }> = {
@@ -49,13 +78,6 @@ const KIND_STYLE: Record<string, { color: string; label: string }> = {
 const MAX_STOPS = 10; // Google Maps adresi: hedef + en çok 9 ara durak
 const NEARBY_KM = 1;
 const STORAGE_KEY = 'webscout-route-v1';
-
-/** İki nokta arası kuş uçuşu mesafe (km). */
-function km(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
-  const r = Math.PI / 180;
-  const h = Math.sin(((b.lat - a.lat) * r) / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lon - a.lon) * r) / 2) ** 2;
-  return 12742 * Math.asin(Math.sqrt(h));
-}
 
 /** En yakın komşu sıralaması: ilk duraktan başlayıp her seferinde en yakın ziyaret edilmemiş durağa gider. */
 function orderStops(stops: Stop[]): Stop[] {
@@ -71,7 +93,10 @@ function orderStops(stops: Stop[]): Stop[] {
   return out;
 }
 
-const toStop = (r: MapProspect & { lat: number; lon: number }): Stop => ({ id: r.id, name: r.name, address: r.address, city: r.city, phone: r.phone, lat: r.lat, lon: r.lon });
+const toStop = (r: MapProspect & { lat: number; lon: number }): Stop => ({
+  id: r.id, name: r.name, address: r.address, city: r.city, phone: r.phone, lat: r.lat, lon: r.lon,
+  category: r.category ?? null, week: r.week ?? null, appointment: Boolean(r.appointment),
+});
 
 /** Durak: adres varsa "Ad, adres"; yoksa koordinat (yalnızca ad + şehirle Google başka bir yeri bulabilir). */
 const place = (s: Stop) => (s.address ? `${s.name}, ${s.address}` : `${s.lat.toFixed(6)},${s.lon.toFixed(6)}`);
@@ -104,6 +129,12 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
   const [notice, setNotice] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
+  const days = useMemo(() => nextDays(), []);
+  const [day, setDay] = useState(days[0].value);
+  const [start, setStart] = useState('09:00');
+  const [smart, setSmart] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savedDay, setSavedDay] = useState('');
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   // Bilgisayarda hazırlanan rota telefona: paylaşım menüsü (WhatsApp vb.) ya da panoya kopyalama
@@ -150,6 +181,44 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
   }, [stops]);
 
   const stopIds = useMemo(() => new Set(stops.map((s) => s.id)), [stops]);
+
+  // Kayıtlı rotadaki duraklar eski olabilir: güncel saat/sektör bilgisi haritadaki satırdan alınır
+  const fresh = useMemo(() => {
+    const by = new Map(located.map((r) => [r.id, r]));
+    return stops.map((s) => { const r = by.get(s.id); return r ? { ...s, ...toStop(r) } : s; });
+  }, [stops, located]);
+
+  const startMin = useMemo(() => {
+    const [h, m] = start.split(':').map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 540;
+  }, [start]);
+
+  // Saatlere göre plan; kapalı duraklar sona düşer ve Google rotasına girmez
+  const plan = useMemo(() => (smart
+    ? planDay(fresh, day, startMin)
+    : fresh.map((s) => ({ stop: s, eta: null as number | null, windows: [] as number[][], state: 'ok' as SlotState }))), [smart, fresh, day, startMin]);
+  const routeStops = useMemo(() => plan.filter((p) => p.state !== 'closed').map((p) => p.stop), [plan]);
+  const closedCount = plan.length - routeStops.length;
+
+  /** Rotayı o güne ziyaret planı olarak kaydeder: telefondaki saha sayfası bu listeyi açar. */
+  const savePlan = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'plan', date: day, ids: routeStops.map((s) => s.id) }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j.success === false) throw new Error(j.error || 'Kaydedilemedi');
+      setSavedDay(day);
+      setNotice(`${routeStops.length} durak ${days.find((d) => d.value === day)?.label ?? day} için kaydedildi.`);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Kaydedilemedi');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggleStop = useCallback((r: MapProspect & { lat: number; lon: number }) => {
     if (stops.some((x) => x.id === r.id)) {
@@ -271,8 +340,8 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
       if (!alive || !map.current) return;
       routeLayer.current?.remove();
       const g = L.layerGroup();
-      if (stops.length > 1) L.polyline(stops.map((s) => [s.lat, s.lon] as [number, number]), { color: '#0071e3', weight: 3, opacity: 0.7, dashArray: '6 6' }).addTo(g);
-      stops.forEach((s, i) => {
+      if (routeStops.length > 1) L.polyline(routeStops.map((s) => [s.lat, s.lon] as [number, number]), { color: '#0071e3', weight: 3, opacity: 0.7, dashArray: '6 6' }).addTo(g);
+      routeStops.forEach((s, i) => {
         L.marker([s.lat, s.lon], {
           icon: L.divIcon({
             className: '',
@@ -288,9 +357,10 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
       routeLayer.current = g;
     })();
     return () => { alive = false; };
-  }, [ready, stops]);
+  }, [ready, routeStops]);
 
-  const total = stops.slice(1).reduce((sum, s, i) => sum + km(stops[i], s), 0);
+  const total = routeStops.slice(1).reduce((sum, s, i) => sum + km(routeStops[i], s), 0);
+  const fieldUrl = typeof window !== 'undefined' && savedDay ? `${window.location.origin}/admin/saha?date=${savedDay}` : '';
   const missing = rows.length - located.length;
 
   return (
@@ -323,18 +393,44 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
         </div>
         <p className="text-[#6E6E73] leading-relaxed">
           Haritada bir noktaya tıklayıp <b>Rotaya ekle</b> ya da <b>Çevresindekiler</b> ile aynı bölgedeki adayları toplayın.
-          Sıra, en kısa yol olacak şekilde otomatik dizilir.
         </p>
+        <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+          <label className="flex flex-col gap-1 text-[#6E6E73]">
+            Ziyaret günü
+            <select value={day} onChange={(e) => { setDay(e.target.value); setSavedDay(''); }} className="apple-input py-1.5 text-xs text-[#1D1D1F]">
+              {days.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-[#6E6E73]">
+            Başlangıç
+            <input type="time" value={start} step={900} onChange={(e) => setStart(e.target.value)} className="apple-input py-1.5 text-xs text-[#1D1D1F] w-[92px]" />
+          </label>
+        </div>
+        <label className="flex items-start gap-2 text-[#1D1D1F] cursor-pointer">
+          <input type="checkbox" checked={smart} onChange={(e) => setSmart(e.target.checked)} className="mt-0.5" />
+          <span>Açılış saatlerine göre sırala <span className="text-[#6E6E73]">— kapalı olanı atlar, işletmeye uygun saati önerir</span></span>
+        </label>
         {notice && <p role="status" className="text-[#0071E3] font-medium">{notice}</p>}
 
         {stops.length > 0 ? (
           <ol className="space-y-1.5">
-            {stops.map((s, i) => (
-              <li key={s.id} className="flex items-start gap-2 p-2 rounded-lg bg-[#F5F5F7]">
-                <span className="w-5 h-5 shrink-0 rounded-full bg-[#0071E3] text-white grid place-items-center text-[10px] font-bold">{i + 1}</span>
+            {plan.map(({ stop: s, eta, windows, state }) => {
+              const n = routeStops.indexOf(s) + 1;
+              return (
+              <li key={s.id} className={`flex items-start gap-2 p-2 rounded-lg ${state === 'closed' ? 'bg-red-50' : 'bg-[#F5F5F7]'}`}>
+                <span className={`w-5 h-5 shrink-0 rounded-full text-white grid place-items-center text-[10px] font-bold ${n ? 'bg-[#0071E3]' : 'bg-red-500'}`}>{n || '–'}</span>
                 <div className="min-w-0 flex-1">
                   <button type="button" onClick={() => onOpen(s.id)} className="font-semibold text-[#1D1D1F] text-left hover:underline block truncate max-w-full">{s.name}</button>
                   <span className="text-[#6E6E73] block truncate">{s.address || s.city}</span>
+                  {smart && (
+                    <span className={`flex items-start gap-1 ${STATE_STYLE[state]}`} title={PREF_HINT[s.category ?? ''] ?? ''}>
+                      <Clock className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
+                      <span>
+                        {eta !== null && <b>≈ {fmtMin(eta)} · </b>}
+                        {STATE_LABEL[state]}{windows.length > 0 && state !== 'late' ? ` (${fmtRanges(windows.slice(0, 2))})` : ''}
+                      </span>
+                    </span>
+                  )}
                   {s.phone && (
                     <a href={`tel:${s.phone.replace(/[^+\d]/g, '')}`} className="text-[#0071E3] inline-flex items-center gap-1">
                       <Phone className="w-3 h-3" aria-hidden="true" />{s.phone}
@@ -345,7 +441,8 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
                   <X className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ol>
         ) : (
           <div className="p-3 rounded-lg border border-dashed border-black/[0.12] text-[#6E6E73] flex items-center gap-2">
@@ -353,11 +450,29 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
           </div>
         )}
 
-        {stops.length > 0 && (
+        {routeStops.length > 0 && (
           <>
-            {stops.length > 1 && <p className="text-[#6E6E73]">Duraklar arası ≈ {total.toFixed(1).replace('.', ',')} km (kuş uçuşu)</p>}
+            {closedCount > 0 && <p className="text-red-600">{closedCount} durak o gün kapalı; Google rotasına eklenmedi.</p>}
+            {routeStops.length > 1 && <p className="text-[#6E6E73]">Duraklar arası ≈ {total.toFixed(1).replace('.', ',')} km (kuş uçuşu)</p>}
+            <button
+              type="button"
+              onClick={savePlan}
+              disabled={saving}
+              className="px-4 py-2.5 rounded-full bg-[#1D1D1F] text-white text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+            >
+              <CalendarCheck className="w-3.5 h-3.5" aria-hidden="true" /> {saving ? 'Kaydediliyor…' : 'Bu güne ziyaret planı olarak kaydet'}
+            </button>
+            {fieldUrl && (
+              <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#F5F5F7]">
+                <QrCode value={fieldUrl} size={176} label="Saha listesini telefonda açmak için QR kodu" />
+                <p className="text-[#6E6E73] text-center leading-relaxed">
+                  Telefonda okutun: <b>Saha listesi</b> açılır; her durakta sonucu tek dokunuşla girersiniz.
+                </p>
+                <a href={fieldUrl} target="_blank" rel="noopener noreferrer" className="text-[#0071E3] font-semibold">Saha listesini aç</a>
+              </div>
+            )}
             <a
-              href={googleRouteUrl(stops)}
+              href={googleRouteUrl(routeStops)}
               target="_blank"
               rel="noopener noreferrer"
               className="apple-pill-btn px-4 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5"
@@ -377,7 +492,7 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
               </button>
               <button
                 type="button"
-                onClick={() => shareRoute(googleRouteUrl(stops))}
+                onClick={() => shareRoute(googleRouteUrl(routeStops))}
                 className="px-3 py-2 rounded-full border border-black/[0.12] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] flex items-center justify-center gap-1.5"
               >
                 {copied
@@ -389,7 +504,7 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
             </div>
             {showQr && (
               <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#F5F5F7]">
-                <QrCode value={googleRouteUrl(stops)} size={232} level="L" label="Rotayı telefonda açmak için QR kodu" />
+                <QrCode value={googleRouteUrl(routeStops)} size={232} level="L" label="Rotayı telefonda açmak için QR kodu" />
                 <p className="text-[#6E6E73] text-center leading-relaxed">Telefonun kamerasıyla okutun; rota Google Maps&apos;te açılır.</p>
               </div>
             )}

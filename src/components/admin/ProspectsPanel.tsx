@@ -28,6 +28,7 @@ import {
 import ProspectOffer from './ProspectOffer';
 import ProspectMap from './ProspectMap';
 import ProspectPhotos from './ProspectPhotos';
+import ProspectVisits from './ProspectVisits';
 import ProspectProfile from './ProspectProfile';
 
 type Kind = 'no_site' | 'redesign' | 'unscanned' | 'ok' | 'chain';
@@ -711,6 +712,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
           </span>
           <div className="flex items-center gap-3">
             <span className="hidden md:inline">{view === 'map' ? 'Aynı bölgedekileri tek rotada toplayın' : 'Puan yüksek = sitede daha çok sorun = daha güçlü yenileme adayı'}</span>
+            <a href="/admin/saha" className="font-semibold text-[#0071E3] hover:underline whitespace-nowrap">Saha listesi</a>
             <div className="flex rounded-lg bg-[#F5F5F7] p-0.5" role="group" aria-label="Görünüm">
               {([['list', 'Liste', List], ['map', 'Harita', MapIcon]] as const).map(([id, label, Icon]) => (
                 <button
@@ -1070,6 +1072,8 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                   ))}
                 </div>
               </div>
+
+              <ProspectVisits key={`v${selected.id}`} id={selected.id} />
 
               <div>
                 <label htmlFor="pr-notes" className="text-[#6E6E73] block mb-1">Ziyaret notları</label>

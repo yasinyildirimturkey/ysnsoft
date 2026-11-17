@@ -1,0 +1,342 @@
+'use client';
+
+/**
+ * Saha listesi (telefon): haritada bir güne kaydedilen ziyaret planı.
+ * Her durakta bugünkü açılış saati, "şu an açık mı", önerilen ziyaret saati, yol tarifi / arama / demo
+ * ve tek dokunuşla ziyaret sonucu (not + bir sonraki ziyaret tarihi). Sonuç adayın durumunu günceller.
+ */
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import {
+  ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
+} from 'lucide-react';
+import {
+  CATEGORY_LABEL, DAY_NAMES, dayWindows, fmtRanges, isoDay, localDayOf, NEEDS_NEXT, openNow, STATE_LABEL,
+  VISIT_OUTCOME_LABEL, weekdayOf, type Week,
+} from '@/lib/visit-plan';
+
+interface LastVisit { outcome: string; at: string; note: string; next_at: string | null }
+
+interface FieldRow {
+  id: number;
+  name: string;
+  category: string | null;
+  address: string | null;
+  city: string;
+  phone: string | null;
+  lat: number | null;
+  lon: number | null;
+  status: string;
+  notes: string;
+  visit_date: string | null;
+  visit_order: number | null;
+  draft_token: string | null;
+  week: Week;
+  appointment: boolean;
+  last_visit: LastVisit | null;
+}
+
+const OUTCOME_STYLE: Record<string, string> = {
+  talked: 'bg-blue-600',
+  demo_shown: 'bg-indigo-600',
+  offer_requested: 'bg-emerald-600',
+  won: 'bg-green-700',
+  come_back: 'bg-amber-500',
+  closed: 'bg-slate-500',
+  not_interested: 'bg-red-600',
+};
+
+const telHref = (p: string) => `tel:${p.replace(/[^+\d]/g, '')}`;
+const placeOf = (r: FieldRow) => (r.address ? `${r.name}, ${r.address}` : `${r.lat},${r.lon}`);
+const navUrl = (r: FieldRow) => `https://www.google.com/maps/dir/?${new URLSearchParams({ api: '1', travelmode: 'driving', destination: placeOf(r) })}`;
+
+function plusDays(iso: string, n: number) {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  // Hafta sonuna denk gelirse pazartesiye
+  while ([0, 6].includes(d.getDay())) d.setDate(d.getDate() + 1);
+  return isoDay(d);
+}
+
+function fmtDay(iso: string) {
+  return `${DAY_NAMES[weekdayOf(iso)]} ${iso.slice(8, 10)}.${iso.slice(5, 7)}.`;
+}
+
+export default function FieldMode() {
+  const [date, setDate] = useState('');
+  const [rows, setRows] = useState<FieldRow[] | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [now, setNow] = useState<{ day: string; min: number } | null>(null);
+
+  // Tarih ve saat yalnızca istemcide: sunucu saat dilimi telefonunkinden farklı olabilir
+  useEffect(() => {
+    const tick = () => { const d = new Date(); setNow({ day: isoDay(d), min: d.getHours() * 60 + d.getMinutes() }); };
+    const t = setTimeout(() => {
+      tick();
+      const q = new URLSearchParams(window.location.search).get('date') ?? '';
+      setDate(/^\d{4}-\d{2}-\d{2}$/.test(q) ? q : isoDay());
+    }, 0);
+    const iv = setInterval(tick, 60_000);
+    return () => { clearTimeout(t); clearInterval(iv); };
+  }, []);
+
+  const load = useCallback(async (d: string) => {
+    if (!d) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/prospects?view=day&date=${d}`, { cache: 'no-store' });
+      if (res.status === 401 || res.status === 403) throw new Error('Oturum kapanmış. Panele yeniden giriş yapın.');
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || 'Liste alınamadı');
+      if (j.available === false) throw new Error('Aday aracı bu sunucuda çalışmıyor.');
+      setRows(j.rows ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Liste alınamadı');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => { void load(date); }, 0);
+    return () => clearTimeout(t);
+  }, [date, load]);
+
+  const day = date ? weekdayOf(date) : 0;
+  const isToday = Boolean(now && date === now.day);
+  const doneToday = (r: FieldRow) => Boolean(r.last_visit && localDayOf(r.last_visit.at) === date);
+
+  const list = useMemo(() => (rows ?? []).slice().sort((a, b) => (a.visit_order ?? 999) - (b.visit_order ?? 999)), [rows]);
+  const remaining = list.filter((r) => !doneToday(r) && r.visit_date === date && dayWindows({ ...r, lat: 0, lon: 0 }, day).state !== 'closed');
+  const done = list.filter(doneToday).length;
+
+  const remainingRoute = remaining.length
+    ? `https://www.google.com/maps/dir/?${new URLSearchParams({
+      api: '1',
+      travelmode: 'driving',
+      destination: placeOf(remaining[remaining.length - 1]),
+      ...(remaining.length > 1 ? { waypoints: remaining.slice(0, -1).slice(0, 9).map(placeOf).join('|') } : {}),
+    })}`
+    : '';
+
+  return (
+    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F]">
+      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-black/[0.06]">
+        <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
+          <Link href="/admin" className="p-2 -ml-2 rounded-full hover:bg-black/[0.05]" aria-label="Panele dön">
+            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-bold leading-tight">Saha listesi</h1>
+            <p className="text-xs text-[#6E6E73]">{date ? fmtDay(date) : '…'}{rows ? ` · ${done}/${list.length} ziyaret` : ''}</p>
+          </div>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="text-sm border border-black/[0.12] rounded-lg px-2 py-1.5 bg-white"
+            aria-label="Gün"
+          />
+          <button type="button" onClick={() => load(date)} className="p-2 rounded-full hover:bg-black/[0.05]" aria-label="Yenile">
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+
+      <div className="max-w-xl mx-auto px-4 py-4 space-y-3">
+        {error && <p role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error} {error.startsWith('Oturum') && <Link className="underline font-semibold" href="/admin/login">Giriş</Link>}</p>}
+
+        {remainingRoute && (
+          <a
+            href={remainingRoute}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-[#0071E3] text-white font-semibold text-sm shadow-sm"
+          >
+            <Navigation className="w-4 h-4" aria-hidden="true" /> Kalan {remaining.length} durağı Google Maps&apos;te aç
+          </a>
+        )}
+
+        {rows && list.length === 0 && !loading && (
+          <div className="p-6 rounded-2xl bg-white text-center text-sm text-[#6E6E73] leading-relaxed">
+            <MapPin className="w-6 h-6 mx-auto mb-2 text-[#0071E3]" aria-hidden="true" />
+            Bu güne planlanmış ziyaret yok. Panelde <b>Müşteri Adayları → Harita</b>&apos;da rotayı kurup
+            <b> “Bu güne ziyaret planı olarak kaydet”</b> deyin.
+          </div>
+        )}
+
+        {!rows && loading && (
+          <div className="p-8 text-center text-[#6E6E73]"><Loader2 className="w-6 h-6 animate-spin mx-auto" aria-hidden="true" /></div>
+        )}
+
+        {list.map((r, i) => (
+          <StopCard
+            key={r.id}
+            row={r}
+            n={i + 1}
+            date={date}
+            day={day}
+            nowMin={isToday && now ? now.min : null}
+            done={doneToday(r)}
+            onSaved={() => load(date)}
+          />
+        ))}
+
+        <p className="text-[11px] text-[#6E6E73] text-center leading-relaxed pt-2">
+          Önerilen saatler sektöre göre tahmindir; açılış saatleri OpenStreetMap&apos;ten gelir ve eksik olabilir.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
+  row: FieldRow; n: number; date: string; day: number; nowMin: number | null; done: boolean; onSaved: () => void;
+}) {
+  const [outcome, setOutcome] = useState('');
+  const [note, setNote] = useState('');
+  const [next, setNext] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [open, setOpen] = useState(!done);
+
+  const info = dayWindows({ ...r, lat: 0, lon: 0 }, day);
+  const isOpen = nowMin !== null ? openNow({ ...r, lat: 0, lon: 0 }, day, nowMin) : null;
+  const postponed = r.visit_date !== date; // tekrar gel ile başka güne alınmış
+
+  const choose = (o: string) => {
+    setOutcome(o);
+    setErr('');
+    if (NEEDS_NEXT.has(o) && !next) setNext(plusDays(date, o === 'closed' ? 1 : 7));
+  };
+
+  const save = async () => {
+    if (!outcome) return;
+    if (NEEDS_NEXT.has(outcome) && !next) { setErr('Bir sonraki ziyaret tarihini seçin.'); return; }
+    setSaving(true);
+    setErr('');
+    try {
+      const res = await fetch('/api/admin/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'visit', id: r.id, outcome, note, ...(next && NEEDS_NEXT.has(outcome) ? { next } : {}) }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j.success === false) throw new Error(j.error || 'Kaydedilemedi');
+      setOutcome(''); setNote(''); setNext(''); setOpen(false);
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Kaydedilemedi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <article className={`rounded-2xl bg-white shadow-sm border ${done ? 'border-green-200' : info.state === 'closed' ? 'border-red-200' : 'border-transparent'}`}>
+      <div className="p-4 flex gap-3">
+        <span className={`w-8 h-8 shrink-0 rounded-full grid place-items-center text-sm font-bold text-white ${done ? 'bg-green-600' : info.state === 'closed' ? 'bg-red-500' : 'bg-[#0071E3]'}`}>
+          {done ? <CheckCircle2 className="w-4 h-4" aria-label="Ziyaret edildi" /> : n}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-bold text-[15px] leading-snug">{r.name}</h2>
+          <p className="text-xs text-[#6E6E73]">{CATEGORY_LABEL[r.category ?? ''] ?? r.category}{r.address ? ` · ${r.address}` : ''}</p>
+
+          <p className="mt-1.5 text-xs flex items-start gap-1.5">
+            <Clock className="w-3.5 h-3.5 mt-px shrink-0 text-[#6E6E73]" aria-hidden="true" />
+            <span>
+              {info.open
+                ? info.open.length ? <>Bugün {fmtRanges(info.open)}</> : <b className="text-red-600">Bu gün kapalı</b>
+                : <span className="text-[#6E6E73]">{STATE_LABEL[info.state]}</span>}
+              {isOpen !== null && info.open && info.open.length > 0 && (
+                <b className={isOpen ? 'text-green-700' : 'text-red-600'}> · {isOpen ? 'şu an açık' : 'şu an kapalı'}</b>
+              )}
+              {info.state !== 'closed' && info.windows.length > 0 && (
+                <span className="block text-[#6E6E73]">Uygun saat: <b className="text-[#1D1D1F]">{fmtRanges(info.windows.slice(0, 2))}</b></span>
+              )}
+            </span>
+          </p>
+
+          {r.last_visit && (
+            <p className="mt-1.5 text-xs">
+              <span className={`inline-block px-2 py-0.5 rounded-full text-white text-[11px] font-semibold ${OUTCOME_STYLE[r.last_visit.outcome] ?? 'bg-slate-500'}`}>
+                {VISIT_OUTCOME_LABEL[r.last_visit.outcome] ?? r.last_visit.outcome}
+              </span>
+              <span className="text-[#6E6E73]"> · {fmtDay(localDayOf(r.last_visit.at))}{r.last_visit.next_at ? ` → tekrar ${fmtDay(r.last_visit.next_at)}` : ''}</span>
+              {r.last_visit.note && <span className="block mt-1 text-[#1D1D1F]">“{r.last_visit.note}”</span>}
+            </p>
+          )}
+          {postponed && r.visit_date && <p className="mt-1 text-xs text-amber-700">Başka güne alındı: {fmtDay(r.visit_date)}</p>}
+        </div>
+      </div>
+
+      <div className="px-4 pb-3 grid grid-cols-3 gap-2 text-xs font-semibold">
+        <a href={navUrl(r)} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7]">
+          <Navigation className="w-4 h-4 text-[#0071E3]" aria-hidden="true" /> Yol tarifi
+        </a>
+        {r.phone ? (
+          <a href={telHref(r.phone)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7]">
+            <Phone className="w-4 h-4 text-[#0071E3]" aria-hidden="true" /> Ara
+          </a>
+        ) : <span className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7] text-[#6E6E73]"><Phone className="w-4 h-4" aria-hidden="true" /> Tel. yok</span>}
+        {r.draft_token ? (
+          <a href={`/demo/${r.draft_token}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7]">
+            <PlayCircle className="w-4 h-4 text-[#0071E3]" aria-hidden="true" /> Demo
+          </a>
+        ) : <span className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7] text-[#6E6E73]"><ExternalLink className="w-4 h-4" aria-hidden="true" /> Demo yok</span>}
+      </div>
+
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="w-full py-3 border-t border-black/[0.06] text-xs font-semibold text-[#0071E3]">
+          Yeni sonuç gir
+        </button>
+      ) : (
+        <div className="px-4 pb-4 pt-3 border-t border-black/[0.06] space-y-2.5">
+          <p className="text-xs font-semibold text-[#6E6E73]">Ziyaret sonucu</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(VISIT_OUTCOME_LABEL).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => choose(k)}
+                aria-pressed={outcome === k}
+                className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${outcome === k ? `${OUTCOME_STYLE[k]} text-white border-transparent` : 'bg-white border-black/[0.12] text-[#1D1D1F]'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {outcome && (
+            <>
+              {NEEDS_NEXT.has(outcome) && (
+                <label className="flex items-center justify-between gap-2 text-sm">
+                  <span>Tekrar ziyaret</span>
+                  <input type="date" value={next} min={date} onChange={(e) => setNext(e.target.value)} className="border border-black/[0.12] rounded-lg px-2 py-1.5" />
+                </label>
+              )}
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                maxLength={2000}
+                placeholder="Not (ör. sahibi Perşembe öğleden önce burada, fiyat sordu)"
+                className="w-full text-sm border border-black/[0.12] rounded-xl p-2.5"
+              />
+              {err && <p role="alert" className="text-xs text-red-600">{err}</p>}
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="w-full py-3 rounded-xl bg-[#1D1D1F] text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />} Kaydet
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
