@@ -1,4 +1,5 @@
 // Yönetim panelinin "Müşteri Adayları" (prospects) ekranı için sorgular.
+import { byAppointment, osmWeek } from './hours.js';
 // Prospect = bizim gideceğimiz işletme. (ysnsoft'taki "leads" = bize gelen talepler; karıştırma.)
 
 export const STATUS_LABELS = {
@@ -55,7 +56,7 @@ function regionWhere({ country, city, areaId, categories }) {
   return { where, params };
 }
 
-export function queryProspects(db, { country, city, areaId, categories, kind, status, q, minScore = 40, limit = 500 } = {}) {
+export function queryProspects(db, { country, city, areaId, categories, kind, status, q, visitDay, minScore = 40, limit = 500 } = {}) {
   const region = regionWhere({ country, city, areaId, categories });
 
   // Özet: bölge + kategori seçimine göre (tür/durum/arama süzgeçlerinden bağımsız)
@@ -82,7 +83,12 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   else if (kind === 'draft') where.push(HAS_DRAFT_SQL);
   else if (kind && kind !== 'all') { where.push(`${KIND_SQL} = @kind`); params.kind = kind; }
   if (status) { where.push('b.status = @status'); params.status = status; }
-  else where.push("b.status != 'do_not_contact'");
+  else if (!visitDay) where.push("b.status != 'do_not_contact'");
+  // Saha listesi: o güne planlananlar + o gün ziyaret kaydı girilenler (ertelenen de listede kalır)
+  if (visitDay) {
+    where.push("(b.visit_date = @visitDay OR EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND date(v.at, 'localtime') = @visitDay))");
+    params.visitDay = visitDay;
+  }
   if (q) {
     where.push("(b.name LIKE @q ESCAPE '\\' OR b.address LIKE @q ESCAPE '\\' OR b.website LIKE @q ESCAPE '\\')");
     params.q = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
@@ -92,7 +98,10 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   const rows = all(
     db,
       `SELECT b.id, b.name, b.category, b.country, b.city, b.address, b.postcode, b.suburb, b.website, b.phone,
-              b.status, b.notes, b.lat, b.lon,
+              b.status, b.notes, b.lat, b.lon, b.visit_date, b.visit_order,
+              COALESCE(NULLIF(b.opening_hours, ''), json_extract(p.profile, '$.osm.tags.opening_hours')) AS opening_hours,
+              (SELECT json_object('outcome', v.outcome, 'at', v.at, 'note', v.note, 'next_at', v.next_at)
+                 FROM visits v WHERE v.business_id = b.id ORDER BY v.id DESC LIMIT 1) AS last_visit,
               ${SCORE_SQL} AS score, s.score AS raw_score, s.findings, s.final_url, s.scanned_at, s.error AS scan_error,
               ${KIND_SQL} AS kind,
               p.activity, p.enriched_at,
@@ -102,7 +111,8 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
               (SELECT group_concat(a.name, ' · ') FROM business_areas ba JOIN areas a ON a.id = ba.area_id WHERE ba.business_id = b.id) AS districts
          ${FROM_SQL}
         WHERE ${where.join(' AND ')}
-        ORDER BY ${kind === 'draft' ? '(SELECT d.created_at FROM drafts d WHERE d.business_id = b.id) DESC,' : ''}
+        ORDER BY ${visitDay ? "CASE WHEN b.visit_date = @visitDay THEN 0 ELSE 1 END, COALESCE(b.visit_order, 999)," : ''}
+                 ${kind === 'draft' ? '(SELECT d.created_at FROM drafts d WHERE d.business_id = b.id) DESC,' : ''}
                  CASE ${KIND_SQL} WHEN 'redesign' THEN 0 WHEN 'no_site' THEN 1 WHEN 'unscanned' THEN 2 ELSE 3 END,
                  ${SCORE_SQL} DESC, b.name
         LIMIT @limit`,
@@ -120,7 +130,11 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
       let verification = {};
       try { if (r.verification) verification = JSON.parse(r.verification) ?? {}; } catch { /* bozuk kayıt */ }
       const items = (findings.items ?? []).map((f) => (verification[f.code] ? { ...f, verified: verification[f.code].status } : f));
-      const row = { ...r, findings: items, tech: findings.info?.tech ?? null };
+      let lastVisit = null;
+      try { if (r.last_visit) lastVisit = JSON.parse(r.last_visit); } catch { /* bozuk kayıt */ }
+      // Haftalık açılış aralıkları (dakika); anlaşılmayan biçimde null → "saat bilinmiyor"
+      const row = { ...r, findings: items, tech: findings.info?.tech ?? null, last_visit: lastVisit, week: osmWeek(r.opening_hours),
+        appointment: byAppointment(r.opening_hours) };
       delete row.verification; // ham JSON panele gitmesin; bilgi bulguların içinde
       return row;
     }),

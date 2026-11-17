@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireRole } from '@/lib/admin-auth';
+import { getAdminSession, requireRole } from '@/lib/admin-auth';
 import {
   deleteWebscoutUpload,
   listWebscoutUploads,
@@ -22,6 +22,9 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 // İlk karakter harf/rakam olmalı: "--" ile başlayan değer araç seçeneği sanılmasın
 const PLACE_RE = /^[\p{L}\p{N}][\p{L}\p{N} .,'()/-]{1,79}$/u;
 const KEY_RE = /^[a-z_]{2,30}$/;
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const VISIT_OUTCOMES = ['talked', 'demo_shown', 'offer_requested', 'come_back', 'closed', 'not_interested', 'won'];
+const b64 = (v: string) => Buffer.from(v, 'utf8').toString('base64');
 
 function fail(error: string, status = 400) {
   return NextResponse.json({ success: false, error }, { status, headers: NO_STORE });
@@ -100,6 +103,22 @@ export async function GET(request: Request) {
         return new NextResponse(new Uint8Array(shot.data), { headers: { 'Content-Type': shot.type, 'Cache-Control': 'private, no-store' } });
       }
       const res = await runWebscout(['profile', '--id', String(id)]);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
+    // Saha kayıtları (tek aday)
+    if (view === 'visits') {
+      const id = Number(searchParams.get('id'));
+      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      const res = await runWebscout(['visits', '--id', String(id)]);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
+    // Saha listesi: o günün planı + o gün ziyaret kaydı girilenler (bölge/tür süzgeci yok)
+    if (view === 'day') {
+      const day = String(searchParams.get('date') ?? '');
+      if (!DAY_RE.test(day)) return fail('Geçersiz tarih.');
+      const res = await runWebscout(['query', '--visit-day', day, '--kind', 'all', '--limit', '60']);
       return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
     }
 
@@ -248,6 +267,35 @@ export async function POST(request: Request) {
       const done = body.action === 'delete-upload' ? deleteWebscoutUpload(id, name) : makeWebscoutUploadCover(id, name);
       if (!done) return fail('Fotoğraf bulunamadı.', 404);
       return NextResponse.json({ success: true, uploads: listWebscoutUploads(id) }, { headers: NO_STORE });
+    }
+
+    // Sahadan ziyaret sonucu: durum otomatik güncellenir, "tekrar gel" o güne planlanır
+    if (body.action === 'visit') {
+      const id = Number(body.id);
+      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      if (!VISIT_OUTCOMES.includes(String(body.outcome))) return fail('Geçersiz ziyaret sonucu.');
+      const args = ['visit-add', '--id', String(id), '--outcome', String(body.outcome)];
+      const note = typeof body.note === 'string' ? body.note.trim().slice(0, 2000) : '';
+      if (note) args.push('--note-b64', b64(note));
+      if (body.next) {
+        if (typeof body.next !== 'string' || !DAY_RE.test(body.next)) return fail('Geçersiz tarih.');
+        args.push('--next', body.next);
+      }
+      const who = getAdminSession(request);
+      if (who) args.push('--user-b64', b64(String(who.name || who.email).slice(0, 120)));
+      const res = await runWebscout(args);
+      return NextResponse.json({ success: true, ...res }, { headers: NO_STORE });
+    }
+
+    // Rotayı bir güne ziyaret planı olarak kaydet (telefondaki saha listesi bunu okur)
+    if (body.action === 'plan') {
+      const day = String(body.date ?? '');
+      if (!DAY_RE.test(day)) return fail('Geçersiz tarih.');
+      const ids = Array.isArray(body.ids) ? body.ids.map(Number) : [];
+      if (ids.length > 30 || ids.some((n: number) => !Number.isInteger(n) || n <= 0)) return fail('Geçersiz aday listesi.');
+      // Boş liste = o günün planını temizle
+      const res = await runWebscout(['plan-visits', '--date', day, ...(ids.length ? ['--ids', ids.join(',')] : [])]);
+      return NextResponse.json({ success: true, ...res }, { headers: NO_STORE });
     }
 
     // Durum / not / elle bulunan site adresi güncelle

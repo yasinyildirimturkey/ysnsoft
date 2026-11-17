@@ -183,9 +183,32 @@ out center tags;`);
       phone: t.phone || t['contact:phone'] || t['contact:mobile'] || null,
       // Zincir/franchise şubesi (ör. fırın zinciri, fast-food markası): site kararı merkezde verilir
       brand: t.brand || t['brand:wikidata'] || null,
+      // Ziyaret rotası için: kapalı günü atlamak, uygun saati önermek
+      hours: t.opening_hours || null,
       lat: el.lat ?? el.center?.lat ?? null,
       lon: el.lon ?? el.center?.lon ?? null,
     });
   }
+  return out;
+}
+
+/**
+ * Kayıtlı işletmelerin güncel opening_hours etiketini toplu okur (yeniden çekim gerekmez).
+ * @param {string[]} osmIds  "node/123" | "way/45" | "relation/6"
+ * @returns {Map<string, string|null>}
+ */
+export async function fetchOpeningHours(osmIds) {
+  const by = { node: [], way: [], relation: [] };
+  for (const id of osmIds) {
+    const [type, num] = String(id).split('/');
+    if (by[type] && /^\d+$/.test(num ?? '')) by[type].push(num);
+  }
+  const parts = Object.entries(by).filter(([, ids]) => ids.length).map(([type, ids]) => `${type}(id:${ids.join(',')});`);
+  const out = new Map();
+  if (!parts.length) return out;
+  const data = await overpass(`[out:json][timeout:90];
+(${parts.join('')});
+out tags;`);
+  for (const el of data.elements ?? []) out.set(`${el.type}/${el.id}`, el.tags?.opening_hours ?? null);
   return out;
 }
