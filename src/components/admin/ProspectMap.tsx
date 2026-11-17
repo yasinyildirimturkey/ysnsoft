@@ -12,7 +12,7 @@
 import 'leaflet/dist/leaflet.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CircleMarker, LayerGroup, Map as LeafletMap } from 'leaflet';
-import { CalendarCheck, Check, Clock, Copy, ExternalLink, MapPin, Navigation, Phone, Route, Share2, Smartphone, Trash2, X } from 'lucide-react';
+import { CalendarCheck, Check, Clock, Copy, ExternalLink, Layers, MapPin, Navigation, Phone, Route, Share2, Smartphone, Trash2, X } from 'lucide-react';
 import { QrCode } from './ProspectOffer';
 import { DAY_NAMES, fmtMin, fmtRanges, isoDay, km, planDay, PREF_HINT, STATE_LABEL, weekdayOf, type SlotState, type Week } from '@/lib/visit-plan';
 
@@ -31,6 +31,8 @@ export interface MapProspect {
   category?: string | null;
   week?: Week;
   appointment?: boolean;
+  suburb?: string | null;
+  postcode?: string | null;
 }
 
 interface Stop {
@@ -116,6 +118,74 @@ function loadStops(): Stop[] {
     return [];
   }
 }
+
+// ── Fırsat yoğunluğu ──
+// Kare ızgara (≈ 600 m × 600 m, Ruhr enleminde): her karede hâlâ açık fırsat sayısı (sitesi yok / yenileme,
+// durumu "yeni" ya da "planlandı"). Renk tek tonlu sıralı ölçek: açık = az, koyu = çok.
+const CELL_LAT = 0.0054;
+const CELL_LON = 0.0087;
+const DENSITY_RAMP = ['#ede9fe', '#c4b5fd', '#a78bfa', '#7c3aed', '#5b21b6'];
+const OPEN_STATUSES = new Set(['new', 'visit_planned']);
+
+interface Cell {
+  key: string;
+  bounds: [[number, number], [number, number]];
+  rows: (MapProspect & { lat: number; lon: number })[];
+  noSite: number;
+  redesign: number;
+  drafts: number;
+  label: string;
+}
+
+const isOpportunity = (r: MapProspect) => (r.kind === 'no_site' || r.kind === 'redesign') && OPEN_STATUSES.has(r.status);
+
+function buildCells(rows: (MapProspect & { lat: number; lon: number })[]): Cell[] {
+  const by = new Map<string, Cell>();
+  for (const r of rows) {
+    if (!isOpportunity(r)) continue;
+    const i = Math.floor(r.lat / CELL_LAT);
+    const j = Math.floor(r.lon / CELL_LON);
+    const key = `${i}:${j}`;
+    let c = by.get(key);
+    if (!c) {
+      c = { key, bounds: [[i * CELL_LAT, j * CELL_LON], [(i + 1) * CELL_LAT, (j + 1) * CELL_LON]], rows: [], noSite: 0, redesign: 0, drafts: 0, label: '' };
+      by.set(key, c);
+    }
+    c.rows.push(r);
+    if (r.kind === 'no_site') c.noSite++; else c.redesign++;
+    if (r.draft_token) c.drafts++;
+  }
+  const top = (vals: (string | null | undefined)[]) => {
+    const n = new Map<string, number>();
+    for (const v of vals) if (v) n.set(v, (n.get(v) ?? 0) + 1);
+    return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+  };
+  for (const c of by.values()) {
+    // Karenin adı: mahalle (OSM addr:suburb; çoğu kayıtta yok) ya da posta kodu + en sık geçen sokak
+    const suburb = top(c.rows.map((r) => r.suburb));
+    const plz = top(c.rows.map((r) => r.postcode));
+    // Adres "Sokak No, PLZ Şehir" biçiminde; virgülsüz adreste (yalnızca şehir/PLZ) sokak yoktur
+    const streetOf = (a: string | null) => {
+      const parts = a?.split(',') ?? [];
+      if (parts.length < 2) return '';
+      const s = parts[0].replace(/\s+\d+\s*[a-zA-Z]?(\s*[-/]\s*\d+\s*[a-zA-Z]?)?$/, '').trim();
+      return /^\d/.test(s) || s === c.rows[0].city ? '' : s;
+    };
+    const street = top(c.rows.map((r) => streetOf(r.address)));
+    const place = suburb || (plz ? `${plz} ${c.rows[0].city}` : c.rows[0].city);
+    c.label = street ? `${place} · ${street} çevresi` : place;
+  }
+  return [...by.values()].sort((a, b) => b.rows.length - a.rows.length);
+}
+
+/** Yoğunluk açıkken noktalar küçülür ki kareler okunabilsin (taslak hazır olanlar belirgin kalır). */
+function styleMarker(mk: CircleMarker, draft: boolean, density: boolean) {
+  mk.setRadius(density ? (draft ? 6 : 3.5) : draft ? 8 : 6.5);
+  mk.setStyle({ fillOpacity: density ? 0.8 : 0.92, weight: draft ? 3 : density ? 0.8 : 1.5 });
+}
+
+/** Karedeki en güçlü adaylar: taslağı hazır olanlar önce, sonra puan */
+const bestOf = (c: Cell) => [...c.rows].sort((a, b) => Number(Boolean(b.draft_token)) - Number(Boolean(a.draft_token)) || (b.score ?? 0) - (a.score ?? 0));
 
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
@@ -247,17 +317,96 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
     setStops(orderStops([...stops, ...added]));
   }, [stops, located]);
 
+  const [density, setDensity] = useState(false);
+  const densityRef = useRef(false);
+  const cells = useMemo(() => buildCells(located), [located]);
+
+  /** Karenin en güçlü adaylarını rotadaki boş yerlere ekler. */
+  const addCell = useCallback((c: Cell) => {
+    const have = new Set(stops.map((x) => x.id));
+    const free = MAX_STOPS - stops.length;
+    const pick = bestOf(c).filter((r) => !have.has(r.id)).slice(0, Math.max(0, free));
+    if (!pick.length) {
+      setNotice(free <= 0 ? `Rota dolu (en çok ${MAX_STOPS} durak).` : 'Bu karedeki adaylar zaten rotada.');
+      return;
+    }
+    setNotice(`${c.label}: ${pick.length} aday rotaya eklendi.`);
+    setStops(orderStops([...stops, ...pick.map(toStop)]));
+  }, [stops]);
+
+  const zoomTo = (c: Cell) => { map.current?.fitBounds(c.bounds, { maxZoom: 16, padding: [40, 40] }); };
+
   // Açılır pencere düğmeleri her zaman güncel durumu görsün (noktaları yeniden çizmeden)
   const stopIdsRef = useRef(stopIds);
   const toggleRef = useRef(toggleStop);
   const nearbyRef = useRef(addNearby);
   const onOpenRef = useRef(onOpen);
+  const addCellRef = useRef(addCell);
   useEffect(() => {
     stopIdsRef.current = stopIds;
     toggleRef.current = toggleStop;
     nearbyRef.current = addNearby;
     onOpenRef.current = onOpen;
+    addCellRef.current = addCell;
   });
+
+  // Yoğunluk katmanı: noktaların ALTINDA ayrı bir katmanda (pane) çizilir, noktalar tıklanabilir kalır
+  const densityLayer = useRef<LayerGroup | null>(null);
+  useEffect(() => {
+    if (!ready || !map.current) return;
+    let alive = true;
+    (async () => {
+      const L = (await import('leaflet')).default;
+      const m = map.current;
+      if (!alive || !m) return;
+      densityLayer.current?.remove();
+      densityLayer.current = null;
+      if (!density || !cells.length) return;
+      if (!m.getPane('density')) {
+        const pane = m.createPane('density');
+        pane.style.zIndex = '350';
+      }
+      const renderer = L.svg({ pane: 'density' });
+      const max = cells[0].rows.length;
+      const g = L.layerGroup();
+      for (const c of cells) {
+        const step = Math.min(DENSITY_RAMP.length - 1, Math.floor(Math.sqrt(c.rows.length / max) * DENSITY_RAMP.length));
+        // Tıklanmaz: noktalar canvas'ta üstte; boş yere tıklama haritaya düşer ve kare aşağıda bulunur
+        L.rectangle(c.bounds, { renderer, pane: 'density', interactive: false, color: '#ffffff', weight: 1, fillColor: DENSITY_RAMP[step], fillOpacity: 0.7 }).addTo(g);
+      }
+      g.addTo(m);
+      densityLayer.current = g;
+    })();
+    return () => { alive = false; };
+  }, [ready, density, cells]);
+
+  // Yoğunluk açıkken noktalar küçülür ki kareler okunabilsin (taslak hazır olanlar belirgin kalır)
+  useEffect(() => {
+    densityRef.current = density;
+    const drafts = new Set(located.filter((r) => r.draft_token).map((r) => r.id));
+    for (const [id, mk] of markers.current) styleMarker(mk, drafts.has(id), density);
+  }, [density, located]);
+
+  // Yoğunluk açıkken boş bir yere tıklanınca o karenin özeti
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m || !density) return;
+    const onClick = async (e: { latlng: { lat: number; lng: number } }) => {
+      const c = cells.find((x) => e.latlng.lat >= x.bounds[0][0] && e.latlng.lat < x.bounds[1][0] && e.latlng.lng >= x.bounds[0][1] && e.latlng.lng < x.bounds[1][1]);
+      if (!c) return;
+      const L = (await import('leaflet')).default;
+      const el = document.createElement('div');
+      el.style.minWidth = '200px';
+      el.innerHTML = `
+        <div style="font-weight:700;font-size:14px">${esc(c.label)}</div>
+        <div style="margin-top:3px;font-size:12px;color:#555">${c.rows.length} açık fırsat · ${c.noSite} sitesi yok · ${c.redesign} yenileme${c.drafts ? ` · ${c.drafts} taslak hazır` : ''}</div>
+        <button data-act="add" style="margin-top:10px;padding:5px 9px;border-radius:7px;border:0;background:#0071e3;color:#fff;font-weight:600;font-size:12px;cursor:pointer">En iyileri rotaya ekle</button>`;
+      const pop = L.popup().setLatLng([e.latlng.lat, e.latlng.lng]).setContent(el).openOn(m);
+      el.querySelector<HTMLButtonElement>('[data-act="add"]')!.onclick = () => { addCellRef.current(c); m.closePopup(pop); };
+    };
+    m.on('click', onClick);
+    return () => { m.off('click', onClick); };
+  }, [ready, density, cells]);
 
   // Haritayı bir kez kur
   useEffect(() => {
@@ -300,7 +449,9 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
           weight: r.draft_token ? 3 : 1.5,
           fillColor: st.color,
           fillOpacity: 0.92,
+          bubblingMouseEvents: false, // nokta tıklaması haritaya (yoğunluk karesi özetine) geçmesin
         });
+        if (densityRef.current) styleMarker(mk, Boolean(r.draft_token), true);
         mk.bindTooltip(esc(r.name), { direction: 'top', offset: [0, -6] });
         mk.bindPopup(() => {
           const el = document.createElement('div');
@@ -367,6 +518,24 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
     <div className="grid lg:grid-cols-[1fr_320px] gap-0 lg:divide-x divide-black/[0.06]">
       <div className="relative">
         <div ref={box} className="h-[460px] lg:h-[620px] w-full bg-[#eef1f4]" role="region" aria-label="Adaylar haritası" />
+        <button
+          type="button"
+          aria-pressed={density}
+          onClick={() => setDensity((v) => !v)}
+          className={`absolute right-3 top-3 z-[500] px-3 py-1.5 rounded-full shadow text-xs font-semibold flex items-center gap-1.5 ${density ? 'bg-[#5b21b6] text-white' : 'bg-white text-[#1D1D1F] hover:bg-[#F5F5F7]'}`}
+        >
+          <Layers className="w-3.5 h-3.5" aria-hidden="true" /> Fırsat yoğunluğu
+        </button>
+        {density && (
+          <div className="absolute right-3 top-12 z-[500] bg-white/95 rounded-lg shadow px-2.5 py-2 text-[11px] text-[#1D1D1F] pointer-events-none">
+            <div className="flex items-center gap-1.5">
+              <span>az</span>
+              <span className="flex">{DENSITY_RAMP.map((c) => <span key={c} className="w-4 h-2.5" style={{ background: c }} />)}</span>
+              <span>çok</span>
+            </div>
+            <div className="text-[#6E6E73] mt-0.5">açık fırsat · kare ≈ 600 m</div>
+          </div>
+        )}
         <div className="absolute left-3 bottom-3 z-[500] bg-white/95 rounded-lg shadow px-2.5 py-2 text-[11px] text-[#1D1D1F] space-y-1 pointer-events-none">
           {(['no_site', 'redesign', 'unscanned', 'ok'] as const).map((k) => (
             <div key={k} className="flex items-center gap-1.5">
@@ -411,6 +580,31 @@ export default function ProspectMap({ rows, onOpen }: { rows: MapProspect[]; onO
           <span>Açılış saatlerine göre sırala <span className="text-[#6E6E73]">— kapalı olanı atlar, işletmeye uygun saati önerir</span></span>
         </label>
         {notice && <p role="status" className="text-[#0071E3] font-medium">{notice}</p>}
+
+        {density && (
+          <div className="p-3 rounded-lg bg-[#F5F5F7]">
+            <strong className="text-[#1D1D1F] block mb-1.5">En yoğun bölgeler</strong>
+            {cells.length === 0 ? (
+              <p className="text-[#6E6E73]">Bu süzgeçte açık fırsat yok.</p>
+            ) : (
+              <ol className="space-y-1">
+                {cells.slice(0, 6).map((c, i) => (
+                  <li key={c.key} className="flex items-center gap-2">
+                    <span className="w-4 text-[#6E6E73] tabular">{i + 1}.</span>
+                    <button type="button" onClick={() => zoomTo(c)} className="min-w-0 flex-1 text-left hover:underline" title="Haritada göster">
+                      <span className="font-semibold text-[#1D1D1F] truncate block" title={c.label}>{c.label}</span>
+                      <span className="text-[#6E6E73]">{c.rows.length} fırsat · {c.noSite} sitesiz · {c.redesign} yenileme{c.drafts ? ` · ${c.drafts} taslak` : ''}</span>
+                    </button>
+                    <button type="button" onClick={() => addCell(c)} className="shrink-0 px-2 py-1 rounded-full border border-black/[0.12] bg-white font-semibold text-[#1D1D1F] hover:bg-white/60">
+                      Rotaya ekle
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <p className="text-[#6E6E73] mt-2 leading-relaxed">Kareye tıklayınca özeti açılır. Rotaya taslağı hazır olanlar, sonra puanı en yüksekler eklenir.</p>
+          </div>
+        )}
 
         {stops.length > 0 ? (
           <ol className="space-y-1.5">

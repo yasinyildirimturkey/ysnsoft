@@ -68,7 +68,7 @@ function regionWhere({ country, city, areaId, categories }) {
   return { where, params };
 }
 
-export function queryProspects(db, { country, city, areaId, categories, kind, status, q, visitDay, minScore = 40, limit = 500 } = {}) {
+export function queryProspects(db, { country, city, areaId, categories, kind, status, q, visitDay, id, minScore = 40, limit = 500 } = {}) {
   const region = regionWhere({ country, city, areaId, categories });
 
   // Özet: bölge + kategori seçimine göre (tür/durum/arama süzgeçlerinden bağımsız)
@@ -96,8 +96,9 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   if (kind === 'offer') where.push(`${KIND_SQL} IN ('no_site','redesign')`);
   else if (kind === 'draft' || kind === 'viewed') where.push(HAS_DRAFT_SQL);
   else if (kind && kind !== 'all') { where.push(`${KIND_SQL} = @kind`); params.kind = kind; }
+  if (id) { where.push('b.id = @id'); params.id = id; }
   if (status) { where.push('b.status = @status'); params.status = status; }
-  else if (!visitDay) where.push("b.status != 'do_not_contact'");
+  else if (!visitDay && !id) where.push("b.status != 'do_not_contact'");
   // Saha listesi: o güne planlananlar + o gün ziyaret kaydı girilenler (ertelenen de listede kalır)
   if (visitDay) {
     where.push("(b.visit_date = @visitDay OR EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND date(v.at, 'localtime') = @visitDay))");
@@ -155,4 +156,112 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
     matched = out.length;
   }
   return { summary, breakdown, matched, rows: out };
+}
+
+// ── Satış hunisi + hatırlatmalar ─────────────────────────────
+
+// Huni basamakları: her aday ulaştığı en ileri basamakta sayılır, basamak sayısı = o basamağa EN AZ ulaşanlar.
+export const FUNNEL_STAGES = [
+  { key: 'lead', label: 'Teklif verilebilir aday' },
+  { key: 'planned', label: 'Ziyaret planlandı' },
+  { key: 'visited', label: 'Görüşüldü' },
+  { key: 'offer', label: 'Teklif aşaması' },
+  { key: 'won', label: 'Kazanıldı' },
+];
+const CLOSED_STATUSES = ['won', 'lost', 'do_not_contact'];
+// Saha kaydında "görüşüldü" sayılan sonuçlar (kapalıydı/tekrar gel sayılmaz)
+const MET_OUTCOMES = ['talked', 'demo_shown', 'offer_requested', 'not_interested', 'won'];
+
+const localDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const daysSince = (sqlUtc, now = Date.now()) => (sqlUtc ? Math.floor((now - Date.parse(sqlUtc.replace(' ', 'T') + 'Z')) / 86400000) : null);
+
+export function funnelReport(db, { country, city, areaId, categories, minScore = 40 } = {}) {
+  const region = regionWhere({ country, city, areaId, categories });
+  const metList = MET_OUTCOMES.map((o) => `'${o}'`).join(',');
+  // Kapsam: teklif verilebilir adaylar + üzerinde çalışılmış (durumu değişmiş ya da ziyaret kaydı olan) her işletme
+  const rows = all(db, `SELECT b.id, b.status, b.visit_date, ${KIND_SQL} AS kind,
+        EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome IN (${metList})) AS met,
+        EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome = 'offer_requested') AS asked,
+        EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome = 'demo_shown') AS demo_shown,
+        (SELECT d.token FROM drafts d WHERE d.business_id = b.id) AS token
+      ${FROM_SQL}
+      WHERE ${region.where.join(' AND ')} AND (${KIND_SQL} IN ('no_site','redesign') OR b.status != 'new'
+        OR EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id))`, { ...region.params, minScore });
+
+  const reach = [0, 0, 0, 0, 0];
+  let lost = 0, dnc = 0, drafts = 0, viewed = 0, shown = 0;
+  for (const r of rows) {
+    let s = 0;
+    if (r.status === 'won') s = 4;
+    else if (r.status === 'offer_sent' || r.asked) s = 3;
+    else if (r.met || r.status === 'visited') s = 2;
+    else if (r.status === 'visit_planned' || r.visit_date) s = 1;
+    if (r.status === 'lost') { lost++; s = Math.max(s, r.met ? 2 : 0); }
+    if (r.status === 'do_not_contact') dnc++;
+    for (let i = 0; i <= s; i++) reach[i]++;
+    if (r.token) { drafts++; if (demoViews(r.token)) viewed++; }
+    if (r.demo_shown) shown++;
+  }
+  const stages = FUNNEL_STAGES.map((st, i) => ({ ...st, n: reach[i], rate: i && reach[i - 1] ? Math.round((reach[i] / reach[i - 1]) * 100) : null }));
+
+  // Son 8 haftanın saha hareketi (aynı bölge süzgeciyle)
+  const weeks = all(db, `SELECT strftime('%Y-%W', v.at, 'localtime') AS week, MIN(date(v.at, 'localtime')) AS first_day,
+        COUNT(*) AS visits, SUM(v.outcome IN (${metList})) AS met, SUM(v.outcome = 'won') AS won
+      FROM visits v JOIN businesses b ON b.id = v.business_id
+      WHERE ${region.where.join(' AND ')} AND v.at >= datetime('now', '-56 days')
+      GROUP BY 1 ORDER BY 1`, region.params);
+
+  return { stages, side: { lost, dnc, drafts, viewed, shown }, weeks, reminders: reminders(db) };
+}
+
+/** Bugün yapılması gerekenler (tüm şehirler): kaçan ziyaret, sıcak demo, bekleyen teklif, sessiz kalan aday. */
+export function reminders(db) {
+  const today = localDay();
+  const closed = CLOSED_STATUSES.map((s) => `'${s}'`).join(',');
+  const rows = all(db, `SELECT b.id, b.name, b.city, b.phone, b.status, b.status_at, b.visit_date,
+        (SELECT d.token FROM drafts d WHERE d.business_id = b.id) AS token,
+        (SELECT json_object('outcome', v.outcome, 'at', v.at, 'next_at', v.next_at)
+           FROM visits v WHERE v.business_id = b.id ORDER BY v.id DESC LIMIT 1) AS last_visit
+      FROM businesses b
+      WHERE b.status NOT IN (${closed}) AND (b.visit_date IS NOT NULL OR b.status IN ('visited','offer_sent')
+        OR EXISTS (SELECT 1 FROM drafts d WHERE d.business_id = b.id)
+        OR EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id))`, {});
+
+  const out = [];
+  for (const r of rows) {
+    let last = null;
+    try { last = r.last_visit ? JSON.parse(r.last_visit) : null; } catch { /* bozuk kayıt */ }
+    const lastDay = last ? localDay(new Date(last.at.replace(' ', 'T') + 'Z')) : null;
+    const base = { id: r.id, name: r.name, city: r.city, phone: r.phone, status: r.status };
+    const views = demoViews(r.token);
+    // 1) Demo, son görüşmeden sonra açıldı → en sıcak aday
+    if (views && (!last || views.last > new Date(last.at.replace(' ', 'T') + 'Z').toISOString())) {
+      out.push({ ...base, type: 'hot_demo', prio: 0, at: views.last, count: views.count });
+      continue;
+    }
+    // 2) Planlanan ziyaret tarihi geçti, o günden beri kayıt yok
+    if (r.visit_date && r.visit_date < today && (!lastDay || lastDay < r.visit_date)) {
+      out.push({ ...base, type: 'missed_visit', prio: 1, at: r.visit_date });
+      continue;
+    }
+    // 3) Teklif istendi ama durum hâlâ "Teklif verildi" değil
+    if (last?.outcome === 'offer_requested' && r.status !== 'offer_sent') {
+      out.push({ ...base, type: 'offer_due', prio: 1, at: last.at, days: daysSince(last.at) });
+      continue;
+    }
+    // 4) Teklif verildi, 7 gündür hareket yok
+    if (r.status === 'offer_sent') {
+      const since = Math.min(...[daysSince(r.status_at), daysSince(last?.at)].filter((d) => d !== null), 999);
+      if (since >= 7) out.push({ ...base, type: 'offer_silent', prio: 2, at: r.status_at ?? last?.at ?? null, days: since === 999 ? null : since });
+      continue;
+    }
+    // 5) Görüşüldü, sonraki adım yazılmadı ve 14 gündür hareket yok
+    if (r.status === 'visited' && last && !last.next_at && !r.visit_date) {
+      const d = daysSince(last.at);
+      if (d >= 14) out.push({ ...base, type: 'stale', prio: 3, at: last.at, days: d });
+    }
+  }
+  out.sort((a, b) => a.prio - b.prio || String(b.at).localeCompare(String(a.at)));
+  const today_planned = all(db, 'SELECT COUNT(*) AS n FROM businesses WHERE visit_date = @today', { today })[0].n;
+  return { today, today_planned, items: out.slice(0, 60), total: out.length };
 }
