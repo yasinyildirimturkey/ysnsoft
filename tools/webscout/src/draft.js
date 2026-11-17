@@ -29,7 +29,8 @@ const UA = process.env.WEBSCOUT_UA || 'WebScout/0.3 (local business survey)';
 export const newToken = () => randomBytes(12).toString('base64url');
 
 // Kategori → şablon. İlk iki şablon: gastro ve handwerk; diğer kategoriler şimdilik en yakınına düşer.
-const TEMPLATE_OF = { gastro: 'gastro', baeckerei: 'gastro', hotel: 'gastro' };
+// praxis (doktor, diş hekimi, fizyoterapi) ve salon (kuaför, güzellik): randevu odaklı şablonlar
+const TEMPLATE_OF = { gastro: 'gastro', baeckerei: 'gastro', hotel: 'gastro', arzt: 'praxis', gesundheit: 'praxis', friseur: 'salon' };
 export const templateFor = (category) => TEMPLATE_OF[category] ?? 'handwerk';
 
 const DEFAULTS = {
@@ -42,6 +43,40 @@ const DEFAULTS = {
     primary: '#1f4e79', accent: '#f0a33a', bg: '#f4f6f9', surface: '#ffffff', ink: '#17202b', muted: '#5b6675',
     servicesKicker: 'Leistungen', servicesTitle: 'Was wir für Sie tun', nav: 'Leistungen',
     ctaTitle: 'Sprechen Sie mit uns über Ihr Vorhaben', ctaText: 'Rufen Sie an – wir beraten Sie persönlich und machen Ihnen ein faires Angebot.',
+  },
+  praxis: {
+    primary: '#0e6b70', accent: '#5fb8b2', bg: '#f3f8f8', surface: '#ffffff', ink: '#13282b', muted: '#56696b',
+    servicesKicker: 'Leistungen', servicesTitle: 'Unsere Leistungen für Sie', nav: 'Leistungen',
+    ctaTitle: 'Ihr Termin bei uns', ctaText: 'Vereinbaren Sie Ihren Termin telefonisch oder bequem online – wir sind gern für Sie da.',
+  },
+  salon: {
+    primary: '#2d2a32', accent: '#c49a5c', bg: '#faf7f3', surface: '#ffffff', ink: '#221f25', muted: '#6b6470',
+    servicesKicker: 'Leistungen', servicesTitle: 'Was wir für Sie tun', nav: 'Leistungen',
+    ctaTitle: 'Zeit für sich', ctaText: 'Buchen Sie Ihren Termin telefonisch oder online – wir freuen uns auf Sie.',
+  },
+};
+
+// Seçili şablona göre form ve dil: randevu (praxis/salon), masa (gastro), talep/geri arama (handwerk)
+const BOOKING = {
+  praxis: {
+    nav: 'Termin', kicker: 'Online-Termin', title: 'Termin online anfragen', cta: 'Termin anfragen',
+    text: 'Wählen Sie Anliegen, Tag und Wunschzeit – wir bestätigen Ihren Termin telefonisch.',
+    slots: ['08:30', '09:15', '10:00', '11:30', '14:00', '15:30'], busy: [1, 4],
+  },
+  salon: {
+    nav: 'Termin', kicker: 'Online buchen', title: 'Ihr Wunschtermin', cta: 'Termin buchen',
+    text: 'Leistung, Tag und Uhrzeit wählen – wir bestätigen Ihren Termin kurz per Telefon.',
+    slots: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'], busy: [2],
+  },
+  gastro: {
+    nav: 'Reservieren', kicker: 'Reservierung', title: 'Tisch reservieren', cta: 'Reservierung anfragen',
+    text: 'Tag, Uhrzeit und Personenzahl wählen – wir melden uns zur Bestätigung.',
+    slots: ['12:00', '12:30', '18:00', '18:30', '19:00', '19:30', '20:00'], busy: [3],
+  },
+  handwerk: {
+    nav: 'Anfrage', kicker: 'Anfrage', title: 'Rückruf oder Angebot anfragen', cta: 'Anfrage senden',
+    text: 'Beschreiben Sie kurz Ihr Vorhaben – wir rufen Sie zur gewünschten Zeit zurück.',
+    slots: ['Vormittags', 'Mittags', 'Nachmittags', 'Abends'], busy: [],
   },
 };
 
@@ -192,8 +227,42 @@ function readUploads(businessId) {
   });
 }
 
-/** Taslak görsellerini toplar: önce saha fotoğrafları, kalan yerlere işletmenin kendi sitesindeki görseller. */
-async function collectImages(businessId, site, dir) {
+// ── Örnek (stok) fotoğraflar ─────────────────────────────────
+// Kendi fotoğrafı hiç olmayan taslaklarda sektöre uygun örnek fotoğraf. Kaynak: StockSnap, CC0 (ticari kullanım
+// serbest, atıf gerekmez); liste ve kaynak adresleri assets/stock/stock.json'da. Sayfada "Beispielfoto" diye işaretlenir.
+const STOCK_DIR = join(import.meta.dirname, '..', 'assets', 'stock');
+let stockManifest = null;
+function stockSetFor(category, name) {
+  const n = String(name ?? '');
+  if (category === 'arzt') return /zahn|dental|kieferorth|implant/i.test(n) ? 'dental' : 'arzt';
+  if (category === 'gesundheit') return 'arzt';
+  if (category === 'friseur') return /barber|herren|bart/i.test(n) ? 'barber' : 'salon';
+  if (category === 'gastro') return /caf[eé]|coffee|kaffee|espresso|\beis|bistro|bäck|konditor/i.test(n) ? 'cafe' : 'restaurant';
+  if (category === 'baeckerei') return 'baeckerei';
+  if (category === 'hotel') return 'hotel';
+  if (category === 'kfz') return 'kfz';
+  if (category === 'immobilien' || category === 'dienstleistung') return 'buero';
+  if (category === 'handwerk') return 'handwerk';
+  return null; // einzelhandel: mağazanın kendisi çok farklı, genel örnek fotoğraf yanıltır
+}
+function stockPhotos(category, name) {
+  const set = stockSetFor(category, name);
+  if (!set) return [];
+  try { stockManifest ??= JSON.parse(readFileSync(join(STOCK_DIR, 'stock.json'), 'utf8')); } catch { return []; }
+  return (stockManifest.sets?.[set] ?? []).flatMap((s) => {
+    try {
+      const buf = readFileSync(join(STOCK_DIR, s.file));
+      const info = imageInfo(buf);
+      return info ? [{ buf, ...info, alt: '', stock: true }] : [];
+    } catch { return []; }
+  });
+}
+
+/**
+ * Taslak görsellerini toplar: önce saha fotoğrafları, kalan yerlere işletmenin kendi sitesindeki görseller;
+ * ikisi de yoksa sektöre uygun örnek fotoğraflar.
+ */
+async function collectImages(businessId, site, dir, biz = {}) {
   const out = { logo: null, logoLight: false, photos: [], uploads: 0 };
   const uploads = readUploads(businessId).slice(0, MAX_PHOTOS);
   out.uploads = uploads.length;
@@ -222,12 +291,15 @@ async function collectImages(businessId, site, dir) {
     // Sitedeki görsellerde en büyüğü öne (saha fotoğrafı yoksa kapak olur)
     fromSite.sort((a, b) => (b.w * b.h || b.buf.length / 50) - (a.w * a.h || a.buf.length / 50));
   }
-  [...uploads, ...fromSite].slice(0, MAX_PHOTOS).forEach((g, i) => {
+  const own = [...uploads, ...fromSite];
+  const chosen = own.length ? own : stockPhotos(biz.category, biz.name);
+  chosen.slice(0, MAX_PHOTOS).forEach((g, i) => {
     const file = `foto${i + 1}.${g.ext}`;
     writeFileSync(join(dir, file), g.buf);
     // Geniş şerit (ör. 960×280 başlık görseli): açılış zemininde iyi durur, dikey çerçevede kesilir
-    out.photos.push({ file, w: g.w, h: g.h, alt: g.alt ?? '', wide: Boolean(g.w && g.h && g.w / g.h > 2.2) });
+    out.photos.push({ file, w: g.w, h: g.h, alt: g.alt ?? '', wide: Boolean(g.w && g.h && g.w / g.h > 2.2), stock: Boolean(g.stock) });
   });
+  out.stock = !own.length && out.photos.length > 0;
   return out;
 }
 
@@ -382,6 +454,40 @@ function fallbackCopy(kit) {
       placeholder: true,
     };
   }
+  if (template === 'praxis') {
+    return {
+      tagline: `Ihre Praxis in ${city}`,
+      hero_title: name,
+      hero_text: `Herzlich willkommen in unserer Praxis in ${city}. Hier stellen Sie Ihre Praxis in ein, zwei Sätzen vor.`,
+      about_title: 'Unsere Praxis',
+      about_text: 'Hier stellen Sie Ihre Praxis und Ihr Team vor: Schwerpunkte, Sprechzeiten und was Ihren Patientinnen und Patienten wichtig ist.',
+      services: [
+        { title: 'Sprechstunde', text: 'Kurze Beschreibung Ihrer Sprechstunde.' },
+        { title: 'Vorsorge', text: 'Platz für Ihre Vorsorgeangebote.' },
+        { title: 'Termine', text: 'Termine telefonisch oder online vereinbaren.' },
+      ],
+      highlights: [],
+      cta: 'Jetzt anrufen',
+      placeholder: true,
+    };
+  }
+  if (template === 'salon') {
+    return {
+      tagline: `Ihr Salon in ${city}`,
+      hero_title: name,
+      hero_text: `Willkommen in ${city}. Hier stellen Sie Ihren Salon in ein, zwei Sätzen vor.`,
+      about_title: 'Über uns',
+      about_text: 'Hier erzählen Sie, was Ihren Salon ausmacht: Ihr Team, Ihr Stil und wie Sie für Ihre Kundinnen und Kunden da sind.',
+      services: [
+        { title: 'Schneiden & Styling', text: 'Kurze Beschreibung Ihrer Leistungen.' },
+        { title: 'Farbe', text: 'Platz für Ihre Farb- und Pflegeangebote.' },
+        { title: 'Termine', text: 'Termine telefonisch oder online buchen.' },
+      ],
+      highlights: [],
+      cta: 'Jetzt anrufen',
+      placeholder: true,
+    };
+  }
   return {
     tagline: `Ihr Fachbetrieb in ${city}`,
     hero_title: name,
@@ -458,7 +564,7 @@ async function writeCopy(kit, site, ai) {
       '"features": ["max. 3 Wörter, z. B. Biergarten"], "cta": "max. 3 Wörter"} — ' +
       '"services": 3 bis 6 tatsächlich im Rohtext genannte Leistungen/Angebote. "highlights": 0 bis 3, nur wenn die Zahl wörtlich im Rohtext steht, sonst leere Liste. ' +
       '"features": 0 bis 6 kurze Merkmale aus dem Rohtext.',
-      `Betrieb: ${kit.name}\nBranche: ${kit.template === 'gastro' ? 'Gastronomie' : 'Handwerk / Dienstleistung'}\nOrt: ${kit.city}\n` +
+      `Betrieb: ${kit.name}\nBranche: ${{ gastro: 'Gastronomie', praxis: 'Arzt-/Zahnarzt-/Therapiepraxis (keine Heilversprechen, keine medizinischen Aussagen über den Rohtext hinaus)', salon: 'Friseur / Kosmetik' }[kit.template] ?? 'Handwerk / Dienstleistung'}\nOrt: ${kit.city}\n` +
       (ai?.services_de?.length ? `Bereits erkannte Leistungen: ${ai.services_de.join(', ')}\n` : '') + `\nRohtext:\n${source}`,
       { maxTokens: 2400 },
     );
@@ -519,6 +625,9 @@ const ICON = {
   chat: '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8"/>',
   leaf: '<path d="M5 19C5 9 12 4 20 4c0 9-6 15-15 15zM5 19l7-7"/>',
   star: '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/>',
+  tooth: '<path d="M7 3c-2.5 0-4 2-4 4.5 0 3 1.5 4.5 2 7.5.4 2.6 1 6 2.6 6 1.4 0 1.6-4 2.4-6 .3-.8.7-1 2-1s1.7.2 2 1c.8 2 1 6 2.4 6 1.6 0 2.2-3.4 2.6-6 .5-3 2-4.5 2-7.5C21 5 19.5 3 17 3c-2 0-3 1-5 1S9 3 7 3z"/>',
+  scissors: '<circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.6 8.6L20 20M8.6 15.4L20 4"/>',
+  heart: '<path d="M12 20s-7-4.4-9-9a4.8 4.8 0 0 1 9-3 4.8 4.8 0 0 1 9 3c-2 4.6-9 9-9 9z"/><path d="M7 12h3l1.5-2.5 2 5L15 12h2"/>',
 };
 const ICON_RULES = [
   [/fisch|meer|lachs|scholle/i, 'fish'], [/wild|hirsch|reh|jagd/i, 'game'], [/garten|terrass|außen|drau(ß|ss)en|spielwiese/i, 'garden'],
@@ -527,12 +636,14 @@ const ICON_RULES = [
   [/liefer|abhol|mitnehm|catering/i, 'truck'], [/reparatur|wartung|montage|install|werkzeug|sanitär|heizung|elektr/i, 'tool'],
   [/haus|bau|dach|fenster|boden|renov|sanier/i, 'home'], [/auto|kfz|fahrzeug|reifen|inspektion|tüv/i, 'car'], [/reinig|pflege|glanz/i, 'spark'],
   [/garantie|sicher|meister|qualität/i, 'shield'], [/beratung|planung|angebot/i, 'chat'], [/saison|regional|frisch|bio|spargel/i, 'leaf'],
+  [/zahn|prophylax|bleaching|implant|kiefer/i, 'tooth'], [/schnitt|haar|färb|frisur|bart|rasur|styling|strähn/i, 'scissors'],
+  [/massage|therap|physio|vorsorge|untersuch|behandl|reha|gesundheit/i, 'heart'],
   [/küche|gericht|speise|menü|karte|essen|mittag/i, 'dish'],
 ];
 /** Her karta farklı ikon: önce başlıktan, sonra metinden eşleşen; hepsi kullanıldıysa sektörün yedek ikonları. */
 function serviceIcons(services, template) {
   const used = new Set();
-  const spare = template === 'gastro' ? ['dish', 'star', 'leaf', 'wine', 'calendar', 'gift'] : ['tool', 'shield', 'chat', 'home', 'spark', 'calendar'];
+  const spare = { gastro: ['dish', 'star', 'leaf', 'wine', 'calendar', 'gift'], praxis: ['heart', 'shield', 'calendar', 'chat', 'star', 'spark'], salon: ['scissors', 'spark', 'star', 'calendar', 'gift', 'heart'] }[template] ?? ['tool', 'shield', 'chat', 'home', 'spark', 'calendar'];
   return services.map((s) => {
     const key = [s.title, `${s.title} ${s.text}`]
       .flatMap((hay) => ICON_RULES.filter(([re]) => re.test(hay)).map(([, k]) => k))
@@ -550,6 +661,8 @@ const UI = {
   cross: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
 };
 const SOCIAL_LABEL = { facebook: 'Facebook', instagram: 'Instagram', youtube: 'YouTube', tiktok: 'TikTok', linkedin: 'LinkedIn', xing: 'XING', twitter: 'X', pinterest: 'Pinterest', tripadvisor: 'Tripadvisor', googlemaps: 'Google Maps' };
 
@@ -562,7 +675,8 @@ const initials = (name) => {
 
 function css(kit) {
   const d = DEFAULTS[kit.template];
-  const gastro = kit.template === 'gastro';
+  // Görsel üslup: salon da gastro gibi zarif (serif başlık, yuvarlak düğme); içerik dalları renderHtml'de ayrı
+  const gastro = kit.template === 'gastro' || kit.template === 'salon';
   const display = gastro ? '"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif' : '"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif';
   const r = gastro ? '6px' : '14px';
   return `
@@ -684,6 +798,33 @@ background:linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/34px 34px,
 linear-gradient(115deg,transparent 46%,color-mix(in srgb,var(--a) 45%,transparent) 46% 50%,transparent 50%),linear-gradient(25deg,transparent 62%,color-mix(in srgb,var(--p) 20%,transparent) 62% 65%,transparent 65%),var(--ps)}
 .map .pin{position:absolute;left:50%;top:44%;transform:translate(-50%,-100%);width:46px;height:46px;border-radius:50% 50% 50% 0;rotate:-45deg;background:var(--p);box-shadow:0 10px 20px -6px rgba(0,0,0,.4)}
 .map .pin::after{content:"";position:absolute;inset:14px;border-radius:50%;background:#fff}
+.map.real{height:230px;background:#e8e6e1}
+.map.real img{position:absolute;width:256px;height:256px;max-width:none;filter:saturate(.85)}
+.map.real .pin{top:50%;z-index:2}
+.map .osm{position:absolute;top:8px;right:8px;z-index:2;font-size:.68rem;background:rgba(255,255,255,.85);border-radius:4px;padding:1px 6px;color:#444}
+.map span{z-index:2}
+/* Örnek fotoğraf etiketi */
+.tag{position:absolute;left:12px;bottom:12px;z-index:3;font-size:.72rem;font-weight:600;letter-spacing:.04em;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:4px 10px}
+.hero-tag{left:auto;right:16px;bottom:16px;z-index:1}
+/* Randevu / rezervasyon / talep */
+.book{display:grid;gap:clamp(24px,5vw,56px);align-items:start;background:var(--sf);border:1px solid var(--line);border-radius:calc(var(--r) + 14px);padding:clamp(24px,5vw,52px);box-shadow:var(--shadow)}
+.book-intro h2{margin-top:12px}.book-intro p{color:var(--mut);margin-top:14px;font-size:1.04rem}
+.book-intro .alt{font-size:.95rem}.book-intro .alt a{color:var(--p);font-weight:700;text-decoration:none}
+.book-form,.msg{display:grid;gap:18px}
+fieldset{border:0;min-width:0}legend{font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:10px}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick label{cursor:pointer;min-width:58px;text-align:center;padding:10px 14px;border-radius:${gastro ? '999px' : '10px'};border:1.5px solid var(--line);background:var(--bg);font-weight:600;font-size:.95rem;font-variant-numeric:tabular-nums;transition:border-color .15s,background .15s,color .15s}
+.pick label:hover{border-color:color-mix(in srgb,var(--p) 45%,transparent)}
+.pick input:checked+label{background:var(--p);border-color:var(--p);color:#fff}
+.pick input:focus-visible+label{outline:2px solid var(--a);outline-offset:2px}
+.pick input:disabled+label{opacity:.4;text-decoration:line-through;cursor:not-allowed}
+.fld{display:grid;gap:6px}.fld span{font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.fld input,.fld select,.fld textarea{font:inherit;font-size:1rem;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;width:100%}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 3px color-mix(in srgb,var(--p) 18%,transparent)}
+.row2{display:grid;gap:14px}
+.book-form .btn,.msg .btn{justify-self:start}
+.demo-note{font-size:.8rem;color:var(--mut);border-left:3px solid var(--a);padding-left:10px}
 .map span{position:absolute;left:14px;right:14px;bottom:14px;background:var(--sf);border-radius:999px;padding:9px 16px;font-weight:600;font-size:.92rem;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
 .map span svg{color:var(--p)}
 .socials{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
@@ -718,12 +859,13 @@ footer .legal{border-top:1px solid rgba(255,255,255,.1);margin-top:36px;padding-
  .cards{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:repeat(4,1fr)}
  .story{grid-template-columns:.9fr 1.1fr}.story.flip .frame{order:2}
  .gallery{grid-template-columns:repeat(4,1fr);grid-auto-rows:200px}.gallery.even{grid-template-columns:repeat(2,1fr)}
- .visit{grid-template-columns:1fr 1fr}
+ .visit{grid-template-columns:1fr 1fr}.visit .panel:last-child{grid-column:1/-1}
+ .book{grid-template-columns:.8fr 1.2fr}.row2{grid-template-columns:1fr 1fr}
  .cta{grid-template-columns:1fr auto}
  .compare{grid-template-columns:auto 1fr}.phone{margin:0}
  footer .cols{grid-template-columns:1.4fr 1fr 1fr}
 }
-@media(min-width:1040px){.cards{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1040px){.cards{grid-template-columns:repeat(3,1fr)}.visit{grid-template-columns:1fr 1fr 1.1fr}.visit .panel:last-child{grid-column:auto}}
 @supports (animation-timeline:view()){
  .reveal{animation:rise linear both;animation-timeline:view();animation-range:entry 0% entry 70%}
  @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
@@ -738,9 +880,97 @@ const HANDWERK_STEPS = [
   ['Ausführung', 'Wir erledigen die Arbeit sauber und termingerecht.'],
 ];
 
+// ── Harita (OpenStreetMap karoları) ──────────────────────────
+// Taslak hiçbir dış kaynağa istek atmaz (CSP): karolar üretimde indirilir, yanına konur (karte1..9.png).
+// OSM karo kullanım kuralı: tanıtıcı User-Agent, düşük hacim, sayfada "© OpenStreetMap" atfı.
+const MAP_ZOOM = 16;
+async function mapTiles(lat, lon, dir) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const n = 2 ** MAP_ZOOM;
+  const px = ((lon + 180) / 360) * n * 256;
+  const r = (lat * Math.PI) / 180;
+  const py = ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n * 256;
+  const cx = Math.floor(px / 256), cy = Math.floor(py / 256);
+  const tiles = [];
+  let i = 0;
+  for (let ty = cy - 1; ty <= cy + 1; ty++) {
+    for (let tx = cx - 1; tx <= cx + 1; tx++) {
+      i++;
+      const t = await download(`https://tile.openstreetmap.org/${MAP_ZOOM}/${tx}/${ty}.png`, 400_000);
+      if (!t || t.ext !== 'png') continue;
+      const file = `karte${i}.png`;
+      writeFileSync(join(dir, file), t.buf);
+      tiles.push({ file, dx: Math.round(tx * 256 - px), dy: Math.round(ty * 256 - py) });
+    }
+  }
+  // Ortadaki karo ve en az 6 karo yoksa harita yarım görünür: desenli yedek alana dönülür
+  return tiles.length >= 6 && tiles.some((t) => t.file === 'karte5.png') ? { tiles } : null;
+}
+
+// ── Formlar (betik yok: seçimler yalnızca CSS ile; taslakta gönderilmez) ──
+const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const fieldId = (p, i) => `${p}${i}`;
+
+function chips(name, items, { busy = [], checked = 0, type = 'radio' } = {}) {
+  return items.map((label, i) => {
+    const id = fieldId(name, i);
+    const off = busy.includes(i);
+    return `<input type="${type}" name="${name}" id="${id}"${i === checked && !off ? ' checked' : ''}${off ? ' disabled' : ''}><label for="${id}"${off ? ' title="Bereits vergeben"' : ''}>${esc(label)}</label>`;
+  }).join('');
+}
+
+function bookingHtml(kit, c) {
+  const B = BOOKING[kit.template];
+  const gastro = kit.template === 'gastro';
+  const handwerk = kit.template === 'handwerk';
+  const days = WEEKDAYS.slice(0, kit.template === 'praxis' ? 5 : gastro ? 7 : 6);
+  const services = c.services.map((s) => s.title).slice(0, 6);
+  const topic = services.length
+    ? `<label class="fld"><span>${handwerk ? 'Worum geht es?' : 'Leistung'}</span><select>${services.map((s) => `<option>${esc(s)}</option>`).join('')}<option>${handwerk ? 'Etwas anderes' : 'Sonstiges'}</option></select></label>`
+    : '';
+  return `
+<section id="termin"><div class="wrap">
+  <div class="book reveal">
+    <div class="book-intro">
+      <p class="kicker">${esc(B.kicker)}</p>
+      <h2>${esc(B.title)}</h2>
+      <p>${esc(B.text)}</p>
+      ${kit.phone ? `<p class="alt">Lieber persönlich? <a href="${esc(telHref(kit.phone))}">${esc(kit.phone)}</a></p>` : ''}
+    </div>
+    <form class="book-form" aria-label="${esc(B.title)}">
+      ${gastro ? '' : topic}
+      ${handwerk ? '' : `<fieldset><legend>Tag</legend><div class="pick">${chips('tag', days.map((x) => x.slice(0, 2)), { busy: gastro ? [] : [days.length - 1].filter(() => kit.template === 'salon') })}</div></fieldset>`}
+      <fieldset><legend>${handwerk ? 'Rückruf am besten' : 'Uhrzeit'}</legend><div class="pick">${chips('zeit', B.slots, { busy: B.busy, checked: gastro ? 4 : 0 })}</div></fieldset>
+      ${gastro ? `<fieldset><legend>Personen</legend><div class="pick">${chips('pers', ['1', '2', '3', '4', '5', '6+'], { checked: 1 })}</div></fieldset>` : ''}
+      ${handwerk ? `${topic}<label class="fld"><span>Ihr Vorhaben</span><textarea rows="3" placeholder="z. B. Fenster im Wohnzimmer austauschen, ca. 2 m breit"></textarea></label>` : ''}
+      <div class="row2">
+        <label class="fld"><span>Name</span><input type="text" autocomplete="off" placeholder="Vor- und Nachname"></label>
+        <label class="fld"><span>Telefon</span><input type="tel" autocomplete="off" placeholder="Für die Bestätigung"></label>
+      </div>
+      <button type="button" class="btn">${UI.check}<span>${esc(B.cta)}</span></button>
+      <p class="demo-note">Im Entwurf nicht aktiv. In der fertigen Website kommt jede Anfrage sofort bei Ihnen an – per E-Mail oder direkt in Ihrem Kalender.</p>
+    </form>
+  </div>
+</div></section>`;
+}
+
+function contactFormHtml() {
+  return `<div class="panel reveal">
+      <h3>${UI.chat}Nachricht schreiben</h3>
+      <form class="msg" aria-label="Nachricht schreiben">
+        <label class="fld"><span>Name</span><input type="text" autocomplete="off"></label>
+        <label class="fld"><span>Telefon oder E-Mail</span><input type="text" autocomplete="off"></label>
+        <label class="fld"><span>Nachricht</span><textarea rows="4"></textarea></label>
+        <button type="button" class="btn">${UI.arrow}<span>Nachricht senden</span></button>
+        <p class="demo-note">Im Entwurf nicht aktiv – in der fertigen Website erreicht Sie die Nachricht direkt.</p>
+      </form>
+    </div>`;
+}
+
 export function renderHtml(kit, assetBase) {
   const d = DEFAULTS[kit.template];
   const gastro = kit.template === 'gastro';
+  const B = BOOKING[kit.template];
   const c = kit.copy;
   const src = (file) => `${assetBase}/${encodeURIComponent(file)}`;
   // Her fotoğraf tek yerde: 1 → açılış zemini, 2 → "Über uns", 3+ → galeri; çok fotoğraf varsa açılışa kolaj.
@@ -782,7 +1012,7 @@ export function renderHtml(kit, assetBase) {
     kit.hours ? [UI.clock, gastro ? 'Geöffnet' : 'Erreichbar', kit.hours.rows.filter((r) => !r.closed).slice(0, 2).map((r) => `${r.days ? `${r.days} ` : ''}${r.time}`).join(' · ')] : null,
   ].filter(Boolean);
   const aboutSide = aboutPhoto
-    ? `<div class="frame reveal"><img src="${src(aboutPhoto.file)}" alt="${esc(aboutPhoto.alt || kit.name)}" loading="lazy"></div>`
+    ? `<div class="frame reveal"><img src="${src(aboutPhoto.file)}" alt="${esc(aboutPhoto.alt || kit.name)}" loading="lazy">${aboutPhoto.stock ? '<span class="tag">Beispielfoto</span>' : ''}</div>`
     : `<div class="glance reveal"><p class="kicker">Auf einen Blick</p><dl>${glance.map(([ic, k, v]) => `<div><dt>${ic}${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>${phone ? `<a class="btn" href="${phone}">${UI.phone}<span>${esc(c.cta)}</span></a>` : ''}</div>`;
 
   const facts = [
@@ -825,22 +1055,22 @@ export function renderHtml(kit, assetBase) {
 <style>${css(kit)}</style>
 </head>
 <body>
-<div class="draft"><b>Entwurf</b> · Unverbindlicher Gestaltungsvorschlag für ${esc(kit.name)} · ${c.placeholder ? 'Texte sind Platzhalter' : 'Texte auf Basis Ihrer bisherigen Website'}${kit.photos.length ? '' : ', Fotos folgen'} · nicht öffentlich auffindbar${compare ? ' · <a href="#vorher-nachher">Vorher / Nachher</a>' : ''}</div>
+<div class="draft"><b>Entwurf</b> · Unverbindlicher Gestaltungsvorschlag für ${esc(kit.name)} · ${c.placeholder ? 'Texte sind Platzhalter' : 'Texte auf Basis Ihrer bisherigen Website'}${kit.stockPhotos ? ', Fotos sind Beispielbilder' : kit.photos.length ? '' : ', Fotos folgen'} · nicht öffentlich auffindbar${compare ? ' · <a href="#vorher-nachher">Vorher / Nachher</a>' : ''}</div>
 <header class="top"><div class="wrap">
   <a class="brand${kit.logo && kit.logoLight ? ' dark' : ''}" href="#top">${kit.logo ? `<img src="${src(kit.logo)}" alt="${esc(kit.name)}">` : `<i class="mono" aria-hidden="true">${esc(initials(kit.name) || '•')}</i><span>${esc(kit.name)}</span>`}</a>
-  <nav class="main" aria-label="Hauptnavigation"><a href="#angebot">${esc(d.nav)}</a><a href="#ueber-uns">Über uns</a>${gallery.length ? '<a href="#eindruecke">Eindrücke</a>' : ''}<a href="#besuch">${gastro ? 'Öffnungszeiten' : 'Kontakt'}</a></nav>
+  <nav class="main" aria-label="Hauptnavigation"><a href="#angebot">${esc(d.nav)}</a><a href="#ueber-uns">Über uns</a>${gallery.length ? '<a href="#eindruecke">Eindrücke</a>' : ''}<a href="#termin">${esc(B.nav)}</a><a href="#besuch">${gastro ? 'Öffnungszeiten' : 'Kontakt'}</a></nav>
   ${phone ? `<a class="btn sm" href="${phone}">${UI.phone}<span>Anrufen</span></a>` : ''}
 </div></header>
 
 <main id="top">
 <section class="hero${heroPhoto ? '' : ' art'}" style="padding:0">
-  ${heroPhoto ? `<img class="bgimg" src="${src(heroPhoto.file)}" alt="">` : ''}
+  ${heroPhoto ? `<img class="bgimg" src="${src(heroPhoto.file)}" alt="">${heroPhoto.stock ? '<span class="tag hero-tag">Beispielfoto</span>' : ''}` : ''}
   <div class="wrap">
     <div>
       <p class="kicker">${esc(c.tagline)}</p>
       <h1>${esc(c.hero_title)}</h1>
       <p class="lead">${esc(c.hero_text)}</p>
-      <div class="actions">${phone ? `<a class="btn light" href="${phone}">${UI.phone}<span>${esc(c.cta)}</span></a>` : ''}<a class="btn ghost" href="#besuch">${gastro ? 'Öffnungszeiten & Anfahrt' : 'Kontakt & Anfahrt'}</a></div>
+      <div class="actions"><a class="btn light" href="#termin">${UI.cal}<span>${esc(B.cta)}</span></a>${phone ? `<a class="btn ghost" href="${phone}">${UI.phone}<span>Anrufen</span></a>` : `<a class="btn ghost" href="#besuch">${gastro ? 'Öffnungszeiten & Anfahrt' : 'Kontakt & Anfahrt'}</a>`}</div>
       ${facts ? `<div class="facts">${facts}</div>` : ''}
     </div>
     ${heroArt}
@@ -866,18 +1096,19 @@ ${stats.length ? `
     ${ownerName && aboutPhoto ? `<div class="sig"><i aria-hidden="true">${esc(initials(ownerName) || '•')}</i><div><b>${esc(ownerName)}</b><small>${esc(kit.owner.role)}</small></div></div>` : ''}
   </div>
 </div></section>
-${gastro ? '' : `
+${kit.template === 'handwerk' ? `
 <section><div class="wrap">
   <div class="head reveal"><p class="kicker">Ablauf</p><h2>So einfach geht's</h2></div>
   <div class="steps">${HANDWERK_STEPS.map(([t, x]) => `<div class="step reveal"><h3>${t}</h3><p>${x}</p></div>`).join('')}</div>
-</div></section>`}
+</div></section>` : ''}
+${bookingHtml(kit, c)}
 ${gallery.length ? `
-<section id="eindruecke"${gastro ? '' : ' class="tint"'}><div class="wrap">
-  <div class="head reveal"><p class="kicker">Eindrücke</p><h2>${gastro ? 'Ein Blick zu uns' : 'Aus unserer Arbeit'}</h2></div>
+<section id="eindruecke" class="tint"><div class="wrap">
+  <div class="head reveal"><p class="kicker">Eindrücke</p><h2>${gastro ? 'Ein Blick zu uns' : kit.template === 'handwerk' ? 'Aus unserer Arbeit' : 'Bei uns'}</h2>${gallery.some((g) => g.stock) ? '<p>Beispielbilder – in der fertigen Website stehen hier Ihre eigenen Fotos.</p>' : ''}</div>
   <div class="gallery${gallery.length < 3 ? ' even' : ''} reveal">${gallery.slice(0, 7).map((g) => `<img${g.wide ? ' class="wide"' : ''} src="${src(g.file)}" alt="${esc(g.alt || kit.name)}" loading="lazy">`).join('')}</div>
 </div></section>` : ''}
 
-<section id="besuch"${(gallery.length ? gastro : !gastro) ? ' class="tint"' : ''}><div class="wrap">
+<section id="besuch"${gallery.length ? '' : ' class="tint"'}><div class="wrap">
   <div class="head reveal"><p class="kicker">${gastro ? 'Besuchen Sie uns' : 'Kontakt'}</p><h2>${gastro ? 'Öffnungszeiten & Anfahrt' : 'So erreichen Sie uns'}</h2></div>
   <div class="visit">
     <div class="panel reveal"><h3>${UI.clock}Öffnungszeiten</h3>${hoursBlock}</div>
@@ -885,9 +1116,10 @@ ${gallery.length ? `
       <h3>${UI.pin}Adresse & Telefon</h3>
       <address><b>${esc(kit.name)}</b><br>${esc(kit.address || kit.city)}</address>
       ${kit.phone ? `<p style="margin-top:16px"><a class="big" href="${phone}">${esc(kit.phone)}</a></p>` : ''}
-      <a class="map" href="${esc(route)}" rel="noopener"><i class="pin" aria-hidden="true"></i><span>Route planen ${UI.arrow}</span></a>
+      <a class="map${kit.map ? ' real' : ''}" href="${esc(route)}" rel="noopener" aria-label="Route zu ${esc(kit.name)} in Google Maps planen">${kit.map ? kit.map.tiles.map((t) => `<img src="${src(t.file)}" alt="" style="left:calc(50% + ${t.dx}px);top:calc(50% + ${t.dy}px)">`).join('') + '<small class="osm">© OpenStreetMap-Mitwirkende</small>' : ''}<i class="pin" aria-hidden="true"></i><span>Route planen ${UI.arrow}</span></a>
       ${kit.socials.length ? `<div class="socials">${kit.socials.map((s) => `<a href="${esc(s.url)}" rel="noopener">${esc(SOCIAL_LABEL[s.type] ?? s.type)}</a>`).join('')}</div>` : ''}
     </div>
+    ${contactFormHtml()}
   </div>
 </div></section>
 ${compare}
@@ -904,7 +1136,7 @@ ${compare}
   </div>
   <div class="legal"><span>© ${year} ${esc(kit.name)} · Impressum und Datenschutz folgen in der fertigen Website</span><span>Entwurf: YSNSOFT</span></div>
 </div></footer>
-<div class="callbar">${phone ? `<a class="btn" href="${phone}">${UI.phone}<span>Anrufen</span></a>` : ''}<a class="btn out" href="${esc(route)}" rel="noopener">${UI.pin}<span>Route</span></a></div>
+<div class="callbar">${phone ? `<a class="btn" href="${phone}">${UI.phone}<span>Anrufen</span></a>` : ''}<a class="btn out" href="#termin">${UI.cal}<span>${esc(B.nav)}</span></a></div>
 </body>
 </html>
 `;
@@ -957,7 +1189,7 @@ export async function buildDraft(biz, profile, token, scan = null) {
 
   const site = profile.site;
   const template = templateFor(biz.category);
-  const images = await collectImages(biz.id, site, dir);
+  const images = await collectImages(biz.id, site, dir, biz);
   const owners = site?.ok ? site.impressum.owners : [];
   const colors = site?.ok ? site.brand.colors : [];
   const primary = pickPrimary(colors, template);
@@ -975,9 +1207,13 @@ export async function buildDraft(biz, profile, token, scan = null) {
     logoLight: images.logoLight,
     photos: images.photos,
     uploads: images.uploads,
+    stockPhotos: images.stock,
+    lat: Number.isFinite(biz.lat) ? biz.lat : null,
+    lon: Number.isFinite(biz.lon) ? biz.lon : null,
     socials: (site?.ok ? site.socials ?? [] : []).filter((s) => s.type !== 'googlemaps').slice(0, 4),
     features: osmFeatures(profile.osm?.tags ?? {}, template),
     before: await beforeKit(biz, profile, scan, dir),
+    map: await mapTiles(biz.lat, biz.lon, dir),
   };
   kit.copy = await writeCopy(kit, site, profile.ai?.ok ? profile.ai : null);
 

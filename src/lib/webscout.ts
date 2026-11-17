@@ -63,7 +63,8 @@ export function readWebscoutShot(businessId: number): { data: Buffer; type: stri
 
 const DRAFT_TOKEN_RE = /^[A-Za-z0-9_-]{16}$/;
 // vorher.png: firmanın bugünkü sitesinin mobil ekran görüntüsü (Vorher / Nachher bölümü)
-const DRAFT_ASSET_RE = /^(?:logo|foto[1-9]|vorher)\.(jpg|png|gif|webp)$/;
+// karte1..9.png: iletişim bölümündeki harita için taslak üretilirken indirilen OpenStreetMap karoları
+const DRAFT_ASSET_RE = /^(?:logo|foto[1-9]|vorher|karte[1-9])\.(jpg|png|gif|webp)$/;
 const ASSET_TYPE: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
 
 export type DraftFile =

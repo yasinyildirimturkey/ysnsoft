@@ -308,7 +308,7 @@ function cmdProfile(db, opt) {
 
 /** Tek işletme için taslak üretir; profil yoksa önce Seviye 2'yi çalıştırır. */
 async function runDraft(db, id, onStep = () => {}) {
-  const biz = db.prepare("SELECT id, name, category, city, address, phone, website, osm_id FROM businesses WHERE id=? AND status != 'do_not_contact'").get(id);
+  const biz = db.prepare("SELECT id, name, category, city, address, phone, website, osm_id, lat, lon FROM businesses WHERE id=? AND status != 'do_not_contact'").get(id);
   if (!biz) throw new Error(`#${id} bulunamadı (ya da "iletişime geçme" olarak işaretli)`);
   const readProfile = db.prepare('SELECT profile FROM profiles WHERE business_id=?');
   if (!readProfile.get(id)) {

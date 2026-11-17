@@ -1,0 +1,213 @@
+{
+ "license": "CC0 1.0 (StockSnap via Openverse) – freie kommerzielle Nutzung, keine Namensnennung nötig",
+ "sets": {
+  "dental": [
+   {
+    "file": "dental-1.jpg",
+    "source": "https://stocksnap.io/photo/chair-dentist-3J10QN5PTS",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/3J10QN5PTS.jpg",
+    "title": "Chair Dentist"
+   },
+   {
+    "file": "dental-2.jpg",
+    "source": "https://stocksnap.io/photo/chair-dentist-N79O15BH30",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/N79O15BH30.jpg",
+    "title": "Chair Dentist"
+   },
+   {
+    "file": "dental-3.jpg",
+    "source": "https://stocksnap.io/photo/chair-dentist-E4SV0WQ539",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/E4SV0WQ539.jpg",
+    "title": "Chair Dentist"
+   }
+  ],
+  "arzt": [
+   {
+    "file": "arzt-1.jpg",
+    "source": "https://stocksnap.io/photo/male-doctor-KN1OCKC4Y2",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/KN1OCKC4Y2.jpg",
+    "title": "Male Doctor"
+   },
+   {
+    "file": "arzt-2.jpg",
+    "source": "https://stocksnap.io/photo/doctor-looking-GSBJXWRSDV",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/GSBJXWRSDV.jpg",
+    "title": "Doctor Looking"
+   },
+   {
+    "file": "arzt-3.jpg",
+    "source": "https://stocksnap.io/photo/doctors-hospital-5YUFL6LC0E",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/5YUFL6LC0E.jpg",
+    "title": "Doctors Hospital"
+   }
+  ],
+  "salon": [
+   {
+    "file": "salon-1.jpg",
+    "source": "https://stocksnap.io/photo/hairdresser-cut-S7UEWWIRTD",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/S7UEWWIRTD.jpg",
+    "title": "Hairdresser Cut"
+   },
+   {
+    "file": "salon-2.jpg",
+    "source": "https://stocksnap.io/photo/hair-curls-R6CKAMVOMZ",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/R6CKAMVOMZ.jpg",
+    "title": "Hair Curls"
+   },
+   {
+    "file": "salon-3.jpg",
+    "source": "https://stocksnap.io/photo/scissors-comb-A5M4RVGZKE",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/A5M4RVGZKE.jpg",
+    "title": "Scissors Comb"
+   }
+  ],
+  "barber": [
+   {
+    "file": "barber-1.jpg",
+    "source": "https://stocksnap.io/photo/barber-cutting-O6KYUCUFY4",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/O6KYUCUFY4.jpg",
+    "title": "Barber Cutting"
+   },
+   {
+    "file": "barber-2.jpg",
+    "source": "https://stocksnap.io/photo/barber-window-5EDKE1CZWR",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/5EDKE1CZWR.jpg",
+    "title": "Barber Window"
+   },
+   {
+    "file": "barber-3.jpg",
+    "source": "https://stocksnap.io/photo/barber-razor-06HGN8LMUX",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/06HGN8LMUX.jpg",
+    "title": "Barber Razor"
+   }
+  ],
+  "restaurant": [
+   {
+    "file": "restaurant-1.jpg",
+    "source": "https://stocksnap.io/photo/restaurant-food-47E77904CB",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/47E77904CB.jpg",
+    "title": "Restaurant Food"
+   },
+   {
+    "file": "restaurant-2.jpg",
+    "source": "https://stocksnap.io/photo/restaurant-kitchen-0HCMIT272C",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/0HCMIT272C.jpg",
+    "title": "Restaurant Kitchen"
+   },
+   {
+    "file": "restaurant-3.jpg",
+    "source": "https://stocksnap.io/photo/food-plate-LF3YEO5Q13",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/LF3YEO5Q13.jpg",
+    "title": "Food Plate"
+   }
+  ],
+  "cafe": [
+   {
+    "file": "cafe-1.jpg",
+    "source": "https://stocksnap.io/photo/coffee-cafe-8C35014CE3",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/8C35014CE3.jpg",
+    "title": "Coffee Cafe"
+   },
+   {
+    "file": "cafe-2.jpg",
+    "source": "https://stocksnap.io/photo/cafe-coffee-TUIRU743JZ",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/TUIRU743JZ.jpg",
+    "title": "Cafe Coffee"
+   },
+   {
+    "file": "cafe-3.jpg",
+    "source": "https://stocksnap.io/photo/cafe-coffee-9QXZ4Q9PXX",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/9QXZ4Q9PXX.jpg",
+    "title": "Cafe Coffee"
+   }
+  ],
+  "baeckerei": [
+   {
+    "file": "baeckerei-1.jpg",
+    "source": "https://stocksnap.io/photo/bread-bakery-EA1243E167",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/EA1243E167.jpg",
+    "title": "Bread Bakery"
+   },
+   {
+    "file": "baeckerei-2.jpg",
+    "source": "https://stocksnap.io/photo/bread-food-P7JB9GA027",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/P7JB9GA027.jpg",
+    "title": "Bread Food"
+   },
+   {
+    "file": "baeckerei-3.jpg",
+    "source": "https://stocksnap.io/photo/donuts-bakery-IA7B7S9TSW",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/IA7B7S9TSW.jpg",
+    "title": "Donuts Bakery"
+   }
+  ],
+  "handwerk": [
+   {
+    "file": "handwerk-1.jpg",
+    "source": "https://stocksnap.io/photo/tools-workshop-KD30XPQR0A",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/KD30XPQR0A.jpg",
+    "title": "Tools Workshop"
+   },
+   {
+    "file": "handwerk-2.jpg",
+    "source": "https://stocksnap.io/photo/construction-worker-6B70C91911",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/6B70C91911.jpg",
+    "title": "Construction Worker"
+   },
+   {
+    "file": "handwerk-3.jpg",
+    "source": "https://stocksnap.io/photo/tools-people-ERNYCFWP8I",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/ERNYCFWP8I.jpg",
+    "title": "Tools People"
+   }
+  ],
+  "kfz": [
+   {
+    "file": "kfz-1.jpg",
+    "source": "https://stocksnap.io/photo/beetle-buggy-A0737DFF83",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/A0737DFF83.jpg",
+    "title": "Beetle Buggy"
+   },
+   {
+    "file": "kfz-2.jpg",
+    "source": "https://stocksnap.io/photo/car-paintjob-90734C8136",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/90734C8136.jpg",
+    "title": "Car Paintjob"
+   },
+   {
+    "file": "kfz-3.jpg",
+    "source": "https://stocksnap.io/photo/jumpercables-battery-T7T37KWY8G",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/T7T37KWY8G.jpg",
+    "title": "Jumpercables Battery"
+   }
+  ],
+  "hotel": [
+   {
+    "file": "hotel-1.jpg",
+    "source": "https://stocksnap.io/photo/hotel-room-DGBAEIS339",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/DGBAEIS339.jpg",
+    "title": "Hotel Room"
+   },
+   {
+    "file": "hotel-2.jpg",
+    "source": "https://stocksnap.io/photo/hotel-lounge-904EAD50B0",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/904EAD50B0.jpg",
+    "title": "Hotel Lounge"
+   }
+  ],
+  "buero": [
+   {
+    "file": "buero-1.jpg",
+    "source": "https://stocksnap.io/photo/team-meeting-VQXYE2ZEHC",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/VQXYE2ZEHC.jpg",
+    "title": "Team Meeting"
+   },
+   {
+    "file": "buero-2.jpg",
+    "source": "https://stocksnap.io/photo/office-desk-N7FUTW0RY5",
+    "image": "https://cdn.stocksnap.io/img-thumbs/960w/N7FUTW0RY5.jpg",
+    "title": "Office Desk"
+   }
+  ]
+ }
+}
