@@ -9,6 +9,9 @@ import { DATA_DIR } from './db.js';
 
 const CANDIDATES = [
   process.env.WEBSCOUT_CHROME,
+  // Sunucu: Plesk site kullanıcısı Program Files'ı göremez. Resmi "Chrome for Testing" başsız kabuğu sitenin
+  // web'e açık olmayan private klasörüne elle kurulur (httpdocs/../private); deploy ve yedeklere girmez.
+  join(import.meta.dirname, '..', '..', '..', '..', 'private', 'chrome-headless-shell-win64', 'chrome-headless-shell.exe'),
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
