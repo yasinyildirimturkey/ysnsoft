@@ -13,6 +13,7 @@
 
 import { mkdirSync, writeFileSync, rmSync, readdirSync, readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
+import { inflateSync } from 'node:zlib';
 import { join } from 'node:path';
 import { DATA_DIR } from './db.js';
 import { llmConfigured, llmJson } from './llm.js';
@@ -89,24 +90,86 @@ export function imageInfo(buf) {
   return null;
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Görsel indirir. Sunucunun dış bağlantısı ara ara koptuğu için ağ hatası ve 5xx'te iki kez daha dener
+ * (yoksa tek bir kopma taslağı fotoğrafsız/logosuz bırakır). 4xx kalıcıdır, denenmez.
+ */
 async function download(url, maxBytes = 4_000_000, insecure = false) {
-  try {
-    let buf;
-    if (insecure) {
-      // Sertifikası bozuk site (Seviye 2 tespit etti): görseli doğrulamasız indir
-      const r = await fetchInsecure(url, { accept: 'image/*', maxBytes: maxBytes + 1, timeoutMs: 15_000 });
-      if (r.status >= 400) return null;
-      buf = r.buf;
-    } else {
-      const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'image/*' }, signal: AbortSignal.timeout(15_000) });
-      if (!res.ok) return null;
-      buf = Buffer.from(await res.arrayBuffer());
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await sleep(attempt * 2000);
+    let status = 0;
+    try {
+      let buf;
+      if (insecure) {
+        // Sertifikası bozuk site (Seviye 2 tespit etti): görseli doğrulamasız indir
+        const r = await fetchInsecure(url, { accept: 'image/*', maxBytes: maxBytes + 1, timeoutMs: 15_000 });
+        status = r.status;
+        if (r.status >= 400) throw new Error(`HTTP ${r.status}`);
+        buf = r.buf;
+      } else {
+        const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'image/*' }, signal: AbortSignal.timeout(15_000) });
+        status = res.status;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        buf = Buffer.from(await res.arrayBuffer());
+      }
+      if (buf.length > maxBytes) return null;
+      const info = imageInfo(buf);
+      return info ? { buf, ...info } : null;
+    } catch {
+      if (status >= 400 && status < 500) return null;
     }
-    if (buf.length > maxBytes) return null;
-    const info = imageInfo(buf);
-    return info ? { buf, ...info } : null;
+  }
+  return null;
+}
+
+/**
+ * Logonun açık renkli (beyaz/çok açık, saydam zeminli) olup olmadığı: beyaz başlıkta görünmez,
+ * o zaman marka renginde bir zemin üstüne konur. Yalnızca 8 bit, taramasız PNG çözülür; diğerleri false.
+ */
+export function isLightLogo(buf) {
+  try {
+    if (buf.readUInt32BE(0) !== 0x89504e47) return false;
+    const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20), depth = buf[24], type = buf[25], interlace = buf[28];
+    const ch = { 0: 1, 2: 3, 4: 2, 6: 4 }[type];
+    if (depth !== 8 || !ch || interlace || w * h > 4_000_000) return false;
+    const parts = [];
+    for (let i = 8; i < buf.length;) {
+      const len = buf.readUInt32BE(i), kind = buf.toString('latin1', i + 4, i + 8);
+      if (kind === 'IDAT') parts.push(buf.subarray(i + 8, i + 8 + len));
+      if (kind === 'IEND') break;
+      i += 12 + len;
+    }
+    const raw = inflateSync(Buffer.concat(parts));
+    const stride = w * ch;
+    const prev = Buffer.alloc(stride), cur = Buffer.alloc(stride);
+    let light = 0, mid = 0, n = 0;
+    for (let y = 0; y < h; y++) {
+      const f = raw[y * (stride + 1)];
+      const row = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+      for (let x = 0; x < stride; x++) {
+        const a = x >= ch ? cur[x - ch] : 0, b = prev[x], c = x >= ch ? prev[x - ch] : 0;
+        let v = row[x];
+        if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1;
+        else if (f === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+        cur[x] = v & 255;
+      }
+      for (let x = 0; x < w; x += 2) {
+        const o = x * ch;
+        const alpha = ch === 4 ? cur[o + 3] : ch === 2 ? cur[o + 1] : 255;
+        if (alpha < 128) continue;
+        const lum = ch >= 3 ? 0.2126 * cur[o] + 0.7152 * cur[o + 1] + 0.0722 * cur[o + 2] : cur[o];
+        if (lum > 215) light++; else if (lum > 86) mid++;
+        n++;
+      }
+      cur.copy(prev);
+    }
+    // Saydam zeminli logonun opak kısmının en az %30u beyaza yakınsa beyaz başlıkta o kısım görünmez.
+    // Ara tonu çok olan (çizim, fotoğraf gibi) logolar hariç: onlar beyaz zeminde zaten okunur.
+    return (ch === 4 || ch === 2) && n > 0 && light / n > 0.3 && mid / n < 0.15 && n < (w * h / 2) * 0.85;
   } catch {
-    return null;
+    return false;
   }
 }
 
@@ -127,14 +190,18 @@ function readUploads(businessId) {
 
 /** Taslak görsellerini toplar: önce saha fotoğrafları, kalan yerlere işletmenin kendi sitesindeki görseller. */
 async function collectImages(businessId, site, dir) {
-  const out = { logo: null, photos: [], uploads: 0 };
+  const out = { logo: null, logoLight: false, photos: [], uploads: 0 };
   const uploads = readUploads(businessId).slice(0, MAX_PHOTOS);
   out.uploads = uploads.length;
 
   const insecure = Boolean(site?.tlsError);
   if (site?.ok && site.brand?.logo) {
     const l = await download(site.brand.logo, 1_500_000, insecure);
-    if (l) { out.logo = `logo.${l.ext}`; writeFileSync(join(dir, out.logo), l.buf); }
+    if (l) {
+      out.logo = `logo.${l.ext}`;
+      out.logoLight = isLightLogo(l.buf);
+      writeFileSync(join(dir, out.logo), l.buf);
+    }
   }
   const fromSite = [];
   if (site?.ok && uploads.length < MAX_PHOTOS) {
@@ -154,7 +221,8 @@ async function collectImages(businessId, site, dir) {
   [...uploads, ...fromSite].slice(0, MAX_PHOTOS).forEach((g, i) => {
     const file = `foto${i + 1}.${g.ext}`;
     writeFileSync(join(dir, file), g.buf);
-    out.photos.push({ file, w: g.w, h: g.h, alt: g.alt ?? '' });
+    // Geniş şerit (ör. 960×280 başlık görseli): açılış zemininde iyi durur, dikey çerçevede kesilir
+    out.photos.push({ file, w: g.w, h: g.h, alt: g.alt ?? '', wide: Boolean(g.w && g.h && g.w / g.h > 2.2) });
   });
   return out;
 }
@@ -345,6 +413,29 @@ export function dehype(text, source, strict = false) {
   return out.replace(/\s+([,.!?])/g, '$1').replace(/\s{2,}/g, ' ').replace(/(^|[.!?]\s+)([a-zäöü])/g, (m, p, c) => p + c.toUpperCase()).trim();
 }
 
+// "X Y leitet/führt den Betrieb", "Inhaber X Y" gibi kişi + yönetim ifadeleri
+const NAME = String.raw`([A-ZÄÖÜ][a-zäöüß]+(?:-[A-ZÄÖÜ][a-zäöüß]+)?)\s+([A-ZÄÖÜ][a-zäöüß]+(?:-[A-ZÄÖÜ][a-zäöüß]+)?)`;
+const MANAGER_AFTER = new RegExp(`${NAME}\\s+(?:leitet|führt|gründete|übernahm|ist\\s+(?:Inhaber|Geschäftsführer|Chef|Meister))`, 'g');
+const MANAGER_BEFORE = new RegExp(`(?:Inhaber(?:in)?|Geschäftsführer(?:in)?|Chef(?:in)?|Leitung(?:\\s+von)?|Meister(?:in)?)\\s*:?\\s+${NAME}`, 'g');
+
+/**
+ * Metinde Impressum'daki sahipten FARKLI bir yönetici adı geçiyorsa o cümleyi çıkarır (eski site metni ile
+ * güncel Impressum çelişebilir; müşteriye iki farklı "yönetici" göstermeyiz). Sahibi bilinmiyorsa dokunmaz.
+ */
+export function dropForeignManagers(text, ownerName) {
+  if (!text || !ownerName) return { text, dropped: [] };
+  const own = new Set(String(ownerName).toLowerCase().split(/[\s-]+/).filter((w) => w.length > 2));
+  const dropped = [];
+  const sentences = text.match(/[^.!?]+[.!?]*\s*/g) ?? [text];
+  const kept = sentences.filter((s) => {
+    const names = [...s.matchAll(MANAGER_AFTER), ...s.matchAll(MANAGER_BEFORE)].map((m) => `${m[1]} ${m[2]}`);
+    const foreign = names.find((n) => !n.toLowerCase().split(/[\s-]+/).some((w) => own.has(w)));
+    if (foreign) dropped.push(foreign);
+    return !foreign;
+  });
+  return { text: kept.join('').trim(), dropped };
+}
+
 async function writeCopy(kit, site, ai) {
   const base = fallbackCopy(kit);
   const source = site?.ok ? Object.entries(site.content.excerpts).map(([k, v]) => `## ${k}\n${v}`).join('\n\n').slice(0, 8000) : '';
@@ -375,12 +466,17 @@ async function writeCopy(kit, site, ai) {
       .filter((h) => h.value && h.label && source.includes(h.value.replace(/[^\d]/g, '') || h.value))
       .slice(0, 3);
     const features = [].concat(json.features ?? []).map((f) => d(f, 28)).filter(Boolean);
+    const owner = kit.owner?.name ?? null;
+    const hero = dropForeignManagers(d(json.hero_text, 300), owner);
+    const about = dropForeignManagers(d(json.about_text, 900), owner);
     return {
       tagline: dehype(clip(json.tagline, 60), source, true) || base.tagline,
       hero_title: dehype(clip(json.hero_title, 80), source, true) || base.hero_title,
-      hero_text: d(json.hero_text, 300) || base.hero_text,
+      hero_text: hero.text || base.hero_text,
       about_title: dehype(clip(json.about_title, 50), source, true) || base.about_title,
-      about_text: d(json.about_text, 900) || base.about_text,
+      about_text: about.text || base.about_text,
+      // Panelde "kontrol edilmeli" notu için: sitede adı geçen ama Impressum'la uyuşmayan kişiler
+      name_conflicts: [...new Set([...hero.dropped, ...about.dropped])],
       services: services.length >= 2 ? services : base.services,
       highlights,
       features,
@@ -449,6 +545,7 @@ const UI = {
   check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
   cross: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
 };
 const SOCIAL_LABEL = { facebook: 'Facebook', instagram: 'Instagram', youtube: 'YouTube', tiktok: 'TikTok', linkedin: 'LinkedIn', xing: 'XING', twitter: 'X', pinterest: 'Pinterest', tripadvisor: 'Tripadvisor', googlemaps: 'Google Maps' };
 
@@ -485,6 +582,7 @@ header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--s
 header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:68px}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;min-width:0}
 .brand img{max-height:46px;max-width:170px;width:auto;object-fit:contain}
+.brand.dark{background:color-mix(in srgb,var(--ink) 92%,var(--p));padding:6px 12px;border-radius:10px}.brand.dark img{max-height:40px}
 .brand .mono{width:40px;height:40px;border-radius:${gastro ? '50%' : '11px'};background:var(--p);color:#fff;display:grid;place-items:center;font-family:${display};font-weight:700;font-size:1rem;flex:none}
 .brand span{font-family:${display};font-weight:700;font-size:1.12rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 nav.main{display:none;gap:30px;font-size:.95rem;font-weight:500}nav.main a{text-decoration:none;color:var(--mut);transition:color .2s}nav.main a:hover{color:var(--p)}
@@ -507,11 +605,21 @@ nav.main{display:none;gap:30px;font-size:.95rem;font-weight:500}nav.main a{text-
 .actions{display:flex;flex-wrap:wrap;gap:12px}
 .facts{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:38px;padding-top:26px;border-top:1px solid rgba(255,255,255,.18);font-size:.95rem;color:rgba(255,255,255,.9)}
 .facts span{display:inline-flex;align-items:center;gap:8px}.facts svg{color:var(--a);font-size:1.15em}
-.art-card{justify-self:center;width:min(380px,100%);aspect-ratio:4/5;border-radius:${gastro ? '200px 200px 18px 18px' : '22px'};background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);display:grid;place-items:center;padding:36px;position:relative;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
-.art-card .logo{background:#fff;border-radius:16px;padding:22px;max-width:82%;box-shadow:var(--shadow)}
-.art-card .logo img{max-height:140px;width:auto;margin:auto}
-.art-card .big{font-family:${display};font-size:clamp(4rem,12vw,7rem);font-weight:700;line-height:1;color:#fff;opacity:.92}
-.art-card small{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+.art-card{justify-self:center;width:min(400px,100%);border-radius:${gastro ? '28px' : '22px'};background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.22);padding:clamp(24px,4vw,34px);box-shadow:0 30px 60px -20px rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.art-card .logo{background:#fff;border-radius:14px;padding:16px 20px;margin-bottom:24px;display:flex;justify-content:center;box-shadow:var(--shadow)}
+.art-card .logo.light{background:rgba(0,0,0,.22);box-shadow:none;border:1px solid rgba(255,255,255,.14)}
+.art-card .logo img{max-height:88px;width:auto}
+.art-k{font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--a)}
+.focus{list-style:none;margin-top:14px;display:grid;gap:10px}
+.focus li{display:flex;align-items:center;gap:14px;font-weight:600;font-size:1.02rem;line-height:1.3;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.08)}
+.focus .fi{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center;font-size:20px;flex:none}
+.art-f{display:flex;align-items:center;gap:8px;margin-top:20px;font-size:.88rem;color:rgba(255,255,255,.78)}.art-f svg{color:var(--a)}
+.glance{background:var(--bg);border:1px solid var(--line);border-radius:calc(var(--r) + 10px);padding:clamp(26px,4vw,40px);box-shadow:var(--shadow)}
+section.tint .glance{background:var(--sf)}
+.glance dl{margin:18px 0 26px;display:grid}
+.glance dl div{display:grid;gap:2px;padding:14px 0;border-bottom:1px dashed var(--line)}.glance dl div:last-child{border-bottom:0}
+.glance dt{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}.glance dt svg{color:var(--p);font-size:1.15em}
+.glance dd{font-size:1.06rem;font-weight:600;color:var(--ink);padding-left:26px}
 .stack{justify-self:center;position:relative;width:min(440px,100%);aspect-ratio:1/1.05}
 .stack img{position:absolute;object-fit:cover;border-radius:var(--r);box-shadow:0 30px 60px -18px rgba(0,0,0,.6);border:4px solid rgba(255,255,255,.9)}
 .stack img:nth-child(1){inset:0 16% 18% 0;width:84%;height:82%}
@@ -554,6 +662,7 @@ section.tint .card{background:var(--bg)}
 .gallery img{width:100%;height:100%;object-fit:cover;border-radius:var(--r)}
 .gallery:not(.even) img:first-child{grid-column:span 2;grid-row:span 2}
 .gallery.even{grid-auto-rows:auto}.gallery.even img{aspect-ratio:4/3}
+.gallery img.wide{grid-column:span 2}.gallery.even img.wide{aspect-ratio:auto}
 /* Ziyaret */
 .visit{display:grid;gap:20px}
 .panel{background:var(--sf);border:1px solid var(--line);border-radius:calc(var(--r) + 8px);padding:clamp(24px,4vw,36px)}
@@ -630,8 +739,11 @@ export function renderHtml(kit, assetBase) {
   const gastro = kit.template === 'gastro';
   const c = kit.copy;
   const src = (file) => `${assetBase}/${encodeURIComponent(file)}`;
-  // Her fotoğraf tek yerde: 1 → açılış zemini, 2 → "Über uns", 3+ → galeri; çok fotoğraf varsa açılışa kolaj
-  const [heroPhoto, aboutPhoto, ...more] = kit.photos;
+  // Her fotoğraf tek yerde: 1 → açılış zemini, 2 → "Über uns", 3+ → galeri; çok fotoğraf varsa açılışa kolaj.
+  // Geniş şeritler dikey "Über uns" çerçevesine konmaz (kesilip bozulur); galeride iki sütun kaplar.
+  const [heroPhoto, ...restPhotos] = kit.photos;
+  const aboutPhoto = restPhotos.find((p) => !p.wide) ?? null;
+  const more = restPhotos.filter((p) => p !== aboutPhoto);
   const stack = more.length >= 4 ? more.slice(0, 2) : [];
   const gallery = more.slice(stack.length).length >= 2 ? more.slice(stack.length) : [];
   const route = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([kit.name, kit.address].filter(Boolean).join(', '))}`;
@@ -647,9 +759,27 @@ export function renderHtml(kit, assetBase) {
   const ownerName = kit.owner?.name ?? null;
   const icons = serviceIcons(c.services, kit.template);
 
+  // Fotoğraf yoksa açılışın sağında boş bir harf kutusu yerine işletmenin gerçek bilgisi: logo + öne çıkan işler
+  const focus = c.services.slice(0, 4);
   const heroArt = heroPhoto
     ? (stack.length ? `<div class="stack" aria-hidden="true">${stack.map((s) => `<img src="${src(s.file)}" alt="">`).join('')}</div>` : '')
-    : `<div class="art-card" aria-hidden="true">${kit.logo ? `<div class="logo"><img src="${src(kit.logo)}" alt=""></div>` : `<div class="big">${esc(initials(kit.name) || '★')}</div>`}<small>${esc(kit.city)}</small></div>`;
+    : `<div class="art-card">
+      ${kit.logo ? `<div class="logo${kit.logoLight ? ' light' : ''}"><img src="${src(kit.logo)}" alt="${esc(kit.name)}"></div>` : ''}
+      <p class="art-k">${gastro ? 'Bei uns' : 'Schwerpunkte'}</p>
+      <ul class="focus">${focus.map((s, i) => `<li><span class="fi">${icons[i]}</span>${esc(s.title)}</li>`).join('')}</ul>
+      ${kit.address ? `<p class="art-f">${UI.pin}<span>${esc(kit.address.split(',').slice(-1)[0].trim() || kit.city)}</span></p>` : ''}
+    </div>`;
+
+  // "Über uns" fotoğrafsızsa boş fotoğraf kutusu yerine "Auf einen Blick" künyesi
+  const glance = [
+    kit.owner?.name ? [UI.user, kit.owner.role || 'Inhaber', kit.owner.name] : null,
+    kit.address ? [UI.pin, 'Adresse', kit.address] : null,
+    kit.phone ? [UI.phone, 'Telefon', kit.phone] : null,
+    kit.hours ? [UI.clock, gastro ? 'Geöffnet' : 'Erreichbar', kit.hours.rows.filter((r) => !r.closed).slice(0, 2).map((r) => `${r.days ? `${r.days} ` : ''}${r.time}`).join(' · ')] : null,
+  ].filter(Boolean);
+  const aboutSide = aboutPhoto
+    ? `<div class="frame reveal"><img src="${src(aboutPhoto.file)}" alt="${esc(aboutPhoto.alt || kit.name)}" loading="lazy"></div>`
+    : `<div class="glance reveal"><p class="kicker">Auf einen Blick</p><dl>${glance.map(([ic, k, v]) => `<div><dt>${ic}${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>${phone ? `<a class="btn" href="${phone}">${UI.phone}<span>${esc(c.cta)}</span></a>` : ''}</div>`;
 
   const facts = [
     kit.address ? `<span>${UI.pin}${esc(kit.address.split(',')[0])}</span>` : '',
@@ -693,7 +823,7 @@ export function renderHtml(kit, assetBase) {
 <body>
 <div class="draft"><b>Entwurf</b> · Unverbindlicher Gestaltungsvorschlag für ${esc(kit.name)} · ${c.placeholder ? 'Texte sind Platzhalter' : 'Texte auf Basis Ihrer bisherigen Website'}${kit.photos.length ? '' : ', Fotos folgen'} · nicht öffentlich auffindbar${compare ? ' · <a href="#vorher-nachher">Vorher / Nachher</a>' : ''}</div>
 <header class="top"><div class="wrap">
-  <a class="brand" href="#top">${kit.logo ? `<img src="${src(kit.logo)}" alt="${esc(kit.name)}">` : `<i class="mono" aria-hidden="true">${esc(initials(kit.name) || '•')}</i><span>${esc(kit.name)}</span>`}</a>
+  <a class="brand${kit.logo && kit.logoLight ? ' dark' : ''}" href="#top">${kit.logo ? `<img src="${src(kit.logo)}" alt="${esc(kit.name)}">` : `<i class="mono" aria-hidden="true">${esc(initials(kit.name) || '•')}</i><span>${esc(kit.name)}</span>`}</a>
   <nav class="main" aria-label="Hauptnavigation"><a href="#angebot">${esc(d.nav)}</a><a href="#ueber-uns">Über uns</a>${gallery.length ? '<a href="#eindruecke">Eindrücke</a>' : ''}<a href="#besuch">${gastro ? 'Öffnungszeiten' : 'Kontakt'}</a></nav>
   ${phone ? `<a class="btn sm" href="${phone}">${UI.phone}<span>Anrufen</span></a>` : ''}
 </div></header>
@@ -724,12 +854,12 @@ ${stats.length ? `
 </div></section>
 
 <section id="ueber-uns" class="tint"><div class="wrap story">
-  <div class="frame reveal">${aboutPhoto ? `<img src="${src(aboutPhoto.file)}" alt="${esc(aboutPhoto.alt || kit.name)}" loading="lazy">` : `<div class="ph" role="img" aria-label="Platz für ein Foto">${UI.camera}<b>Ihr schönstes Foto</b><small>${gastro ? 'Gastraum, Terrasse oder Ihr Team – wir fotografieren gern beim Termin vor Ort.' : 'Ihr Team, Ihre Werkstatt oder ein gelungenes Projekt – wir fotografieren gern vor Ort.'}</small></div>`}</div>
+  ${aboutSide}
   <div class="reveal">
     <p class="kicker">Über uns</p>
     <h2 style="margin-top:12px">${esc(c.about_title)}</h2>
     <p>${esc(c.about_text)}</p>
-    ${ownerName ? `<div class="sig"><i aria-hidden="true">${esc(initials(ownerName) || '•')}</i><div><b>${esc(ownerName)}</b><small>${esc(kit.owner.role)}</small></div></div>` : ''}
+    ${ownerName && aboutPhoto ? `<div class="sig"><i aria-hidden="true">${esc(initials(ownerName) || '•')}</i><div><b>${esc(ownerName)}</b><small>${esc(kit.owner.role)}</small></div></div>` : ''}
   </div>
 </div></section>
 ${gastro ? '' : `
@@ -740,7 +870,7 @@ ${gastro ? '' : `
 ${gallery.length ? `
 <section id="eindruecke"${gastro ? '' : ' class="tint"'}><div class="wrap">
   <div class="head reveal"><p class="kicker">Eindrücke</p><h2>${gastro ? 'Ein Blick zu uns' : 'Aus unserer Arbeit'}</h2></div>
-  <div class="gallery${gallery.length < 3 ? ' even' : ''} reveal">${gallery.slice(0, 7).map((g) => `<img src="${src(g.file)}" alt="${esc(g.alt || kit.name)}" loading="lazy">`).join('')}</div>
+  <div class="gallery${gallery.length < 3 ? ' even' : ''} reveal">${gallery.slice(0, 7).map((g) => `<img${g.wide ? ' class="wide"' : ''} src="${src(g.file)}" alt="${esc(g.alt || kit.name)}" loading="lazy">`).join('')}</div>
 </div></section>` : ''}
 
 <section id="besuch"${(gallery.length ? gastro : !gastro) ? ' class="tint"' : ''}><div class="wrap">
@@ -838,6 +968,7 @@ export async function buildDraft(biz, profile, token, scan = null) {
     owner: owners[0] ? { role: owners[0].role, name: owners[0].name } : null,
     colors: { primary, accent: pickAccent(colors, primary, template) },
     logo: images.logo,
+    logoLight: images.logoLight,
     photos: images.photos,
     uploads: images.uploads,
     socials: (site?.ok ? site.socials ?? [] : []).filter((s) => s.type !== 'googlemaps').slice(0, 4),
