@@ -34,6 +34,8 @@ interface FieldRow {
   week: Week;
   appointment: boolean;
   last_visit: LastVisit | null;
+  demo_views?: number;
+  demo_last_view?: string | null;
 }
 
 const OUTCOME_STYLE: Record<string, string> = {
@@ -268,7 +270,12 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
               {r.last_visit.note && <span className="block mt-1 text-[#1D1D1F]">“{r.last_visit.note}”</span>}
             </p>
           )}
-          {postponed && r.visit_date && <p className="mt-1 text-xs text-amber-700">Başka güne alındı: {fmtDay(r.visit_date)}</p>}
+          {r.demo_views && r.demo_last_view ? (
+            <p className="mt-1.5 text-xs font-semibold text-emerald-700">
+              Demo {r.demo_views}× açıldı · son {new Date(r.demo_last_view).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+            </p>
+          ) : null}
+          {postponed && r.visit_date &&<p className="mt-1 text-xs text-amber-700">Başka güne alındı: {fmtDay(r.visit_date)}</p>}
         </div>
       </div>
 
