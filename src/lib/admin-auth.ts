@@ -141,6 +141,21 @@ export function requireRole(request: Request, module: AdminModule, level: Access
   return can(session.role, module, level) ? null : forbidden();
 }
 
+// ── "Bizim cihaz" işareti ─────────────────────────────────────
+// Panele bir kez girilen tarayıcı kalıcı olarak işaretlenir; oturum kapansa da o cihazdan açılan
+// demolar müşteri açılışı sayılmaz (/demo/<token>). Kişisel veri değildir, yalnızca "1" taşır.
+export const OWN_DEVICE_COOKIE = 'ysn_own_device';
+export const ownDeviceCookieOptions = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
+  path: '/',
+  maxAge: 60 * 60 * 24 * 400, // tarayıcıların izin verdiği en uzun süre
+};
+export function isOwnDevice(request: Request): boolean {
+  return readCookie(request, OWN_DEVICE_COOKIE) === '1';
+}
+
 export const sessionCookieOptions = {
   httpOnly: true,
   sameSite: 'lax' as const,

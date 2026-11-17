@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { clientKey, getAdminSession } from '@/lib/admin-auth';
+import { clientKey, getAdminSession, isOwnDevice } from '@/lib/admin-auth';
 import { readWebscoutDraft, recordDemoView } from '@/lib/webscout';
 
 /**
@@ -27,7 +27,8 @@ const seen = new Map<string, number>();
 const SALT = Math.random().toString(36);
 
 function countable(request: Request, token: string): boolean {
-  if (getAdminSession(request)) return false; // panele girişli biz (sahada demoyu gösterirken) sayılmayız
+  // Biz sayılmayız: panele girişliyken ya da daha önce panele girilmiş ("bizim") bir cihazdan açınca
+  if (getAdminSession(request) || isOwnDevice(request)) return false;
   const ua = request.headers.get('user-agent') ?? '';
   if (!ua || NOT_A_VISIT.test(ua)) return false;
   const purpose = `${request.headers.get('sec-purpose') ?? ''} ${request.headers.get('purpose') ?? ''}`;
