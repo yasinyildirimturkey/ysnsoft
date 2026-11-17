@@ -330,16 +330,51 @@ function socials(links) {
   return [...out].map(([type, url]) => ({ type, url }));
 }
 
-function images(pages) {
+// Ortak/sponsor/üyelik logoları firmanın kendi logosu değildir
+const FOREIGN_LOGO = /partner|sponsor|mitglied|member|verband|innung|kammer|siegel|zertifi|award|auszeichnung|referenz|kunde|aroundhome|myhammer|check24|houzz|google|facebook|instagram|whatsapp|trustpilot|provenexpert|kununu|paypal|klarna|visa|mastercard|dhl|accessibility|onetap|cookie/i;
+
+// Firma logosu için aday puanı: başlıkta olmak, WordPress "custom-logo", dosya adında alan adı geçmesi artı;
+// ortak/sponsor işaretleri, başka alan adı, tembel yükleme (alt kısımdaki logo şeritleri) eksi.
+function logoScore({ file, hint, inHeader, order, home, sameHost }, tokens) {
+  let s = 0;
+  if (/custom-logo|site-logo|navbar-brand|header-logo|logo-header/i.test(hint)) s += 6;
+  if (inHeader) s += 4;
+  if (tokens.some((t) => file.includes(t))) s += 4;
+  if (/(^|[-_./])logo/i.test(file)) s += 1;
+  if (!home) s -= 1;
+  if (/loading\s*=\s*["']?lazy/i.test(hint)) s -= 1;
+  // Dosya adındaki işaret kesin; alt/class metni ("Ihr Partner für …") daha zayıf kanıttır
+  if (FOREIGN_LOGO.test(file)) s -= 8;
+  else if (FOREIGN_LOGO.test(hint)) s -= 4;
+  if (!sameHost) s -= 2; // CDN'de (Wix, Jimdo) olabilir: elenmez, yalnızca geri düşer
+  return s - order * 0.01;
+}
+
+export function images(pages) {
   const out = [];
-  let logo = null;
+  const cands = [];
+  const host = (pages[0]?.url?.hostname ?? '').replace(/^www\./, '');
+  const tokens = host.split('.').slice(0, -1).join('-').split('-').filter((t) => t.length >= 4).map((t) => t.toLowerCase());
   for (const p of pages) {
+    const headers = [...p.html.matchAll(/<header\b[\s\S]*?<\/header>/gi)].map((h) => [h.index, h.index + h[0].length]);
     for (const m of p.html.matchAll(/<img\b([^>]*)>/gi)) {
       const src = attr(m[1], 'src') || attr(m[1], 'data-src') || attr(m[1], 'data-lazy-src');
       const url = src && !src.startsWith('data:') ? abs(src, p.url) : null;
       if (!url) continue;
-      const hint = `${src} ${attr(m[1], 'alt') ?? ''} ${attr(m[1], 'class') ?? ''} ${attr(m[1], 'id') ?? ''}`;
-      if (/logo/i.test(hint)) { logo ??= url.href; continue; }
+      const hint = `${src} ${attr(m[1], 'class') ?? ''} ${attr(m[1], 'id') ?? ''} ${m[1].match(/loading\s*=\s*["']?lazy/i)?.[0] ?? ''} alt=${attr(m[1], 'alt') ?? ''}`;
+      if (/logo/i.test(hint)) {
+        let file = url.pathname.split('/').pop() ?? '';
+        try { file = decodeURIComponent(file); } catch { /* bozuk kodlama: olduğu gibi */ }
+        cands.push({
+          url, hint,
+          file: file.toLowerCase(),
+          sameHost: !host || [host, p.url.hostname.replace(/^www\./, '')].includes(url.hostname.replace(/^www\./, '')),
+          inHeader: headers.some(([a, b]) => m.index >= a && m.index < b),
+          order: cands.length,
+          home: p.kind === 'home' || p.kind === 'frame', // çerçeveli sitede asıl ana sayfa çerçevedir
+        });
+        continue;
+      }
       const w = Number(attr(m[1], 'width')), h = Number(attr(m[1], 'height'));
       if ((w && w < 120) || (h && h < 90)) continue;
       if (/icon|sprite|pixel|spacer|blank|bullet|arrow|button|banner_ad|\.svg(?:$|\?)|\.gif(?:$|\?)/i.test(url.pathname)) continue;
@@ -347,6 +382,8 @@ function images(pages) {
     }
   }
   const seen = new Set();
+  const best = cands.map((c) => ({ c, s: logoScore(c, tokens) })).sort((a, b) => b.s - a.s)[0];
+  const logo = best && best.s > -2 ? best.c.url.href : null;
   return { logo, list: out.filter((i) => !seen.has(i.url) && seen.add(i.url)).slice(0, 24) };
 }
 
