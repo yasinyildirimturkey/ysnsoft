@@ -76,6 +76,8 @@ interface Prospect {
   draft_expires: string | null;
   /** Müşterinin demoyu kaç kez açtığı (biz/botlar hariç) ve en son ne zaman */
   demo_views?: number;
+  /** Kayıtlı web adresi başka bir firmanın sitesine gidiyorsa (devralma/yanlış kayıt): taslak üretilmez */
+  site_mismatch?: { host: string; owner: string | null } | null;
   demo_last_view?: string | null;
 }
 
@@ -823,6 +825,14 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                           <LayoutTemplate className="w-3 h-3" aria-hidden="true" /> Taslak hazır
                         </a>
                       )}
+                      {r.site_mismatch && (
+                        <span
+                          className="mt-1 w-fit px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-800 flex items-center gap-1"
+                          title={`Kayıtlı adres ${r.site_mismatch.host} sitesine gidiyor; bu site başka bir firmaya ait görünüyor`}
+                        >
+                          <AlertCircle className="w-3 h-3" aria-hidden="true" /> Site başka firmaya gidiyor
+                        </span>
+                      )}
                       {r.demo_views && r.demo_last_view ? (
                         <span
                           className="mt-1 w-fit px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1"
@@ -999,6 +1009,16 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
               </div>
 
               <div>
+                {selected.site_mismatch && (
+                  <p role="alert" className="mb-2 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs leading-relaxed flex gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                    <span>
+                      Kayıtlı web adresi <b>{selected.site_mismatch.host}</b> sitesine gidiyor
+                      {selected.site_mismatch.owner ? <> (Impressum: <b>{selected.site_mismatch.owner}</b>)</> : null}; sitede bu işletmenin adı geçmiyor.
+                      Firma devredilmiş ya da kayıt yanlış olabilir — sahada kontrol edin, doğru adresi aşağıya yazın. O zamana kadar taslak üretilmez.
+                    </span>
+                  </p>
+                )}
                 <label htmlFor="pr-site" className="text-[#6E6E73] flex items-center gap-1 mb-1">
                   <Globe className="w-3 h-3" aria-hidden="true" /> Web sitesi {selected.website ? '' : '(kayıtlı değil — sahada/Google’da bulduysanız yazın)'}
                 </label>
