@@ -71,7 +71,7 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
             </div>
             <div className="flex items-center gap-2 text-[11px] text-[#10B981] font-medium">
               <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-              <span>Tüm SaaS Kümeleri Aktif (%99.99 Uptime)</span>
+              <span>Projeler canlıda</span>
             </div>
           </div>
 
@@ -147,12 +147,6 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
                 </a>
               </li>
               <li>
-                <a href="/portal" className="text-blue-600 font-semibold hover:underline flex items-center gap-1.5">
-                  <span>Müşteri Takip Portalı</span>
-                  <span className="text-[11px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">Canlı</span>
-                </a>
-              </li>
-              <li>
                 <a href="/admin" className="text-[#0071E3] font-semibold hover:underline flex items-center gap-1">
                   <span>Yönetim Portalı (Admin)</span>
                   <span className="text-[11px] bg-[#0071E3]/10 px-1.5 py-0.5 rounded">Giriş</span>
@@ -165,7 +159,7 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
 
         {/* Bottom Copyright */}
         <div className="pt-8 border-t border-black/[0.06] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#6E6E73] gap-4">
-          <p>© 2026 YSNSOFT Bilişim Teknolojileri A.Ş. Tüm hakları saklıdır.</p>
+          <p>© 2026 YSNSOFT. Tüm hakları saklıdır.</p>
           <div className="flex items-center gap-6">
             <span>Türkiye & Global Bulut Altyapısı</span>
             <span>Designed with Apple Minimalist Philosophy</span>

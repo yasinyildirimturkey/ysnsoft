@@ -22,7 +22,8 @@ export interface Product {
   secondaryUrl?: string;
   secondaryDomain?: string;
   realCodePath?: string;
-  liveStats: {
+  /** Eskiden ölçülmeyen "kullanıcı/uptime/ciro" rakamları vardı; kaldırıldı. Eski kayıtlarla uyum için isteğe bağlı. */
+  liveStats?: {
     users?: string;
     uptime?: string;
     processedVolume?: string;
@@ -41,9 +42,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: 'UYAP otomasyonu, icra ve dava takibi, müvekkil portalı, arabuluculuk ve hukuk bürosu muhasebesini tek çatı altında toplayan yeni nesil LegalTech SaaS ekosistemi.',
     longDesc: 'KGLEX, avukatların ve kurumsal hukuk departmanlarının UYAP sorgulamalarını otonomlaştıran, duruşma ve tebligatları kaçırmayan, yapay zekayla mevzuat ve içtihat taraması yapan entegre bir hukuk yönetim platformudur. Web, mobil ve arka plan robot ajanlarıyla 7/24 çalışır.',
     metrics: [
-      { label: 'UYAP Otomasyon Hızı', value: '10x Hızlı' },
-      { label: 'Dava Kaçırma Riski', value: '%0' },
-      { label: 'Aktif Dosya Kapasitesi', value: '100.000+' }
+      { label: 'Kullanıcı', value: 'Hukuk büroları' },
+      { label: 'Kapsam', value: 'Dava & icra takibi' },
+      { label: 'Erişim', value: 'Web tarayıcısı' }
     ],
     features: [
       'Otonom UYAP Robotu ile Anlık Evrak, Tebligat & Dosya Taraması',
@@ -56,13 +57,7 @@ export const PRODUCTS: Product[] = [
     previewType: 'legal',
     liveUrl: 'https://www.kglex.com',
     displayDomain: 'kglex.com',
-    realCodePath: 'D:\\hukuk\\kglex',
-    liveStats: {
-      users: '2.400+ Avukat & Hukuk Bürosu',
-      uptime: '%99.99',
-      processedVolume: '450.000+ UYAP Sorgusu/Ay',
-      speed: '0.12s'
-    }
+    realCodePath: 'D:\\hukuk\\kglex'
   },
   {
     id: 'hgavukatlik',
@@ -74,9 +69,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: 'Uluslararası tahkim, şirketler hukuku ve dava takibi için geliştirilmiş; müvekkillerin güvenle dosya incelediği ve online ödeme yaptığı prestijli hukuk portalı.',
     longDesc: 'HG Avukatlık ve Açıkel Hukuk için geliştirilen bu sistem; İngilizce, Almanca, Arapça ve Rusça çok dilli mimari, güvenli müvekkil giriş alanı, online vekalet & sözleşme onayı ve entegre sanal POS tahsilat modülü içerir.',
     metrics: [
-      { label: 'Desteklenen Dil', value: '5 Dil' },
-      { label: 'Müvekkil Memnuniyeti', value: '%100' },
-      { label: 'Online Tahsilat', value: '256-Bit SSL' }
+      { label: 'Tür', value: 'Hukuk bürosu sitesi' },
+      { label: 'Diller', value: 'TR / EN / DE / AR' },
+      { label: 'Bölüm', value: 'Müvekkil alanı' }
     ],
     features: [
       'TR, EN, DE, AR ve RU Çok Dilli SEO Uyumlu Kurumsal Sayfalar',
@@ -91,13 +86,7 @@ export const PRODUCTS: Product[] = [
     displayDomain: 'hgavukatlik.com',
     secondaryUrl: 'https://www.acikellaw.com',
     secondaryDomain: 'acikellaw.com',
-    realCodePath: 'D:\\hukuk\\acikel\\law_front',
-    liveStats: {
-      users: '10.000+ Müvekkil Girişi',
-      uptime: '%100',
-      processedVolume: '₺12M+ Online Tahsilat',
-      speed: '0.09s'
-    }
+    realCodePath: 'D:\\hukuk\\acikel\\law_front'
   },
   {
     id: 'acikellaw',
@@ -109,9 +98,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: 'Uluslararası tahkim, yabancılar hukuku ve kurumsal danışmanlık hizmetleri sunan çok dilli prestijli hukuk ofisi portali.',
     longDesc: 'Açıkel Hukuk için geliştirilmiş bu altyapı; İngilizce, Almanca ve Rusça dillerinde tam SEO uyumluluğu, online randevu takvimi ve müvekkil evrak paylaşım alanı içerir.',
     metrics: [
-      { label: 'Uluslararası Vaka', value: '450+' },
-      { label: 'Çok Dilli Altyapı', value: 'TR / EN / DE' },
-      { label: 'Sayfa Açılış Hızı', value: '0.08s' }
+      { label: 'Tür', value: 'Hukuk bürosu sitesi' },
+      { label: 'Diller', value: 'TR / EN / DE' },
+      { label: 'Alan', value: 'Ticaret & tahkim' }
     ],
     features: [
       'Çok Dilli Kurumsal Hukuk Departmanı Tanıtımı ve Makaleler',
@@ -124,13 +113,7 @@ export const PRODUCTS: Product[] = [
     previewType: 'legal',
     liveUrl: 'https://www.acikellaw.com',
     displayDomain: 'acikellaw.com',
-    realCodePath: 'D:\\hukuk\\acikel\\law_front',
-    liveStats: {
-      users: '5.000+ Ziyaretçi/Ay',
-      uptime: '%100',
-      processedVolume: 'Online Randevu & Danışmanlık',
-      speed: '0.08s'
-    }
+    realCodePath: 'D:\\hukuk\\acikel\\law_front'
   },
   {
     id: 'haritaplan-geoplan',
@@ -142,9 +125,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: '3194 Sayılı Kanun Md. 18 DOP hesabı, ifraz, tevhid, kamulaştırma, plankote ve 3D bina gabarisi üreten Türkiye’nin en gelişmiş bulut harita mühendisliği platformu.',
     longDesc: 'Harita mühendisleri, şehir plancıları ve belediyeler için tasarlanmış HaritaPlan; Netcad (.ncn) ve AutoCAD (.dxf) dosyalarını doğrudan tarayıcıda okuyup işleyen, tapu harçlarını hesaplayan ve resmi dağıtım cetvellerini tek tıkla üreten profesyonel bir CBS ekosistemidir.',
     metrics: [
-      { label: 'DOP Hesaplama Süresi', value: '1.2 sn' },
-      { label: 'CAD Uyumluluğu', value: 'Netcad & DXF' },
-      { label: 'Mevzuat Uyumu', value: '3194 / 7181 / 6306' }
+      { label: 'Konu', value: 'İmar uygulaması' },
+      { label: 'Dosya', value: 'Netcad & DXF' },
+      { label: 'Görünüm', value: 'Tarayıcıda 3D' }
     ],
     features: [
       '3194 Md. 18 Arazi Düzenlemesi ve Otomatik Düzenleme Ortaklık Payı (DOP)',
@@ -157,13 +140,7 @@ export const PRODUCTS: Product[] = [
     previewType: 'cad',
     liveUrl: 'https://www.haritaplan.com',
     displayDomain: 'haritaplan.com',
-    realCodePath: 'D:\\harita',
-    liveStats: {
-      users: '680+ Harita Mühendisi & Belediye',
-      uptime: '%99.98',
-      processedVolume: '1.200+ Parsel Planı/Hafta',
-      speed: '0.24s'
-    }
+    realCodePath: 'D:\\harita'
   },
   {
     id: 'panelde-saas',
@@ -175,9 +152,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: 'Yüzlerce bağımsız ofis ve acente için tek altyapıdan yönetilen; ilan portalları, CRM, müşteri talep eşleme ve otomatik muhasebe platformu.',
     longDesc: 'Panelde; Express 4 API + Next.js App Router ve React Native mobil altyapısıyla çalışan devasa bir multi-tenant kurumsal platformdur. Soket tabanlı gerçek zamanlı mesajlaşma, MariaDB/Sequelize veri mimarisi ve iisnode uyumlu yüksek performanslı motor barındırır.',
     metrics: [
-      { label: 'Bağlı Ofis & Acente', value: '1.500+' },
-      { label: 'Eşzamanlı Soket Bağlantısı', value: '25.000+' },
-      { label: 'API Yanıt Hızı', value: '45 ms' }
+      { label: 'Kullanıcı', value: 'Emlak ofisleri' },
+      { label: 'Yapı', value: 'Çok kiracılı' },
+      { label: 'Kapsam', value: 'İlan & ofis yönetimi' }
     ],
     features: [
       'Çok Kiracılı (Multi-Tenant) İlan, Portföy ve Şube Yönetim Konsolu',
@@ -190,13 +167,7 @@ export const PRODUCTS: Product[] = [
     previewType: 'portal',
     liveUrl: 'https://www.panelde.com',
     displayDomain: 'panelde.com',
-    realCodePath: 'D:\\panelde',
-    liveStats: {
-      users: '1.500+ Acente & Yönetici',
-      uptime: '%99.99',
-      processedVolume: '85.000+ Aktif İlan & Talep',
-      speed: '0.09s'
-    }
+    realCodePath: 'D:\\panelde'
   },
   {
     id: 'samatya-mezecisi',
@@ -208,9 +179,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: 'Yüksek hacimli soğuk zincir gurme meze satışını, restoran masadan QR sipariş yönetimini ve anlık kurye takibini birleştiren tam kapsamlı e-ticaret çözümü.',
     longDesc: 'Tarihi Samatya Mezecisi için özel geliştirilen platform; Playwright ile uçtan uca test edilmiş, Google OAuth entegrasyonlu, QR kod masadan sipariş ve çok kanallı soğuk zincir lojistik takibine sahip modern Next.js 16 e-ticaret ekosistemidir.',
     metrics: [
-      { label: 'Günlük Sipariş Hacmi', value: '3.500+' },
-      { label: 'Sipariş Tamamlama Süresi', value: '45 sn' },
-      { label: 'Soğuk Zincir Teslim Başarısı', value: '%99.8' }
+      { label: 'Satış', value: 'B2B + B2C' },
+      { label: 'Menü', value: 'QR menü' },
+      { label: 'Sipariş', value: 'Online sipariş' }
     ],
     features: [
       'B2B Restoran/Otel Toptan Tedarik & B2C Bireysel Gurme Satış Modülü',
@@ -223,13 +194,7 @@ export const PRODUCTS: Product[] = [
     previewType: 'food',
     liveUrl: 'https://www.tarihisamatyamezecisi.com',
     displayDomain: 'tarihisamatyamezecisi.com',
-    realCodePath: 'D:\\samatya',
-    liveStats: {
-      users: '45.000+ Kayıtlı Gurme Müşteri',
-      uptime: '%99.95',
-      processedVolume: '₺18.5M+ Aylık Ciro',
-      speed: '0.15s'
-    }
+    realCodePath: 'D:\\samatya'
   },
   {
     id: 'flamantyou-kozmetik',
@@ -241,9 +206,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: 'Kullanıcının yüzünü analiz edip kişiselleştirilmiş ürün reçetesi çıkaran yapay zeka aracı, bayi iskonto matrisi ve influencer affiliate ağı barındıran lüks e-ticaret sistemi.',
     longDesc: 'Flamantyou projesi; Prisma ORM, Next.js ve mobil uygulamaları kapsayan lüks kozmetik markaları için geliştirilmiş uçtan uca bir dijital satış motorudur. Cilt günlüğü takibi, çoklu para birimi ve otomatik kargo entegrasyonu sunar.',
     metrics: [
-      { label: 'AI Analiz Doğruluğu', value: '%94' },
-      { label: 'Sepet Dönüşüm Artışı', value: '+%42' },
-      { label: 'Mobil Alışveriş Oranı', value: '%82' }
+      { label: 'Tür', value: 'E-ticaret' },
+      { label: 'Özellik', value: 'AI cilt analizi' },
+      { label: 'Kanal', value: 'Bayi & influencer' }
     ],
     features: [
       'Kamera ile Anlık AI Cilt Analizi ve Kişiselleştirilmiş Bakım Reçetesi',
@@ -256,13 +221,7 @@ export const PRODUCTS: Product[] = [
     previewType: 'ecommerce',
     liveUrl: 'https://www.flamantyou.com',
     displayDomain: 'flamantyou.com',
-    realCodePath: 'D:\\kozmetik',
-    liveStats: {
-      users: '120.000+ Cilt Analizi',
-      uptime: '%99.98',
-      processedVolume: '60.000+ Kargolanan Ürün',
-      speed: '0.14s'
-    }
+    realCodePath: 'D:\\kozmetik'
   },
   {
     id: 'bodrum-luxury',
@@ -274,9 +233,9 @@ export const PRODUCTS: Product[] = [
     shortDesc: 'Bodrum, Mandarin Oriental ve çevre koylarda ultra lüks villa kiralama, özel yat kiralama ve VIP transfer süreçlerini yöneten çok dilli rezervasyon motoru.',
     longDesc: 'Bodrum’un en seçkin turizm ve gayrimenkul operasyonları için geliştirilen bu sistem; anlık takvim müsaitliği, döviz bazlı online kaparo ödemesi, rota optimizasyonlu VIP araç takip modülü ve çok dilli (EN, RU, AR, TR) lüks arayüz sunar.',
     metrics: [
-      { label: 'Yıllık Rezervasyon', value: '12.000+' },
-      { label: 'Müşteri Memnuniyeti', value: '%99.9' },
-      { label: 'Uluslararası Misafir', value: '%78' }
+      { label: 'Tür', value: 'Villa & yat kiralama' },
+      { label: 'Hizmet', value: 'VIP transfer' },
+      { label: 'Bölge', value: 'Bodrum' }
     ],
     features: [
       'Interaktif Bodrum & Kıyı Şeridi Haritası ile Villa/Yat Seçimi',
@@ -291,63 +250,13 @@ export const PRODUCTS: Product[] = [
     displayDomain: 'dolphinbodrum.com',
     secondaryUrl: 'https://www.armbodrum.com',
     secondaryDomain: 'armbodrum.com',
-    realCodePath: 'D:\\web\\2026yy',
-    liveStats: {
-      users: '35.000+ VIP Misafir',
-      uptime: '%100',
-      processedVolume: '€4.2M+ Yıllık Hacim',
-      speed: '0.11s'
-    }
+    realCodePath: 'D:\\web\\2026yy'
   }
 ];
 
-export const CLIENT_TESTIMONIALS = [
-  {
-    name: 'Av. Kemal Güler',
-    role: 'Yönetici Ortak',
-    company: 'KGLEX Hukuk & Danışmanlık (kglex.com)',
-    comment: 'KGLEX UYAP robotu ve dava takip programı sayesinde ofisimizdeki avukatların haftalık 20 saati bulan manuel dosya tarama yükünü sıfırladık. Duruşma kaçırma ihtimalimiz kalmadı.',
-    rating: 5,
-    result: '10x UYAP Verimi',
-    siteUrl: 'https://www.kglex.com'
-  },
-  {
-    name: 'Av. Hasan Açıkel',
-    role: 'Kurucu Ortak',
-    company: 'HG Avukatlık & Açıkel Law (hgavukatlik.com)',
-    comment: 'Uluslararası müvekkillerimiz için 5 dilli portalımız ve online vekalet tahsilat modülümüz inanılmaz prestij sağladı. Müvekkillerimiz dosyalarını şifreli alandan güvenle inceliyor.',
-    rating: 5,
-    result: '5 Dilli Hukuk Portalı',
-    siteUrl: 'https://www.hgavukatlik.com'
-  },
-  {
-    name: 'Harun Çetinkaya',
-    role: 'Baş Harita Mühendisi',
-    company: 'Çetinkaya Harita & İmar (haritaplan.com)',
-    comment: 'HaritaPlan’ın 3194 Md. 18 ve DOP hesap motoru inanılmaz hassas. Eskiden günlerce süren dağıtım cetveli ve encümen belgeleri artık dakikalar içinde resmi formatta hazır.',
-    rating: 5,
-    result: '%85 Zaman Tasarrufu',
-    siteUrl: 'https://www.haritaplan.com'
-  },
-  {
-    name: 'Gülşah Vural',
-    role: 'Marka Kurucusu',
-    company: 'Flamantyou Kozmetik (flamantyou.com)',
-    comment: 'AI cilt analizi aracı e-ticaret sitemize girdikten sonra sepet tamamlama oranımız %42 fırladı. Müşteriler kendi ciltlerine özel ürün reçetesini görünce hemen sipariş veriyor.',
-    rating: 5,
-    result: '+%42 Sepet Dönüşümü',
-    siteUrl: 'https://www.flamantyou.com'
-  },
-  {
-    name: 'Metin Samatya',
-    role: 'İşletme Sahibi',
-    company: 'Tarihi Samatya Mezecisi (tarihisamatyamezecisi.com)',
-    comment: 'B2B restoran siparişlerimizle bireysel gurme müşterilerimizi tek sistemde buluşturduk. QR menü ve anlık kurye takip motoru mutfak ile servis arasındaki kaosu bitirdi.',
-    rating: 5,
-    result: '3.500+ Günlük Sipariş',
-    siteUrl: 'https://www.tarihisamatyamezecisi.com'
-  }
-];
+// Eskiden burada gerçek kişilere ait OLMAYAN alıntılar ve sonuç rakamları vardı (2026-11-18 kaldırıldı).
+// Yalnız müşterinin yazılı izniyle alınmış gerçek yorumlar eklenmeli.
+export const CLIENT_TESTIMONIALS: { name: string; role: string; company: string; comment: string; rating: number; result: string; siteUrl: string }[] = [];
 
 export const TECH_STACK_ITEMS = [
   { name: 'Next.js 16 & 15', desc: 'App Router & Turbopack', category: 'Frontend' },

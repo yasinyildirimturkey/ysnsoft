@@ -11,7 +11,7 @@ import {
   ShieldCheck 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { saveLead } from '@/lib/store';
+import { submitLead } from '@/lib/crm-client';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -32,6 +32,7 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
 
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (prefilledProduct) {
@@ -41,11 +42,13 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
-
-    saveLead({
+    setError('');
+    try {
+      await submitLead({
       name: formData.name,
       company: formData.company,
       email: formData.email,
@@ -54,16 +57,18 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
       budget: formData.budget,
       message: formData.message
     });
-
-    setTimeout(() => {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Talep gönderilemedi.');
       setLoading(false);
-      setSubmitted(true);
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 }
-      });
-    }, 600);
+      return;
+    }
+    setLoading(false);
+    setSubmitted(true);
+    confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.6 }
+    });
   };
 
   const handleReset = () => {
@@ -104,7 +109,7 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
                 Talebiniz Alındı!
               </h4>
               <p className="text-sm text-[#515154] max-w-md mx-auto mb-6">
-                Teşekkür ederiz. Proje detaylarınız teknik ekibimize iletildi. En geç 24 saat içinde size özel fizibilite ve teklif dosyasıyla dönüş yapacağız.
+                Teşekkür ederiz. Talebiniz kaydedildi ve ekibimize iletildi. İhtiyacınızı inceleyip en kısa sürede sizinle iletişime geçeceğiz.
               </p>
               
               <div className="bg-[#F5F5F7] p-4 rounded-2xl border border-black/[0.04] text-xs text-[#1D1D1F] max-w-sm mx-auto mb-6">
@@ -234,8 +239,12 @@ export default function ContactModal({ isOpen, onClose, prefilledProduct }: Cont
 
               <div className="flex items-center gap-2 text-[11px] text-[#6E6E73] pt-1">
                 <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-                <span>Bilgileriniz KVKK standartlarına uygun olarak gizlilikle korunur.</span>
+                <span>Bilgileriniz yalnızca talebinizi yanıtlamak için kullanılır.</span>
               </div>
+
+              {error && (
+                <p role="alert" className="text-xs text-[#B91C1C] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">{error}</p>
+              )}
 
               <div className="pt-2">
                 <button

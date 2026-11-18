@@ -6,7 +6,6 @@ import Hero from '@/components/Hero';
 import ProductBentoGrid from '@/components/ProductBentoGrid';
 import LiveSiteShowcase from '@/components/LiveSiteShowcase';
 import InteractiveSandbox from '@/components/InteractiveSandbox';
-import CaseStudies from '@/components/CaseStudies';
 import WorkProcess from '@/components/WorkProcess';
 import ProjectCalculator from '@/components/ProjectCalculator';
 import ArchitectureBlueprint from '@/components/ArchitectureBlueprint';
@@ -15,7 +14,6 @@ import ComparisonTable from '@/components/ComparisonTable';
 import RoiCalculator from '@/components/RoiCalculator';
 import MeetingScheduler from '@/components/MeetingScheduler';
 import TechStack from '@/components/TechStack';
-import Testimonials from '@/components/Testimonials';
 import FaqSection from '@/components/FaqSection';
 import Footer from '@/components/Footer';
 import ProductModal from '@/components/ProductModal';
@@ -83,7 +81,6 @@ export default function Home() {
 
       {/* 5. Documented Case Studies & Real Results */}
       <div id="cases">
-        <Reveal><CaseStudies onOpenContact={handleOpenContact} /></Reveal>
       </div>
 
       {/* 6. 4-Step Agile Work & Delivery Process */}
@@ -117,7 +114,6 @@ export default function Home() {
       <Reveal><TechStack /></Reveal>
 
       {/* 14. Client Stories & Ratings */}
-      <Reveal><Testimonials /></Reveal>
 
       {/* 15. FAQ Accordion */}
       <Reveal><FaqSection 

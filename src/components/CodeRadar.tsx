@@ -109,7 +109,7 @@ export function init3DMapStudio(container: HTMLDivElement, parselData: any) {
     file: 'server/sockets/multiTenantGateway.js',
     code: `const socketIO = require('socket.io');
 
-// Panelde: 25.000+ Eşzamanlı Acente ve Danışman Canlı İletişim Hattı
+// Panelde: Acente ve danışmanlar için canlı iletişim hattı
 function setupTenantSockets(server) {
   const io = socketIO(server, { cors: { origin: "*" } });
 

@@ -25,7 +25,7 @@ interface BlogPost {
 const blogPosts: BlogPost[] = [
   {
     id: 'post-1',
-    title: 'UYAP Bot Otomasyonu: 500+ Hukuk Bürosunda Sıfır Kesintiyle Günlük 50.000 Dosya Taraması',
+    title: 'UYAP Bot Otomasyonu: Hukuk Bürolarında Dosya Taramasını Otomatikleştirmek',
     slug: 'uyap-bot-otomasyonu-kglex-mimari',
     category: 'LegalTech & Bot Architecture',
     readTime: '6 dk okuma',
@@ -85,7 +85,7 @@ export function calculateDOP(kadastroParseller: KadastroParcel[], kamuTerkAlan: 
   },
   {
     id: 'post-3',
-    title: 'Next.js 16 Edge & React 19 ile 24ms Sayfa Açılış Hızı: E-Ticarette Dönüşüm Optimizasyonu',
+    title: 'Next.js 16 & React 19 ile Hızlı Sayfa Açılışı: E-Ticarette Performans',
     slug: 'nextjs-16-edge-react-19-flamantyou',
     category: 'Frontend Performance & AI',
     readTime: '5 dk okuma',
@@ -142,10 +142,10 @@ export default function BlogPage() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/portal"
+              href="/"
               className="text-xs font-semibold px-3.5 py-1.5 bg-[#1D1D1F] text-white rounded-full hover:bg-black transition-all shadow-sm"
             >
-              Müşteri Takip Portalı
+              Ana Sayfa
             </Link>
           </div>
         </div>
@@ -198,15 +198,7 @@ export default function BlogPage() {
               </div>
             </div>
 
-            {/* Metrics */}
-            <div className="grid grid-cols-3 gap-3 p-4 bg-[#F5F5F7] rounded-2xl border border-gray-200/60 text-center">
-              {selectedPost.content.metrics.map((m, i) => (
-                <div key={i}>
-                  <div className="text-xl sm:text-2xl font-bold text-blue-600">{m.value}</div>
-                  <div className="text-[11px] text-[#6E6E73] font-medium mt-0.5">{m.label}</div>
-                </div>
-              ))}
-            </div>
+            {/* Ölçülmemiş metrik kutuları kaldırıldı (2026-11-18) */}
 
             {/* Problem & Solution */}
             <div className="space-y-4 text-sm leading-relaxed text-[#333]">

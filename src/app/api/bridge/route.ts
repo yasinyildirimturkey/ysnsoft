@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
 import { requireRole } from '@/lib/admin-auth';
+import { publicHttpsUrl } from '@/lib/public-host';
 
+// Eskiden her site için sabit "connected / 2 saniye önce / 24 ms" yazıyordu; bunlar ölçüm değildi.
+// Gerçek durum yalnız "ping" işlemiyle (siteye gerçek HTTPS isteği) öğrenilir.
 interface SiteBridgeStatus {
   domain: string;
   name: string;
-  status: 'connected' | 'standby' | 'error';
-  lastPing: string;
-  latencyMs: number;
   environment: 'production' | 'staging';
   allowedFrameOrigins: string[];
 }
@@ -16,81 +16,54 @@ const SITES: Record<string, SiteBridgeStatus> = {
   'kglex.com': {
     domain: 'kglex.com',
     name: 'KGLEX LegalTech AI (Hukuk & UYAP)',
-    status: 'connected',
-    lastPing: '2 saniye önce',
-    latencyMs: 24,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'hgavukatlik.com': {
     domain: 'hgavukatlik.com',
     name: 'HG Avukatlık Bürosu (Çok Dilli Hukuk Portalı)',
-    status: 'connected',
-    lastPing: '3 saniye önce',
-    latencyMs: 28,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'acikellaw.com': {
     domain: 'acikellaw.com',
     name: 'Açıkel Hukuk & Danışmanlık',
-    status: 'connected',
-    lastPing: '4 saniye önce',
-    latencyMs: 26,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'haritaplan.com': {
     domain: 'haritaplan.com',
     name: 'HaritaPlan 3D CBS & 3194 Md. 18',
-    status: 'connected',
-    lastPing: '5 saniye önce',
-    latencyMs: 38,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'tarihisamatyamezecisi.com': {
     domain: 'tarihisamatyamezecisi.com',
     name: 'Tarihi Samatya Mezecisi (Gurme B2B/B2C & QR POS)',
-    status: 'connected',
-    lastPing: '7 saniye önce',
-    latencyMs: 31,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'panelde.com': {
     domain: 'panelde.com',
     name: 'Panelde Multi-Tenant Gayrimenkul',
-    status: 'connected',
-    lastPing: '8 saniye önce',
-    latencyMs: 42,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'flamantyou.com': {
     domain: 'flamantyou.com',
     name: 'Flamantyou Kozmetik (AI E-Ticaret)',
-    status: 'connected',
-    lastPing: '12 saniye önce',
-    latencyMs: 29,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'samatya-mezecisi.com': {
     domain: 'samatya-mezecisi.com',
     name: 'Tarihi Samatya Mezecisi (Yedek Alan Adı)',
-    status: 'connected',
-    lastPing: '15 saniye önce',
-    latencyMs: 33,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   },
   'dolphinbodrum.com': {
     domain: 'dolphinbodrum.com',
     name: 'Dolphin & ARM Bodrum (VIP Concierge)',
-    status: 'connected',
-    lastPing: '18 saniye önce',
-    latencyMs: 36,
     environment: 'production',
     allowedFrameOrigins: ['http://localhost:3000', 'https://ysnsoft.com']
   }
@@ -134,7 +107,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     success: true,
-    totalConnected: Object.keys(SITES).length,
+    totalSites: Object.keys(SITES).length,
     masterToken: process.env.YSN_MANAGEMENT_MASTER_TOKEN || '',
     sites: Object.values(SITES).map(withToken)
   }, { headers: { 'Cache-Control': 'no-store' } });
@@ -148,22 +121,43 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, domain } = body;
 
-    if (action === 'purge_cache' && domain) {
-      return NextResponse.json({
-        success: true,
-        message: `${domain} sitesi için Cloudflare / Edge önbelleği token doğrulamasıyla başarıyla temizlendi.`,
-        purgedAt: new Date().toISOString()
-      });
-    }
+    // Önceki "purge_cache" hiçbir CDN'e bağlı değildi ama "temizlendi" diyordu; kaldırıldı.
 
-    if (action === 'ping' && domain) {
-      return NextResponse.json({
-        success: true,
-        domain,
-        latencyMs: Math.floor(20 + Math.random() * 25),
-        status: '200 OK • Token Doğrulandı',
-        timestamp: new Date().toISOString()
-      });
+    if (action === 'ping' && typeof domain === 'string') {
+      // Gerçek ölçüm: bu sunucudan siteye HTTPS isteği. Sertifika geçersizse fetch hata verir.
+      const url = publicHttpsUrl(domain);
+      if (!url) return NextResponse.json({ success: false, error: 'Geçersiz alan adı.' }, { status: 400 });
+      url.protocol = 'https:';
+      const started = Date.now();
+      try {
+        const res = await fetch(url.href, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YSNSOFT-SiteCheck; +https://ysnsoft.com)' },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(10_000),
+          cache: 'no-store',
+        });
+        void res.body?.cancel();
+        return NextResponse.json({
+          success: true,
+          domain,
+          ok: res.ok,
+          httpStatus: res.status,
+          latencyMs: Date.now() - started,
+          finalUrl: res.url,
+          checkedAt: new Date().toISOString(),
+        }, { headers: { 'Cache-Control': 'no-store' } });
+      } catch (err) {
+        const cause = (err as { cause?: { code?: string } })?.cause?.code;
+        return NextResponse.json({
+          success: true,
+          domain,
+          ok: false,
+          httpStatus: 0,
+          latencyMs: Date.now() - started,
+          error: cause ? `Bağlantı hatası (${cause})` : err instanceof Error && err.name === 'TimeoutError' ? '10 sn içinde yanıt yok' : 'Bağlantı hatası',
+          checkedAt: new Date().toISOString(),
+        }, { headers: { 'Cache-Control': 'no-store' } });
+      }
     }
 
     if (action === 'rotate_token' && domain) {

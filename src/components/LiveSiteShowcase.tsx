@@ -53,17 +53,13 @@ export default function LiveSiteShowcase() {
               badge: s.status === 'active' ? 'Canlıda Yayında' : 'Geliştiriliyor',
               shortDesc: s.description || s.tagline,
               longDesc: s.description || s.tagline,
-              metrics: [
-                { label: 'Uptime', value: s.stats?.uptime || '%99.9' },
-                { label: 'Gecikme', value: s.stats?.latency || '35ms' }
-              ],
+              metrics: [],
               features: s.features || [],
               techStack: ['Next.js 16', 'TypeScript', 'Tailwind CSS'],
               accentColor: '#0071E3',
               previewType: 'portal' as any,
               liveUrl: s.liveUrl || `https://${s.domain}`,
-              displayDomain: s.domain,
-              liveStats: { uptime: s.stats?.uptime || '%99.9', speed: s.stats?.latency || '35ms' }
+              displayDomain: s.domain
             };
           });
           setAllProducts(mapped);
@@ -73,7 +69,7 @@ export default function LiveSiteShowcase() {
   }, []);
 
   // Interactive Simulator States
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'modules' | 'stats'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'modules'>('dashboard');
   const [simDopRatio, setSimDopRatio] = useState(0.3842);
   const [simUyapQuery, setSimUyapQuery] = useState('2026/1429 Esas');
   const [simLang, setSimLang] = useState<'TR' | 'EN' | 'DE'>('TR');
@@ -305,14 +301,6 @@ export default function LiveSiteShowcase() {
                           >
                             Modül Detayı
                           </button>
-                          <button
-                            onClick={() => setActiveTab('stats')}
-                            className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                              activeTab === 'stats' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#6E6E73]'
-                            }`}
-                          >
-                            Metrikler & SLA
-                          </button>
                         </div>
                       </div>
 
@@ -494,28 +482,6 @@ export default function LiveSiteShowcase() {
                         </div>
                       )}
 
-                      {activeTab === 'stats' && (
-                        <div className="space-y-3 animate-in fade-in text-xs">
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                            <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[11px] text-gray-500 block">Kullanıcı Hacmi</span>
-                              <strong className="text-sm text-[#1D1D1F] mt-1 block">{selectedProduct.liveStats.users}</strong>
-                            </div>
-                            <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[11px] text-gray-500 block">Uptime Garantisi</span>
-                              <strong className="text-sm text-emerald-600 mt-1 block">{selectedProduct.liveStats.uptime}</strong>
-                            </div>
-                            <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[11px] text-gray-500 block">İşlem Hacmi</span>
-                              <strong className="text-sm text-[#1D1D1F] mt-1 block">{selectedProduct.liveStats.processedVolume}</strong>
-                            </div>
-                            <div className="p-3 bg-white rounded-xl border border-gray-200 text-center">
-                              <span className="text-[11px] text-gray-500 block">Ortalama Yanıt</span>
-                              <strong className="text-sm text-blue-600 mt-1 block">{selectedProduct.liveStats.speed}</strong>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Bottom Status Bar */}

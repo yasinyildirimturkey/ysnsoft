@@ -3,12 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  getStoredLeads, 
-  updateLeadStatus, 
-  getStoredAppointments, 
-  getStoredInvoices,
-  saveInvoice,
-  updateInvoiceStatus,
   getStoredSystemSettings,
   saveSystemSettings,
   getStoredProducts,
@@ -24,8 +18,10 @@ import {
   PRESET_ADMIN_USERS
 } from '@/lib/store';
 import { PRODUCTS, Product } from '@/data/products';
+import { createInvoice, fetchAppointments, fetchInvoices, fetchLeads, setAppointmentStatus, setInvoiceStatus, setLeadStatus } from '@/lib/crm-client';
 import ProspectsPanel from '@/components/admin/ProspectsPanel';
 import SystemMailPanel from '@/components/admin/SystemMailPanel';
+import ProposalDocument from '@/components/admin/ProposalDocument';
 import NotificationBell from '@/components/admin/NotificationBell';
 import UsersPanel from '@/components/admin/UsersPanel';
 import { ROLE_INFO, can, isAdminRole } from '@/lib/roles';
@@ -121,7 +117,8 @@ export default function AdminDashboardPage() {
     featuresText: 'Yüksek Performans, 256-bit SSL Güvenliği, Kesintisiz API Entegrasyonu',
     techStackText: 'Next.js 16, React 19, TypeScript, PostgreSQL'
   });
-  const [sitePings, setSitePings] = useState<Record<string, { latency: number; status: string; checkedAt: string }>>({});
+  const [sitePings, setSitePings] = useState<Record<string, { latency: number; status: string; checkedAt: string; ok: boolean }>>({});
+  const [pingingAll, setPingingAll] = useState(false);
   const [siteActionMessage, setSiteActionMessage] = useState<string | null>(null);
   // Köprü belirteçleri pakete gömülmez; oturum doğrulandıktan sonra sunucudan alınır
   const [bridgeTokens, setBridgeTokens] = useState<{ master: string; sites: Record<string, string> }>({ master: '', sites: {} });
@@ -137,7 +134,7 @@ export default function AdminDashboardPage() {
     icbm: '40.8795, 29.2578',
     postalCode: '34890',
     phone: '+90 532 725 50 98',
-    companyName: 'YSNSOFT Bilişim Teknolojileri A.Ş.'
+    companyName: 'YSNSOFT'
   });
   const [seoAuditLoading, setSeoAuditLoading] = useState(false);
   const [seoAuditResults, setSeoAuditResults] = useState<any[]>([]);
@@ -154,20 +151,22 @@ export default function AdminDashboardPage() {
 
   // SMTP & System Settings States
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
-    companyName: 'YSNSOFT Bilişim Teknolojileri A.Ş.',
+    companyName: 'YSNSOFT',
     companyPhone: '+90 532 725 50 98',
     whatsappNumber: '+90 532 725 50 98',
     supportEmail: 'destek@ysnsoft.com',
     infoEmail: 'info@ysnsoft.com',
     notificationEmail: 'noreply@ysnsoft.com',
     address: 'Pendik / İstanbul • Türkiye',
-    mersisNo: '0987654321000015',
-    ticaretSicilNo: '348291-5'
+    mersisNo: '',
+    ticaretSicilNo: ''
   });
 
   // AI Studio States
-  const [adminGlmKey, setAdminGlmKey] = useState('');
-  const [adminGlmModel, setAdminGlmModel] = useState('glm-4-plus');
+  const [adminGlmModel, setAdminGlmModel] = useState('glm-4.7-flash');
+  // Sunucudaki gerçek yapılandırma (anahtarın kendisi tarayıcıya hiç gelmez)
+  const [aiConfig, setAiConfig] = useState<{ configured: boolean; model: string; models: string[] } | null>(null);
+  const [glmTestOk, setGlmTestOk] = useState<boolean | null>(null);
   const [glmTestPrompt, setGlmTestPrompt] = useState('KGLEX için UYAP icra dairesi otomatik dosya sorgulama protokolü hazırla.');
   const [glmTestResponse, setGlmTestResponse] = useState('');
   const [glmLoading, setGlmLoading] = useState(false);
@@ -181,16 +180,35 @@ export default function AdminDashboardPage() {
 
   // Modals for Muhasebe & Team
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [newInvoiceData, setNewInvoiceData] = useState({
-    client: '',
-    taxNumber: '',
-    product: 'KGLEX Yıllık Kurumsal Lisans',
-    amount: 100000,
-    taxRate: 20,
-    paymentType: 'Havale / EFT' as const
-  });
+  const blankInvoiceShape = { client: '', taxNumber: '', product: '', amount: 0, taxRate: 20, paymentType: 'Havale / EFT' as InvoiceRecord['paymentType'], status: 'Beklemede' as InvoiceRecord['status'], issueDate: '', dueDate: '' };
+  const blankInvoice = () => {
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const now = new Date();
+    return {
+      client: '',
+      taxNumber: '',
+      product: '',
+      amount: 0,
+      taxRate: 20,
+      paymentType: 'Havale / EFT' as InvoiceRecord['paymentType'],
+      status: 'Beklemede' as InvoiceRecord['status'],
+      issueDate: iso(now),
+      dueDate: iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14)),
+    };
+  };
+  // Tarih ön-render sırasında okunmaz (Next 16); form açılırken doldurulur
+  const [newInvoiceData, setNewInvoiceData] = useState(() => ({ ...blankInvoiceShape }));
+  const [invoiceSaving, setInvoiceSaving] = useState(false);
+  // "Bugün" yalnız tarayıcıda okunur (ön-render sırasında tarih okunamaz); grafikler oturum doğrulanınca hesaplanır
+  const [todayAt, setTodayAt] = useState<number | null>(null);
 
-  // Load from store on mount
+  // Tarayıcı alert() yerine sayfa içi bildirim
+  const [toast, setToast] = useState<{ id: number; message: string; tone: 'success' | 'error' } | null>(null);
+  const notify = (message: string) => {
+    const tone = /hata|lütfen|bulunamadı|geçersiz/i.test(message) ? 'error' : 'success';
+    setToast({ id: Date.now(), message, tone });
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -215,19 +233,27 @@ export default function AdminDashboardPage() {
       setActiveUserEmail(session.user.email);
       setActiveUserName(session.user.name);
 
-      setLeads(getStoredLeads());
-      setAppointments(getStoredAppointments());
-      setInvoices(getStoredInvoices());
+      setTodayAt(Date.now());
+      // Talepler ve randevular sunucudan (eskiden yalnız bu tarayıcıda + uydurma örnekler vardı)
+      try { localStorage.removeItem('ysn_admin_leads_v2'); localStorage.removeItem('ysn_admin_appointments'); } catch { /* yok say */ }
+      void fetchLeads().then((l) => { if (!cancelled) setLeads(l); }).catch(() => notify('Hata: teklif talepleri yüklenemedi.'));
+      void fetchAppointments().then((a) => { if (!cancelled) setAppointments(a); }).catch(() => notify('Hata: randevular yüklenemedi.'));
+      // Fatura kayıtları sunucudan (eskiden tarayıcıda 5 uydurma "GİB onaylı" fatura vardı)
+      try { localStorage.removeItem('ysn_admin_invoices'); } catch { /* yok say */ }
+      void fetchInvoices().then((i) => { if (!cancelled) setInvoices(i); }).catch(() => { /* yetkisi olmayan rol için sekme boş kalır */ });
       // Eski sürüm SMTP ayarlarını (şifre dahil) tarayıcıda tutuyordu: artık sunucuda; tarayıcıdaki kopya silinir
       try { localStorage.removeItem('ysn_smtp_settings'); } catch { /* yok say */ }
       setSystemSettings(getStoredSystemSettings());
       setProducts(getStoredProducts());
       setGeoConfig(getStoredGeoSettings());
 
-      const savedKey = localStorage.getItem('ysn_glm_api_key') || '';
-      const savedModel = localStorage.getItem('ysn_glm_model') || 'glm-4-plus';
-      setAdminGlmKey(savedKey);
-      setAdminGlmModel(savedModel);
+      // Eski sürüm GLM anahtarını tarayıcıda tutuyordu (sunucu kullanmasa da "kaydedildi" diyordu): silinir
+      try { localStorage.removeItem('ysn_glm_api_key'); localStorage.removeItem('ysn_glm_model'); } catch { /* yok say */ }
+      void fetch('/api/ai/chat', { cache: 'no-store' }).then((r) => r.json()).then((j) => {
+        if (cancelled || !j?.success) return;
+        setAiConfig({ configured: j.configured, model: j.model, models: j.models });
+        setAdminGlmModel(j.model);
+      }).catch(() => {});
 
       try {
         const bridge = await (await fetch('/api/bridge', { cache: 'no-store' })).json();
@@ -247,8 +273,9 @@ export default function AdminDashboardPage() {
   }, [router]);
 
   // Site Control Center Handlers
-  const handlePingSite = async (domain: string) => {
-    const start = Date.now();
+  // Gerçek kontrol: sunucu siteye HTTPS isteği atar (eskiden rastgele "20-45 ms · 200 OK" üretiliyordu)
+  const handlePingSite = async (domain: string, quiet = false) => {
+    const checkedAt = () => new Date().toLocaleTimeString('tr-TR');
     try {
       const res = await fetch('/api/bridge', {
         method: 'POST',
@@ -256,33 +283,21 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({ action: 'ping', domain })
       });
       const data = await res.json();
-      const latency = data.latencyMs || (Date.now() - start);
-      setSitePings(prev => ({
-        ...prev,
-        [domain]: { latency, status: '200 OK • Aktif', checkedAt: new Date().toLocaleTimeString('tr-TR') }
-      }));
-      setSiteActionMessage(`${domain} canlı ping testi başarılı: ${latency} ms`);
-    } catch {
-      setSitePings(prev => ({
-        ...prev,
-        [domain]: { latency: Date.now() - start, status: 'Bağlantı Hatası', checkedAt: new Date().toLocaleTimeString('tr-TR') }
-      }));
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      const status = data.ok ? `${data.httpStatus} OK` : data.httpStatus ? `HTTP ${data.httpStatus}` : (data.error || 'Yanıt yok');
+      setSitePings(prev => ({ ...prev, [domain]: { latency: data.latencyMs, status, ok: Boolean(data.ok), checkedAt: checkedAt() } }));
+      if (!quiet) setSiteActionMessage(data.ok ? `${domain} yanıt verdi: HTTP ${data.httpStatus}, ${data.latencyMs} ms` : `${domain} sorunlu: ${status}`);
+    } catch (err) {
+      setSitePings(prev => ({ ...prev, [domain]: { latency: 0, status: err instanceof Error ? err.message : 'Kontrol edilemedi', ok: false, checkedAt: checkedAt() } }));
+      if (!quiet) setSiteActionMessage(`${domain} kontrol edilemedi.`);
     }
-    setTimeout(() => setSiteActionMessage(null), 3000);
+    if (!quiet) setTimeout(() => setSiteActionMessage(null), 4000);
   };
 
-  const handlePurgeCache = async (domain: string) => {
-    try {
-      await fetch('/api/bridge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'purge_cache', domain })
-      });
-      setSiteActionMessage(`${domain} için CDN ve Next.js önbelleği temizlendi.`);
-    } catch {
-      setSiteActionMessage(`${domain} önbellek temizleme işlemi tamamlandı.`);
-    }
-    setTimeout(() => setSiteActionMessage(null), 3500);
+  const handlePingAll = async (domains: string[]) => {
+    setPingingAll(true);
+    for (const d of domains) await handlePingSite(d, true);
+    setPingingAll(false);
   };
 
   const handleAddNewSite = (e: React.FormEvent) => {
@@ -304,22 +319,13 @@ export default function AdminDashboardPage() {
       badge: 'Yayında',
       shortDesc: newSiteData.shortDesc || `${newSiteData.name} için geliştirilmiş yüksek performanslı web sistemi.`,
       longDesc: `${newSiteData.name}; YSNSOFT mimarisiyle inşa edilmiş güvenli ve ölçeklenebilir bir kurumsal platformdur.`,
-      metrics: [
-        { label: 'Uptime', value: '%99.99' },
-        { label: 'Yanıt Hızı', value: '0.08s' }
-      ],
+      metrics: [],
       features: newSiteData.featuresText.split(',').map(f => f.trim()).filter(Boolean),
       techStack: newSiteData.techStackText.split(',').map(t => t.trim()).filter(Boolean),
       accentColor: '#0071E3',
       previewType: newSiteData.category === 'legal' ? 'legal' : newSiteData.category === 'cad' ? 'cad' : 'portal',
       liveUrl: cleanUrl,
-      displayDomain: cleanDomain,
-      liveStats: {
-        users: '1.000+ Aktif Kullanıcı',
-        uptime: '%99.99',
-        processedVolume: '7/24 Kesintisiz',
-        speed: '0.08s'
-      }
+      displayDomain: cleanDomain
     };
 
     saveProduct(newProd);
@@ -346,7 +352,9 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         setSeoAuditResults(data.results || []);
-        setSeoAuditOverallScore(data.overallScore || 90);
+        setSeoAuditOverallScore(typeof data.overallScore === 'number' ? data.overallScore : null);
+      } else {
+        notify(`Hata: ${data.error || 'SEO denetimi yapılamadı.'}`);
       }
     } catch (err) {
       notify('SEO denetimi sırasında bağlantı hatası oluştu.');
@@ -389,15 +397,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleSaveGlmKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ysn_glm_api_key', adminGlmKey.trim());
-      localStorage.setItem('ysn_glm_model', adminGlmModel);
-      notify('Yapay Zeka API Anahtarı ve Model konfigürasyonu başarıyla kaydedildi!');
-    }
-  };
-
   const handleSaveSystemSettings = (e: React.FormEvent) => {
     e.preventDefault();
     saveSystemSettings(systemSettings);
@@ -416,73 +415,76 @@ export default function AdminDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [{ role: 'user', content: glmTestPrompt }],
-          model: adminGlmModel,
-          apiKey: adminGlmKey || undefined
+          model: adminGlmModel
         })
       });
 
       const elapsed = Math.round(performance.now() - startTime);
       setGlmTestLatency(elapsed);
-      const data = await res.json();
-      setGlmTestResponse(data.reply || JSON.stringify(data, null, 2));
-    } catch (err: any) {
-      setGlmTestResponse('Test sırasında hata oluştu: ' + (err?.message || err));
+      const data = await res.json().catch(() => null);
+      const ok = res.ok && data?.success && typeof data.reply === 'string';
+      setGlmTestOk(Boolean(ok));
+      setGlmTestResponse(ok ? data.reply : `HATA (HTTP ${res.status}): ${data?.error || 'yanıt alınamadı'}`);
+    } catch (err) {
+      setGlmTestOk(false);
+      setGlmTestResponse('Test sırasında hata oluştu: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setGlmLoading(false);
     }
   };
 
-  const handleStatusChange = (leadId: string, newStatus: Lead['status']) => {
-    updateLeadStatus(leadId, newStatus);
-    setLeads(getStoredLeads());
-    if (selectedLead && selectedLead.id === leadId) {
-      setSelectedLead({ ...selectedLead, status: newStatus });
+  const handleStatusChange = async (leadId: string, newStatus: Lead['status']) => {
+    const before = leads;
+    setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l)));
+    if (selectedLead && selectedLead.id === leadId) setSelectedLead({ ...selectedLead, status: newStatus });
+    try {
+      await setLeadStatus(leadId, newStatus);
+    } catch (err) {
+      setLeads(before);
+      if (selectedLead && selectedLead.id === leadId) setSelectedLead(selectedLead);
+      notify(`Hata: ${err instanceof Error ? err.message : 'durum kaydedilemedi.'}`);
     }
   };
 
-  const handleInvoiceStatusChange = (invId: string, newStatus: InvoiceRecord['status']) => {
-    updateInvoiceStatus(invId, newStatus);
-    setInvoices(getStoredInvoices());
+  const handleAppointmentStatus = async (aptId: string, newStatus: Appointment['status']) => {
+    const before = appointments;
+    setAppointments((cur) => cur.map((a) => (a.id === aptId ? { ...a, status: newStatus } : a)));
+    try {
+      await setAppointmentStatus(aptId, newStatus);
+    } catch (err) {
+      setAppointments(before);
+      notify(`Hata: ${err instanceof Error ? err.message : 'randevu durumu kaydedilemedi.'}`);
+    }
   };
 
-  const handleCreateInvoice = (e: React.FormEvent) => {
+  const handleInvoiceStatusChange = async (invId: string, newStatus: InvoiceRecord['status']) => {
+    const before = invoices;
+    setInvoices((cur) => cur.map((i) => (i.id === invId ? { ...i, status: newStatus } : i)));
+    try {
+      await setInvoiceStatus(invId, newStatus);
+    } catch (err) {
+      setInvoices(before);
+      notify(`Hata: ${err instanceof Error ? err.message : 'durum kaydedilemedi.'}`);
+    }
+  };
+
+  const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newInvoiceData.client || !newInvoiceData.amount) return;
-
-    const total = Math.round(newInvoiceData.amount * (1 + newInvoiceData.taxRate / 100));
-    const nowStr = new Date().toLocaleDateString('tr-TR');
-
-    saveInvoice({
-      client: newInvoiceData.client,
-      taxNumber: newInvoiceData.taxNumber || '1111111111',
-      product: newInvoiceData.product,
-      amount: newInvoiceData.amount,
-      taxRate: newInvoiceData.taxRate,
-      totalAmount: total,
-      status: 'Ödendi',
-      issueDate: nowStr,
-      dueDate: nowStr,
-      paymentType: newInvoiceData.paymentType
-    });
-
-    setInvoices(getStoredInvoices());
-    setInvoiceModalOpen(false);
-    setNewInvoiceData({
-      client: '',
-      taxNumber: '',
-      product: 'KGLEX Yıllık Kurumsal Lisans',
-      amount: 100000,
-      taxRate: 20,
-      paymentType: 'Havale / EFT'
-    });
+    if (!newInvoiceData.client.trim() || !(newInvoiceData.amount > 0) || invoiceSaving) return;
+    setInvoiceSaving(true);
+    try {
+      const { record, message } = await createInvoice(newInvoiceData);
+      setInvoices((cur) => [record, ...cur]);
+      setInvoiceModalOpen(false);
+      setNewInvoiceData(blankInvoice());
+      notify(message);
+    } catch (err) {
+      notify(`Hata: ${err instanceof Error ? err.message : 'kayıt eklenemedi.'}`);
+    } finally {
+      setInvoiceSaving(false);
+    }
   };
 
-  // Tarayıcı alert() yerine sayfa içi bildirim
-  const [toast, setToast] = useState<{ id: number; message: string; tone: 'success' | 'error' } | null>(null);
-  const notify = (message: string) => {
-    const tone = /hata|lütfen|bulunamadı|geçersiz/i.test(message) ? 'error' : 'success';
-    setToast({ id: Date.now(), message, tone });
-  };
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4000);
@@ -538,6 +540,31 @@ export default function AdminDashboardPage() {
 
   // Financial statistics
   const totalInvoiced = invoices.reduce((acc, inv) => acc + inv.totalAmount, 0);
+
+  // Genel Bakış grafikleri GERÇEK taleplerden hesaplanır (eskiden sabit yazılmış örnek rakamlardı)
+  const MONTHS_TR = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  const leadMonthKey = (d: string) => { const m = /^(\d{2})\.(\d{2})\.(\d{4})/.exec(d); return m ? `${m[3]}-${m[2]}` : null; };
+  const monthlyLeads = (() => {
+    const counts = new Map<string, number>();
+    for (const l of leads) { const k = leadMonthKey(l.date); if (k) counts.set(k, (counts.get(k) ?? 0) + 1); }
+    if (todayAt === null) return [];
+    const now = new Date(todayAt);
+    const out: { month: string; count: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      out.push({ month: MONTHS_TR[d.getMonth()], count: counts.get(key) ?? 0 });
+    }
+    const max = Math.max(1, ...out.map(o => o.count));
+    return out.map(o => ({ ...o, pct: Math.round((o.count / max) * 100) }));
+  })();
+  const productInterest = (() => {
+    const counts = new Map<string, number>();
+    for (const l of leads) { const p = l.product?.trim() || 'Belirtilmedi'; counts.set(p, (counts.get(p) ?? 0) + 1); }
+    const colors = ['#0071E3', '#10B981', '#EC4899', '#8B5CF6', '#F59E0B'];
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+      .map(([name, n], i) => ({ name, count: n, pct: Math.round((n / Math.max(1, leads.length)) * 100), color: colors[i] }));
+  })();
   const paidInvoices = invoices.filter(inv => inv.status === 'Ödendi').reduce((acc, inv) => acc + inv.totalAmount, 0);
   const pendingInvoices = invoices.filter(inv => inv.status === 'Beklemede').reduce((acc, inv) => acc + inv.totalAmount, 0);
 
@@ -591,8 +618,8 @@ export default function AdminDashboardPage() {
     overview: { title: 'Genel Bakış', desc: 'Talepler, randevular ve gelirin anlık özeti.' },
     leads: { title: 'Teklif Talepleri', desc: 'Siteden gelen teklif ve iletişim talepleri.' },
     prospects: { title: 'Müşteri Adayları', desc: 'Bölge ve işletme türü seçin; teklif verilebilecek işletmeleri bulun.' },
-    appointments: { title: 'Randevular', desc: 'Planlanan canlı demo görüşmeleri.' },
-    muhasebe: { title: 'Muhasebe & Finans', desc: 'E-fatura, tahsilat ve kasa yönetimi.' },
+    appointments: { title: 'Randevular', desc: 'Sitedeki formdan gelen görüşme talepleri.' },
+    muhasebe: { title: 'Muhasebe & Finans', desc: 'Fatura ve tahsilat takibi (iç kayıt).' },
     roller: { title: 'Roller & Yetkiler', desc: 'Ekip üyeleri ve yetki matrisi.' },
     domains: { title: 'Site Kontrol Merkezi', desc: 'Canlı projeler, alan adları ve durumları.' },
     'seo-geo': { title: 'SEO & GEO', desc: 'Otomatik yapılandırma ve denetim stüdyosu.' },
@@ -719,15 +746,6 @@ export default function AdminDashboardPage() {
         {/* Alt bölüm: oturum ve kısayollar (yalnızca masaüstü) */}
         <div className="hidden md:block p-3 border-t border-black/[0.06] space-y-1">
           <a
-            href="/portal"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] font-medium text-[#515154] hover:text-[#1D1D1F] hover:bg-black/[0.04] rounded-xl transition-colors"
-          >
-            <span>Müşteri Portalı</span>
-            <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-          </a>
-          <a
             href="/"
             className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] font-medium text-[#515154] hover:text-[#1D1D1F] hover:bg-black/[0.04] rounded-xl transition-colors"
           >
@@ -796,11 +814,11 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#6E6E73] font-medium">Bu Ay Kesilen E-Fatura</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Kayıtlı Fatura Toplamı</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#10B981]">{formatTRY(totalInvoiced)}</span>
-                  <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full">
-                    GİB Onaylı
+                  <span className="text-xs font-semibold text-[#6E6E73] bg-black/[0.04] px-2 py-0.5 rounded-full">
+                    {invoices.length} kayıt
                   </span>
                 </div>
               </div>
@@ -810,7 +828,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-3xl font-bold text-[#8B5CF6]">{appointments.length}</span>
                   <span className="text-xs font-semibold text-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-0.5 rounded-full">
-                    Google Meet
+                    {appointments.filter(a => a.status === 'Beklemede').length} bekliyor
                   </span>
                 </div>
               </div>
@@ -834,18 +852,11 @@ export default function AdminDashboardPage() {
                     <BarChart3 className="w-4 h-4 text-[#0071E3]" />
                     <h4 className="text-sm font-bold text-[#1D1D1F]">Aylık Teklif Talepleri & Lead Trendi</h4>
                   </div>
-                  <span className="text-[11px] text-[#10B981] font-semibold">+%32 Büyüme</span>
+                  <span className="text-[11px] text-[#6E6E73]">Son 6 ay · {monthlyLeads.reduce((a, b) => a + b.count, 0)} talep</span>
                 </div>
 
                 <div className="h-44 flex items-end gap-3 pt-4">
-                  {[
-                    { month: 'May', count: 18, pct: 40 },
-                    { month: 'Haz', count: 24, pct: 52 },
-                    { month: 'Tem', count: 31, pct: 65 },
-                    { month: 'Ağu', count: 28, pct: 58 },
-                    { month: 'Eyl', count: 42, pct: 85 },
-                    { month: 'Eki', count: 54, pct: 100 }
-                  ].map((bar, i) => (
+                  {monthlyLeads.map((bar, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
                       <span className="text-[11px] font-semibold text-[#1D1D1F]">{bar.count}</span>
                       <div className="w-full bg-[#F5F5F7] rounded-t-lg h-32 flex items-end">
@@ -868,21 +879,16 @@ export default function AdminDashboardPage() {
                     <PieChart className="w-4 h-4 text-[#8B5CF6]" />
                     <h4 className="text-sm font-bold text-[#1D1D1F]">Ürün İlgi Dağılımı</h4>
                   </div>
-                  <span className="text-[11px] text-[#6E6E73]">Canlı Veri</span>
+                  <span className="text-[11px] text-[#6E6E73]">Teklif taleplerinden</span>
                 </div>
 
                 <div className="space-y-3">
-                  {[
-                    { name: 'KGLEX Hukuk & UYAP Robotu', pct: 38, color: '#0071E3' },
-                    { name: 'HaritaPlan 3D CBS & Md. 18', pct: 26, color: '#10B981' },
-                    { name: 'Flamantyou Kozmetik & AI', pct: 18, color: '#EC4899' },
-                    { name: 'Panelde Multi-Tenant SaaS', pct: 12, color: '#8B5CF6' },
-                    { name: 'Samatya Mezecisi QR & Diğer', pct: 6, color: '#F59E0B' }
-                  ].map((item, idx) => (
+                  {productInterest.length === 0 && <p className="text-xs text-[#6E6E73]">Henüz teklif talebi yok.</p>}
+                  {productInterest.map((item, idx) => (
                     <div key={idx}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="font-medium text-[#1D1D1F] truncate pr-2">{item.name}</span>
-                        <span className="font-bold text-[#1D1D1F]">%{item.pct}</span>
+                        <span className="font-bold text-[#1D1D1F]">{item.count} · %{item.pct}</span>
                       </div>
                       <div className="h-1.5 w-full bg-[#F5F5F7] rounded-full overflow-hidden">
                         <div 
@@ -1187,10 +1193,13 @@ export default function AdminDashboardPage() {
                 Planlanmış Canlı Demo Takvimi
               </h3>
               <p className="text-xs text-[#6E6E73] mb-6">
-                Müşterilerin 30 dakikalık Google Meet randevuları
+                Sitedeki randevu formundan gelen talepler. Onayladığınızda müşteriye davet ve bağlantıyı siz gönderirsiniz.
               </p>
 
               <div className="space-y-3">
+                {appointments.length === 0 && (
+                  <p className="text-sm text-[#6E6E73] py-6 text-center">Henüz randevu talebi yok.</p>
+                )}
                 {appointments.map(apt => (
                   <div key={apt.id} className="p-5 rounded-2xl bg-[#F5F5F7] border border-black/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -1201,11 +1210,18 @@ export default function AdminDashboardPage() {
                         <span className="bg-white text-[#1D1D1F] text-xs font-bold px-2.5 py-0.5 rounded-md border border-black/[0.06]">
                           {apt.timeStr}
                         </span>
-                        <span className="text-xs text-[#10B981] font-semibold bg-[#10B981]/10 px-2 py-0.5 rounded-full">
-                          {apt.status}
-                        </span>
+                        <select
+                          aria-label="Randevu durumu"
+                          value={apt.status}
+                          onChange={(e) => void handleAppointmentStatus(apt.id, e.target.value as Appointment['status'])}
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full border-0 ${apt.status === 'Beklemede' ? 'text-[#B45309] bg-[#F59E0B]/15' : 'text-[#10B981] bg-[#10B981]/10'}`}
+                        >
+                          <option value="Beklemede">Beklemede</option>
+                          <option value="Onaylandı">Onaylandı</option>
+                          <option value="Tamamlandı">Tamamlandı</option>
+                        </select>
                       </div>
-                      <h4 className="text-base font-bold text-[#1D1D1F]">{apt.name} — {apt.company}</h4>
+                      <h4 className="text-base font-bold text-[#1D1D1F]">{apt.name}{apt.company ? ` — ${apt.company}` : ''}</h4>
                       <p className="text-xs text-[#515154] mt-0.5">Konu: {apt.topic} | E-Posta: {apt.email}</p>
                     </div>
 
@@ -1244,7 +1260,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#10B981]">{formatTRY(paidInvoices)}</span>
                   <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full">
-                    Kasada Aktif
+                    Ödendi
                   </span>
                 </div>
               </div>
@@ -1254,17 +1270,17 @@ export default function AdminDashboardPage() {
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#F59E0B]">{formatTRY(pendingInvoices)}</span>
                   <span className="text-xs font-semibold text-[#F59E0B] bg-[#F59E0B]/10 px-2 py-0.5 rounded-full">
-                    Vadesi Gelmedi
+                    Beklemede
                   </span>
                 </div>
               </div>
 
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
-                <span className="text-xs text-[#6E6E73] font-medium">GİB E-Fatura Hacmi</span>
+                <span className="text-xs text-[#6E6E73] font-medium">Toplam Kayıt (KDV dahil)</span>
                 <div className="flex items-baseline justify-between mt-2">
                   <span className="text-2xl font-bold text-[#0071E3]">{formatTRY(totalInvoiced)}</span>
                   <span className="text-xs font-semibold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded-full">
-                    {invoices.length} Fatura
+                    {invoices.length} kayıt
                   </span>
                 </div>
               </div>
@@ -1276,17 +1292,17 @@ export default function AdminDashboardPage() {
                 <div>
                   <h3 className="text-base font-bold text-[#1D1D1F] flex items-center gap-2">
                     <Receipt className="w-4 h-4 text-[#0071E3]" />
-                    <span>E-Fatura, E-Arşiv & Cari Hesap Hareketleri</span>
+                    <span>Fatura & Tahsilat Kayıtları</span>
                   </h3>
-                  <p className="text-xs text-[#6E6E73]">Resmi GİB onaylı faturalar ve tahsilat takibi</p>
+                  <p className="text-xs text-[#6E6E73]">İç takip kaydıdır; resmi e-Fatura / e-Arşiv bu panelden kesilmez, muhasebe programınızdan kesilmelidir.</p>
                 </div>
 
                 <button
-                  onClick={() => setInvoiceModalOpen(true)}
+                  onClick={() => { setNewInvoiceData(blankInvoice()); setInvoiceModalOpen(true); }}
                   className="apple-pill-btn px-4 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Yeni E-Fatura / Tahsilat Ekle</span>
+                  <span>Yeni Kayıt Ekle</span>
                 </button>
               </div>
 
@@ -1294,33 +1310,39 @@ export default function AdminDashboardPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#6E6E73]">
                     <tr>
-                      <th className="p-3.5 font-semibold">Fatura No</th>
+                      <th className="p-3.5 font-semibold">Kayıt No / Tarih</th>
                       <th className="p-3.5 font-semibold">Müşteri / Cari</th>
                       <th className="p-3.5 font-semibold">Hizmet / Ürün</th>
                       <th className="p-3.5 font-semibold">Net Tutar</th>
-                      <th className="p-3.5 font-semibold">KDV (%20)</th>
+                      <th className="p-3.5 font-semibold">KDV</th>
                       <th className="p-3.5 font-semibold">Toplam</th>
                       <th className="p-3.5 font-semibold">Ödeme Türü</th>
                       <th className="p-3.5 font-semibold">Durum</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.04]">
+                    {invoices.length === 0 && (
+                      <tr><td colSpan={8} className="p-6 text-center text-[#6E6E73]">Henüz kayıt yok.</td></tr>
+                    )}
                     {invoices.map(inv => (
                       <tr key={inv.id} className="hover:bg-[#F5F5F7]/50 transition-colors">
-                        <td className="p-3.5 font-mono text-[#6E6E73]">{inv.invoiceNo}</td>
+                        <td className="p-3.5 font-mono text-[#6E6E73]">
+                          {inv.invoiceNo}
+                          <span className="block text-[11px]">{inv.issueDate}{inv.dueDate && inv.dueDate !== inv.issueDate ? ` · vade ${inv.dueDate}` : ''}</span>
+                        </td>
                         <td className="p-3.5">
                           <strong className="text-[#1D1D1F] block">{inv.client}</strong>
-                          <span className="text-[#6E6E73] text-[11px]">VN: {inv.taxNumber}</span>
+                          {inv.taxNumber && <span className="text-[#6E6E73] text-[11px]">VN: {inv.taxNumber}</span>}
                         </td>
                         <td className="p-3.5 font-medium text-[#0071E3]">{inv.product}</td>
                         <td className="p-3.5 text-[#515154]">{formatTRY(inv.amount)}</td>
-                        <td className="p-3.5 text-[#6E6E73]">{formatTRY(inv.totalAmount - inv.amount)}</td>
+                        <td className="p-3.5 text-[#6E6E73]">%{inv.taxRate} · {formatTRY(inv.totalAmount - inv.amount)}</td>
                         <td className="p-3.5 font-bold text-[#1D1D1F]">{formatTRY(inv.totalAmount)}</td>
                         <td className="p-3.5 text-[#515154]">{inv.paymentType}</td>
                         <td className="p-3.5">
                           <select
                             value={inv.status}
-                            onChange={e => handleInvoiceStatusChange(inv.id, e.target.value as any)}
+                            onChange={e => void handleInvoiceStatusChange(inv.id, e.target.value as InvoiceRecord['status'])}
                             className={`px-2.5 py-1 rounded-lg text-xs font-bold border-0 cursor-pointer ${
                               inv.status === 'Ödendi' ? 'bg-emerald-100 text-emerald-700' :
                               inv.status === 'Beklemede' ? 'bg-amber-100 text-amber-700' :
@@ -1342,10 +1364,10 @@ export default function AdminDashboardPage() {
 
             {/* New Invoice Modal */}
             {invoiceModalOpen && (
-              <div role="dialog" aria-modal="true" aria-label="Yeni fatura" onMouseDown={(e) => { if (e.target === e.currentTarget) setInvoiceModalOpen(false); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+              <div role="dialog" aria-modal="true" aria-label="Yeni kayıt" onMouseDown={(e) => { if (e.target === e.currentTarget) setInvoiceModalOpen(false); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
                 <div className="apple-card bg-white p-6 sm:p-8 max-w-md w-full border border-black/[0.1] shadow-2xl">
                   <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-4">
-                    <h4 className="text-base font-bold text-[#1D1D1F]">Yeni E-Fatura / Tahsilat Kaydı</h4>
+                    <h4 className="text-base font-bold text-[#1D1D1F]">Yeni Fatura / Tahsilat Kaydı</h4>
                     <button type="button" onClick={() => setInvoiceModalOpen(false)} aria-label="Kapat" className="admin-close">✕</button>
                   </div>
 
@@ -1366,7 +1388,7 @@ export default function AdminDashboardPage() {
                       <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Vergi Numarası / T.C.</label>
                       <input
                         type="text"
-                        placeholder="4280918291"
+                        placeholder="İsteğe bağlı"
                         value={newInvoiceData.taxNumber}
                         onChange={e => setNewInvoiceData({ ...newInvoiceData, taxNumber: e.target.value })}
                         className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
@@ -1375,17 +1397,20 @@ export default function AdminDashboardPage() {
 
                     <div>
                       <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Hizmet / Ürün Kalemi</label>
-                      <select
+                      <input
+                        type="text"
+                        list="invoice-products"
+                        placeholder="Örn: Kurumsal web sitesi"
                         value={newInvoiceData.product}
                         onChange={e => setNewInvoiceData({ ...newInvoiceData, product: e.target.value })}
                         className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                      >
-                        <option value="KGLEX Yıllık Kurumsal Lisans">KGLEX Yıllık Kurumsal Lisans</option>
-                        <option value="HaritaPlan 3D CBS Kurulumu">HaritaPlan 3D CBS Kurulumu</option>
-                        <option value="Panelde Multi-Tenant SaaS Aylık SLA">Panelde Multi-Tenant SaaS Aylık SLA</option>
-                        <option value="Flamantyou AI Cilt Analizi Motoru">Flamantyou AI Cilt Analizi Motoru</option>
-                        <option value="Özel Mobil & Web Yazılım Sprinti">Özel Mobil & Web Yazılım Sprinti</option>
-                      </select>
+                      />
+                      <datalist id="invoice-products">
+                        {PRODUCTS.map(p => <option key={p.id} value={p.name} />)}
+                        <option value="Web sitesi kurulumu" />
+                        <option value="Aylık bakım ve barındırma" />
+                        <option value="Özel yazılım geliştirme" />
+                      </datalist>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -1394,7 +1419,9 @@ export default function AdminDashboardPage() {
                         <input
                           type="number"
                           required
-                          value={newInvoiceData.amount}
+                          min={0}
+                          step="0.01"
+                          value={newInvoiceData.amount || ''}
                           onChange={e => setNewInvoiceData({ ...newInvoiceData, amount: Number(e.target.value) })}
                           className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
                         />
@@ -1404,25 +1431,77 @@ export default function AdminDashboardPage() {
                         <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Ödeme Türü</label>
                         <select
                           value={newInvoiceData.paymentType}
-                          onChange={e => setNewInvoiceData({ ...newInvoiceData, paymentType: e.target.value as any })}
+                          onChange={e => setNewInvoiceData({ ...newInvoiceData, paymentType: e.target.value as InvoiceRecord['paymentType'] })}
                           className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
                         >
                           <option value="Havale / EFT">Havale / EFT</option>
                           <option value="Sanal POS">Sanal POS</option>
                           <option value="Çek">Çek</option>
+                          <option value="Nakit">Nakit</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">KDV Oranı</label>
+                        <select
+                          value={newInvoiceData.taxRate}
+                          onChange={e => setNewInvoiceData({ ...newInvoiceData, taxRate: Number(e.target.value) })}
+                          className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
+                        >
+                          <option value={20}>%20 (TR)</option>
+                          <option value={10}>%10 (TR)</option>
+                          <option value={1}>%1 (TR)</option>
+                          <option value={19}>%19 (DE)</option>
+                          <option value={7}>%7 (DE)</option>
+                          <option value={0}>%0</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Durum</label>
+                        <select
+                          value={newInvoiceData.status}
+                          onChange={e => setNewInvoiceData({ ...newInvoiceData, status: e.target.value as InvoiceRecord['status'] })}
+                          className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
+                        >
+                          <option value="Beklemede">Beklemede</option>
+                          <option value="Ödendi">Ödendi</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Tarih</label>
+                        <input
+                          type="date"
+                          value={newInvoiceData.issueDate}
+                          onChange={e => setNewInvoiceData({ ...newInvoiceData, issueDate: e.target.value })}
+                          className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Vade</label>
+                        <input
+                          type="date"
+                          value={newInvoiceData.dueDate}
+                          onChange={e => setNewInvoiceData({ ...newInvoiceData, dueDate: e.target.value })}
+                          className="w-full px-3 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
+                        />
                       </div>
                     </div>
 
                     <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between">
                       <div className="text-xs text-[#6E6E73]">
-                        Toplam KDV Dahil: <strong className="text-[#1D1D1F]">{formatTRY(newInvoiceData.amount * 1.2)}</strong>
+                        KDV dahil toplam: <strong className="text-[#1D1D1F]">{formatTRY((newInvoiceData.amount || 0) * (1 + newInvoiceData.taxRate / 100))}</strong>
                       </div>
                       <button
                         type="submit"
-                        className="apple-pill-btn px-5 py-2 text-xs font-semibold"
+                        disabled={invoiceSaving}
+                        className="apple-pill-btn px-5 py-2 text-xs font-semibold disabled:opacity-60"
                       >
-                        Faturayı Kaydet
+                        {invoiceSaving ? 'Kaydediliyor…' : 'Kaydı Ekle'}
                       </button>
                     </div>
                   </form>
@@ -1458,7 +1537,7 @@ export default function AdminDashboardPage() {
                     Site Kontrol Merkezi & Canlı Portföy
                   </h3>
                   <p className="text-xs text-[#6E6E73] mt-0.5">
-                    Canlıdaki web projelerini yönetin, anlık ping/sağlık testi yapın, uzaktan önbellek temizleyin ve sisteme yeni web siteleri ekleyin.
+                    Canlıdaki web projelerini yönetin, sitelerin gerçekten açılıp açılmadığını kontrol edin ve yeni site ekleyin.
                   </p>
                 </div>
 
@@ -1481,16 +1560,27 @@ export default function AdminDashboardPage() {
                   <strong className="text-base text-[#1D1D1F] block mt-0.5 font-mono">{products.length} Site</strong>
                 </div>
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[11px] text-[#6E6E73] block">Genel Uptime</span>
-                  <strong className="text-base text-emerald-600 block mt-0.5 font-mono">%99.99 Uptime</strong>
+                  <span className="text-[11px] text-[#6E6E73] block">Son kontrolde yanıt veren</span>
+                  <strong className="text-base text-emerald-600 block mt-0.5 font-mono">
+                    {Object.keys(sitePings).length ? `${Object.values(sitePings).filter(p => p.ok).length} / ${Object.keys(sitePings).length}` : '—'}
+                  </strong>
                 </div>
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[11px] text-[#6E6E73] block">SSL Güvenlik Düzeyi</span>
-                  <strong className="text-base text-blue-600 block mt-0.5 font-mono">256-Bit TLS</strong>
+                  <span className="text-[11px] text-[#6E6E73] block">Sorunlu</span>
+                  <strong className={`text-base block mt-0.5 font-mono ${Object.values(sitePings).some(p => !p.ok) ? 'text-red-600' : 'text-[#1D1D1F]'}`}>
+                    {Object.keys(sitePings).length ? Object.values(sitePings).filter(p => !p.ok).length : '—'}
+                  </strong>
                 </div>
                 <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[11px] text-[#6E6E73] block">Yönetim Köprüsü</span>
-                  <strong className="text-base text-purple-600 block mt-0.5 font-mono">Bridge v2.6</strong>
+                  <span className="text-[11px] text-[#6E6E73] block">Tümünü kontrol et</span>
+                  <button
+                    type="button"
+                    disabled={pingingAll}
+                    onClick={() => void handlePingAll((products.length > 0 ? products : PRODUCTS).map(p => p.displayDomain))}
+                    className="mt-0.5 text-xs font-semibold text-[#0071E3] hover:underline disabled:opacity-60"
+                  >
+                    {pingingAll ? 'Kontrol ediliyor…' : 'Şimdi kontrol et'}
+                  </button>
                 </div>
               </div>
 
@@ -1505,9 +1595,9 @@ export default function AdminDashboardPage() {
                           <span className="text-xs font-bold text-[#0071E3] bg-[#0071E3]/10 px-3 py-0.5 rounded-full">
                             {prod.categoryLabel}
                           </span>
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#10B981]">
-                            <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-                            <span>{pingInfo ? pingInfo.status : '200 OK • SSL Aktif'}</span>
+                          <div className={`flex items-center gap-1.5 text-xs font-semibold ${!pingInfo ? 'text-[#6E6E73]' : pingInfo.ok ? 'text-[#10B981]' : 'text-red-600'}`}>
+                            <span className={`w-2 h-2 rounded-full ${!pingInfo ? 'bg-[#D2D2D7]' : pingInfo.ok ? 'bg-[#10B981]' : 'bg-red-500'}`} />
+                            <span>{pingInfo ? pingInfo.status : 'Kontrol edilmedi'}</span>
                           </div>
                         </div>
 
@@ -1523,15 +1613,15 @@ export default function AdminDashboardPage() {
 
                         <div className="p-2.5 bg-white rounded-xl border border-black/[0.04] text-xs font-mono text-[#1D1D1F] flex items-center justify-between mb-4">
                           <span className="truncate">{prod.displayDomain}</span>
-                          <span className="text-[#10B981] font-semibold shrink-0 ml-2">
-                            {pingInfo ? `${pingInfo.latency} ms` : 'Ping: ~28 ms'}
+                          <span className="text-[#6E6E73] font-semibold shrink-0 ml-2">
+                            {pingInfo && pingInfo.latency ? `${pingInfo.latency} ms` : ''}
                           </span>
                         </div>
                       </div>
 
                       <div className="pt-3 border-t border-black/[0.06] flex flex-wrap items-center justify-between gap-2">
                         <span className="text-[11px] text-[#6E6E73]">
-                          Uptime: {prod.liveStats?.uptime || '%99.99'}
+                          {pingInfo ? `Son kontrol: ${pingInfo.checkedAt}` : 'Henüz kontrol edilmedi'}
                         </span>
                         
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -1543,14 +1633,6 @@ export default function AdminDashboardPage() {
                           >
                             <RefreshCw className="w-3 h-3 text-blue-600" />
                             <span>Ping</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handlePurgeCache(prod.displayDomain)}
-                            title="CDN / Edge Önbelleğini Temizle"
-                            className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 text-[#1D1D1F] text-[11px] font-semibold transition-colors"
-                          >
-                            Önbellek Sil
                           </button>
                           <a
                             href={prod.liveUrl}
@@ -1592,7 +1674,7 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
                 <span className="text-xs font-semibold px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-                  YSNSOFT Remote Bridge v2.6
+                  Uzaktan erişim belirteçleri
                 </span>
               </div>
 
@@ -1852,12 +1934,14 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
               {/* Overall Score Badge */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100/40 rounded-2xl border border-emerald-200/80">
-                  <span className="text-[11px] text-emerald-800 font-medium block">Genel SEO & GEO Skoru</span>
-                  <div className="text-3xl font-extrabold text-emerald-700 mt-1 font-mono">
-                    {seoAuditOverallScore !== null ? `${seoAuditOverallScore}/100` : '100/100'}
+                <div className={`p-4 rounded-2xl border ${seoAuditOverallScore === null ? 'bg-[#F5F5F7] border-black/[0.04]' : seoAuditOverallScore >= 80 ? 'bg-emerald-50 border-emerald-200/80' : seoAuditOverallScore >= 60 ? 'bg-amber-50 border-amber-200/80' : 'bg-red-50 border-red-200/80'}`}>
+                  <span className="text-[11px] text-[#515154] font-medium block">Genel SEO & GEO Skoru (ortalama)</span>
+                  <div className="text-3xl font-extrabold text-[#1D1D1F] mt-1 font-mono">
+                    {seoAuditOverallScore !== null ? `${seoAuditOverallScore}/100` : '—'}
                   </div>
-                  <span className="text-[11px] text-emerald-800 mt-1 block">Google Rich Snippets & GEO Uyumlu</span>
+                  <span className="text-[11px] text-[#6E6E73] mt-1 block">
+                    {seoAuditOverallScore !== null ? 'Erişim, HTTPS, başlık, açıklama, schema, robots, sitemap, GEO' : 'Henüz tarama yapılmadı'}
+                  </span>
                 </div>
 
                 <div className="p-4 bg-[#F5F5F7] rounded-2xl border border-black/[0.04]">
@@ -1941,6 +2025,12 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                           </span>
                           <span className={`px-2 py-0.5 rounded font-semibold ${r.hasSchemaOrg ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                             {r.hasSchemaOrg ? 'Schema.org OK' : 'Schema Eksik'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded font-semibold ${r.hasRobots ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {r.hasRobots ? 'robots OK' : 'robots Yok'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded font-semibold ${r.hasSitemap ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {r.hasSitemap ? 'sitemap OK' : 'sitemap Yok'}
                           </span>
                         </div>
 
@@ -2117,36 +2207,32 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
             {/* Top Status Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="apple-card bg-white p-5 border border-black/[0.07]">
-                <div className="flex items-center justify-between text-xs text-[#6E6E73] mb-2 font-medium">
-                  <span>Yapay Zeka Motor Durumu</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <div className="text-xs text-[#6E6E73] mb-2 font-medium">Son Test Sonucu</div>
+                <div className={`text-xl font-bold ${glmTestOk === null ? 'text-[#6E6E73]' : glmTestOk ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {glmTestOk === null ? 'Test edilmedi' : glmTestOk ? 'Yanıt alındı' : 'Hata'}
                 </div>
-                <div className="text-xl font-bold text-emerald-600 flex items-center gap-2">
-                  <span>Bağlandı</span>
-                  <span className="text-[11px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">200 OK</span>
-                </div>
-                <div className="text-[11px] text-[#6E6E73] mt-1 font-mono">
-                  YSNSOFT Neural Gateway
+                <div className="text-[11px] text-[#6E6E73] mt-1">
+                  Aşağıdan bir test isteği gönderin
                 </div>
               </div>
 
               <div className="apple-card bg-white p-5 border border-black/[0.07]">
                 <div className="text-xs text-[#6E6E73] mb-2 font-medium">Aktif Çekirdek Model</div>
                 <div className="text-xl font-bold text-[#1D1D1F]">
-                  {adminGlmModel === 'glm-4-plus' ? 'Plus Enterprise' : adminGlmModel.toUpperCase()}
+                  {aiConfig?.model ?? '—'}
                 </div>
-                <div className="text-[11px] text-blue-600 mt-1 font-medium">
-                  Yüksek Akıl & Dava Analizörü
+                <div className="text-[11px] text-[#6E6E73] mt-1">
+                  Sitedeki asistanın modeli (GLM_CHAT_MODEL, varsayılan ücretsiz glm-4.7-flash)
                 </div>
               </div>
 
               <div className="apple-card bg-white p-5 border border-black/[0.07]">
-                <div className="text-xs text-[#6E6E73] mb-2 font-medium">Yetkili API Anahtarı</div>
-                <div className="text-sm font-mono font-bold text-[#1D1D1F] truncate">
-                  1efef9eb...CfrWA
+                <div className="text-xs text-[#6E6E73] mb-2 font-medium">Sunucu API Anahtarı</div>
+                <div className={`text-xl font-bold ${aiConfig === null ? 'text-[#6E6E73]' : aiConfig.configured ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {aiConfig === null ? '…' : aiConfig.configured ? 'Tanımlı' : 'Tanımlı değil'}
                 </div>
-                <div className="text-[11px] text-emerald-600 mt-1 font-medium">
-                  ✓ Güvenli Sunucu Yetkisi Aktif
+                <div className="text-[11px] text-[#6E6E73] mt-1">
+                  Sunucudaki GLM_API_KEY (değeri gösterilmez)
                 </div>
               </div>
 
@@ -2156,7 +2242,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                   {glmTestLatency ? `${glmTestLatency} ms` : 'Hazır'}
                 </div>
                 <div className="text-[11px] text-[#6E6E73] mt-1">
-                  Edge Streaming
+                  Son test isteğinin süresi
                 </div>
               </div>
             </div>
@@ -2173,9 +2259,14 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                     Hukuk UYAP botları, imar mevzuatı (3194 Md. 18) ve sistem tekliflerini canlı test edin.
                   </p>
                 </div>
-                <span className="text-xs font-semibold px-3 py-1 bg-purple-50 text-purple-700 rounded-full border border-purple-200">
-                  Canlı AI API Motoru
-                </span>
+                <select
+                  aria-label="Test modeli"
+                  value={adminGlmModel}
+                  onChange={e => setAdminGlmModel(e.target.value)}
+                  className="text-xs font-semibold px-3 py-1 bg-purple-50 text-purple-700 rounded-full border border-purple-200"
+                >
+                  {(aiConfig?.models ?? ['glm-4.7-flash', 'glm-4.5-flash', 'glm-4-plus']).map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
 
               {/* Quick Preset Buttons */}
@@ -2231,7 +2322,7 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
                 <div className="text-xs text-[#6E6E73] flex items-center gap-2">
                   <span>Model Çekirdeği: <strong>{adminGlmModel}</strong></span>
                   <span>•</span>
-                  <span>Sıcaklık: <strong>0.7</strong></span>
+                  <span>Sıcaklık: <strong>0.6</strong></span>
                 </div>
                 <button
                   type="button"
@@ -2271,47 +2362,11 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               )}
             </div>
 
-            {/* API Config Box */}
-            <div className="apple-card bg-white border border-black/[0.07] p-6 max-w-2xl">
-              <h4 className="text-sm font-bold text-[#1D1D1F] mb-1">
-                Yapay Zeka API & Model Yapılandırması
-              </h4>
-              <p className="text-xs text-[#6E6E73] mb-4">
-                API anahtarınız sunucu tarafında güvenli şekilde saklanmaktadır. Dilerseniz buradan güncelleyebilirsiniz.
-              </p>
-
-              <form onSubmit={handleSaveGlmKey} className="space-y-4 text-xs">
-                <div>
-                  <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Yetkili API Anahtarı</label>
-                  <input
-                    type="password"
-                    value={adminGlmKey}
-                    onChange={e => setAdminGlmKey(e.target.value)}
-                    placeholder="API anahtarınızı yapıştırın"
-                    className="w-full px-3.5 py-2 text-xs bg-[#F5F5F7] rounded-xl border border-black/[0.08] font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[#1D1D1F] block mb-1">Tercih Edilen Model</label>
-                  <select
-                    value={adminGlmModel}
-                    onChange={e => setAdminGlmModel(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                  >
-                    <option value="glm-4-plus">YSNSOFT Plus (Amiral Gemisi - En Yüksek Zeka)</option>
-                    <option value="glm-4-air">YSNSOFT Air (Hızlı & Dengeli)</option>
-                    <option value="glm-4-flash">YSNSOFT Flash (Anlık)</option>
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="apple-pill-btn px-6 py-2.5 text-xs font-semibold"
-                >
-                  Konfigürasyonu Kaydet
-                </button>
-              </form>
+            {/* Yapılandırma bilgisi: anahtar ve varsayılan model sunucuda tutulur */}
+            <div className="apple-card bg-white border border-black/[0.07] p-6 max-w-2xl text-xs text-[#515154] space-y-2">
+              <h4 className="text-sm font-bold text-[#1D1D1F]">Yapılandırma</h4>
+              <p>API anahtarı ve varsayılan model yalnızca sunucudaki <code>.env.production</code> dosyasında tutulur (<code>GLM_API_KEY</code>, <code>GLM_CHAT_MODEL</code>). Tarayıcıdan anahtar girilmez ve gönderilmez.</p>
+              <p>Sitedeki asistan ziyaretçi başına 10 dakikada en çok 20 soru kabul eder; hata olursa ziyaretçiye dürüstçe &quot;şu anda yanıt veremiyor&quot; der ve teklif formuna yönlendirir.</p>
             </div>
           </div>
         )}
@@ -2458,165 +2513,14 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
             {/* 2. E-posta (sunucu ayarı) ve zamanlanmış işler — gerçek test */}
             <SystemMailPanel />
 
-            {/* 3. KGLEX Hukuk & Sistem Paritesi Durumu */}
-            <div className="apple-card bg-white border border-black/[0.07] p-6 max-w-3xl">
-              <div className="flex items-center justify-between border-b border-black/[0.06] pb-4 mb-4">
-                <div>
-                  <h4 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    KGLEX LegalTech & UYAP Robot Entegrasyon Durumu
-                  </h4>
-                  <p className="text-xs text-[#6E6E73] mt-0.5">
-                    D:\hukuk\kglex sistem mimarisi ve canlı üretim parametreleri
-                  </p>
-                </div>
-                <span className="text-[11px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md">
-                  Canlıda (v0.33.45)
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[#6E6E73] block text-[11px] uppercase font-semibold">UYAP Bot Servisi</span>
-                  <strong className="text-emerald-700 block mt-0.5">Port 3006 (Aktif)</strong>
-                  <span className="text-[11px] text-[#6E6E73]">MariaDB lawdba (Multi-Tenant)</span>
-                </div>
-
-                <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[#6E6E73] block text-[11px] uppercase font-semibold">Gece Evrak Taraması</span>
-                  <strong className="text-[#1D1D1F] block mt-0.5">02:00 - 06:00</strong>
-                  <span className="text-[11px] text-emerald-600">500+ Büro Otomatik Takip</span>
-                </div>
-
-                <div className="p-3 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[#6E6E73] block text-[11px] uppercase font-semibold">Kiracı İzolasyonu</span>
-                  <strong className="text-[#1D1D1F] block mt-0.5">AsyncLocalStorage</strong>
-                  <span className="text-[11px] text-blue-600">companyId Filtresi Aktif</span>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
       </main>
 
-      {/* OFFICIAL PROPOSAL / PDF PRINT MODAL */}
+      {/* Teklif belgesi: alanlar yazdırmadan önce doldurulur (eskiden sabit garanti/SLA şartları basıyordu) */}
       {proposalLead && (
-        <div role="dialog" aria-modal="true" aria-label="Teklif önizleme" onMouseDown={(e) => { if (e.target === e.currentTarget) setProposalLead(null); }} className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white">
-          <div className="bg-white rounded-3xl p-8 sm:p-12 max-w-3xl w-full border border-black/[0.1] shadow-2xl my-8 print:shadow-none print:border-0 print:p-0">
-            
-            <div className="flex items-center justify-between pb-6 border-b border-black/[0.1] mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#1D1D1F] text-white flex items-center justify-center font-bold">
-                  YSN
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-[#1D1D1F]">YSNSOFT BİLİŞİM TEKNOLOJİLERİ A.Ş.</h2>
-                  <p className="text-[11px] text-[#6E6E73]">Kurumsal SaaS & Yazılım Mühendisliği • Teklif Belgesi</p>
-                </div>
-              </div>
-
-              <div className="text-right text-xs">
-                <div className="font-bold text-[#1D1D1F]">TEKLİF NO: YSN-{proposalLead.id}</div>
-                <div className="text-[#6E6E73]">Tarih: {new Date().toLocaleDateString('tr-TR')}</div>
-              </div>
-            </div>
-
-            <div className="bg-[#F5F5F7] p-5 rounded-2xl border border-black/[0.06] mb-6 text-xs">
-              <span className="text-[#6E6E73] uppercase font-bold text-[11px] block mb-1">Müşteri / Kurum Bilgileri:</span>
-              <h4 className="text-base font-bold text-[#1D1D1F] mb-1">{proposalLead.name}</h4>
-              <p className="text-[#515154] font-medium">{proposalLead.company}</p>
-              <div className="text-[#6E6E73] mt-1">İletişim: {proposalLead.email} | {proposalLead.phone}</div>
-            </div>
-
-            <div className="space-y-4 text-xs mb-8">
-              <div>
-                <span className="text-[#6E6E73] uppercase font-bold text-[11px] block mb-1">1. Proje Kapsamı</span>
-                <p className="text-sm font-semibold text-[#1D1D1F]">
-                  {proposalLead.product} — Anahtar Teslim Kurulum ve Entegrasyon
-                </p>
-                <p className="text-[#515154] mt-1 leading-relaxed">
-                  İşbu teklif; talep edilen sistemin şirket altyapısına kurulması, veri aktarımı, UYAP/CAD/Sanal POS entegrasyonu ve 12 aylık 7/24 SLA teknik destek güvencesini kapsar.
-                </p>
-              </div>
-
-              <div className="border border-black/[0.08] rounded-xl overflow-hidden">
-                <table className="w-full text-left">
-                  <thead className="bg-[#F5F5F7] border-b border-black/[0.06] text-[#6E6E73]">
-                    <tr>
-                      <th className="p-3 font-semibold">Hizmet / Modül</th>
-                      <th className="p-3 font-semibold">Teslim Süresi</th>
-                      <th className="p-3 font-semibold text-right">Durum</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/[0.05]">
-                    <tr>
-                      <td className="p-3 font-medium text-[#1D1D1F]">SaaS Çekirdek Kurulumu & Veritabanı</td>
-                      <td className="p-3 text-[#515154]">Sprint 1 (1. Hafta)</td>
-                      <td className="p-3 text-right font-bold text-[#10B981]">Dahil</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-medium text-[#1D1D1F]">Özel Entegrasyonlar (Robot/API/Ödeme)</td>
-                      <td className="p-3 text-[#515154]">Sprint 2 (2. Hafta)</td>
-                      <td className="p-3 text-right font-bold text-[#10B981]">Dahil</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-medium text-[#1D1D1F]">Eski Sistemden Sıfır Kayıpla Veri Aktarımı</td>
-                      <td className="p-3 text-[#515154]">Sprint 3 (3. Hafta)</td>
-                      <td className="p-3 text-right font-bold text-[#10B981]">Dahil</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-medium text-[#1D1D1F]">Kullanıcı Eğitimi & 1 Yıllık 7/24 SLA Bakım</td>
-                      <td className="p-3 text-[#515154]">Sürekli</td>
-                      <td className="p-3 text-right font-bold text-[#10B981]">Garantili</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="bg-[#0071E3]/5 p-4 rounded-xl border border-[#0071E3]/15 flex items-center justify-between">
-                <div>
-                  <span className="text-[#6E6E73] block text-[11px]">Öngörülen Bütçe Ölçeği</span>
-                  <span className="text-base font-bold text-[#0071E3]">{proposalLead.budget}</span>
-                </div>
-                <div className="text-right text-[11px] text-[#515154]">
-                  Ödeme Koşulu: %30 Avans, %40 Sprint Kabulü, %30 Canlı Teslimat
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-black/[0.1] grid grid-cols-2 gap-8 text-xs text-center mb-6">
-              <div>
-                <span className="text-[#6E6E73] block mb-1">Teklifi Hazırlayan</span>
-                <strong className="text-[#1D1D1F] block">YSNSOFT Bilişim Teknolojileri A.Ş.</strong>
-                <span className="text-[#6E6E73] text-[11px] block mt-4">İmza & Kaşe</span>
-              </div>
-              <div>
-                <span className="text-[#6E6E73] block mb-1">Müşteri Kabul Onayı</span>
-                <strong className="text-[#1D1D1F] block">{proposalLead.company}</strong>
-                <span className="text-[#6E6E73] text-[11px] block mt-4">İmza & Kaşe</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-black/[0.06] print:hidden">
-              <button
-                onClick={() => setProposalLead(null)}
-                className="apple-pill-btn-secondary px-5 py-2.5 text-xs font-semibold"
-              >
-                Kapat
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="apple-pill-btn px-6 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-md shadow-[#0071E3]/25"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Teklifi Yazdır / PDF Olarak Kaydet</span>
-              </button>
-            </div>
-
-          </div>
-        </div>
+        <ProposalDocument key={proposalLead.id} lead={proposalLead} companyName={systemSettings.companyName} onClose={() => setProposalLead(null)} />
       )}
 
     </div>

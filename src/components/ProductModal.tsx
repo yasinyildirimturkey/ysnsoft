@@ -26,7 +26,7 @@ interface ProductModalProps {
 }
 
 export default function ProductModal({ product, onClose, onRequestQuote }: ProductModalProps) {
-  const [activeScreenTab, setActiveScreenTab] = useState<'overview' | 'live' | 'analytics' | 'specs'>('overview');
+  const [activeScreenTab, setActiveScreenTab] = useState<'overview' | 'live' | 'specs'>('overview');
   const [copied, setCopied] = useState(false);
 
   if (!product) return null;
@@ -131,16 +131,6 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                   Canlı Site Önizleme ({product.displayDomain})
                 </button>
                 <button
-                  onClick={() => setActiveScreenTab('analytics')}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                    activeScreenTab === 'analytics'
-                      ? 'bg-[#1D1D1F] text-white shadow-xs'
-                      : 'text-[#515154] hover:text-[#1D1D1F]'
-                  }`}
-                >
-                  Performans Metrikleri
-                </button>
-                <button
                   onClick={() => setActiveScreenTab('specs')}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     activeScreenTab === 'specs'
@@ -225,45 +215,6 @@ export default function ProductModal({ product, onClose, onRequestQuote }: Produ
                       <span className="text-xs font-medium text-[#1D1D1F]">{feature}</span>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* TAB: Analytics */}
-            {activeScreenTab === 'analytics' && (
-              <div className="bg-white rounded-xl p-5 border border-black/[0.06] shadow-sm animate-in fade-in duration-150">
-                <span className="text-xs font-semibold text-[#1D1D1F] block mb-4">
-                  Gerçek Zamanlı Üretim & Sunucu Metrikleri ({product.displayDomain})
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                  <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#6E6E73]">Aktif Kullanıcı</span>
-                    <p className="text-base font-semibold text-[#1D1D1F] mt-1">{product.liveStats.users}</p>
-                  </div>
-                  <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#6E6E73]">Uptime Oranı</span>
-                    <p className="text-base font-semibold text-[#10B981] mt-1">{product.liveStats.uptime}</p>
-                  </div>
-                  <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#6E6E73]">İşlem Hacmi</span>
-                    <p className="text-base font-semibold text-[#1D1D1F] mt-1">{product.liveStats.processedVolume}</p>
-                  </div>
-                  <div className="bg-[#F5F5F7] p-3 rounded-xl">
-                    <span className="text-[11px] text-[#6E6E73]">Ortalama Yanıt Hızı</span>
-                    <p className="text-base font-semibold text-[#0071E3] mt-1">{product.liveStats.speed}</p>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-[#0071E3]/5 rounded-xl border border-[#0071E3]/15 text-xs text-[#0071E3] font-medium flex items-center justify-between">
-                  <span>💡 Bu metrikler son 30 günlük üretim kümesindeki canlı telemetri verilerine dayanmaktadır.</span>
-                  <a
-                    href={product.liveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-bold underline ml-2 whitespace-nowrap"
-                  >
-                    Siteye Git ↗
-                  </a>
                 </div>
               </div>
             )}

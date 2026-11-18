@@ -61,9 +61,9 @@ const STEPS = [
     color: '#F59E0B',
     summary: 'Mevcut sisteminizden eski veriler aktarılır, SSL ve bulut kalkanları devreye alınır; ekibiniz eğitimle hemen kullanmaya başlar.',
     deliverables: [
-      'Sıfır veri kaybıyla eski sistemden (Logo/Mikro vb.) aktarım',
+      'Eski sistemden (Logo/Mikro vb.) veri aktarımı ve kontrolü',
       'Ekip eğitim videoları ve yönetici kullanım kılavuzları',
-      'Sözleşmeli %99.99 SLA garantisi ve 7/24 teknik mühendislik'
+      'Sözleşmede belirlenen kapsamda bakım ve teknik destek'
     ]
   }
 ];

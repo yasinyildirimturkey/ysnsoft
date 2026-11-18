@@ -27,11 +27,11 @@ const FAQS: FaqItem[] = [
   },
   {
     question: 'Veri güvenliği, KVKK ve 256-bit SSL şifreleme nasıl sağlanıyor?',
-    answer: 'Tüm YSNSOFT altyapısı TLS 1.3 ve 256-bit SSL şifrelemeyle korunur. Veritabanlarımızda Row-Level Security (RLS) uygulanır, günlük otomatik yedekleme coğrafi olarak izole edilir ve tüm sistemlerimiz KVKK & GDPR mevzuatlarına %100 uyumludur.'
+    answer: 'Tüm YSNSOFT altyapısı TLS 1.3 ve 256-bit SSL şifrelemeyle korunur. Veritabanlarımızda Row-Level Security (RLS) uygulanır, günlük otomatik yedekleme coğrafi olarak izole edilir ve KVKK / GDPR gereklilikleri her projede ayrıca değerlendirilir ve kontrol edilmelidir.'
   },
   {
     question: 'Satış sonrası teknik destek, SLA garantisi ve acil müdahale şartları nelerdir?',
-    answer: 'Tüm kurumsal müşterilerimize 7/24 kesintisiz telefon (+90 532 725 50 98), WhatsApp ve e-posta desteği sunuyoruz. Kritik kurumsal süreçler için %99.99 çalışma garantisi (SLA) ve 15 dakika içinde çözüm mimarı müdahalesi taahhüt ediyoruz.'
+    answer: 'Tüm kurumsal müşterilerimize 7/24 kesintisiz telefon (+90 532 725 50 98), WhatsApp ve e-posta desteği sunuyoruz. Destek kapsamı ve müdahale süreleri her projenin sözleşmesinde ayrıca belirlenir.'
   }
 ];
 

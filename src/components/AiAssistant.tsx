@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, Bot, User, ArrowRight, ExternalLink, Calendar, Calculator, CheckCircle2, Settings2, Key, Cpu } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, ArrowRight, ExternalLink, Calendar, Calculator, CheckCircle2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -10,24 +10,19 @@ interface Message {
   time: string;
   provider?: string;
   actions?: { label: string; action: string; url?: string }[];
+  /** Hata bildirimi: sohbet geçmişi olarak modele gönderilmez. */
+  error?: boolean;
 }
 
 export default function AiAssistant() {
   const [isOpen, setIsOpen] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [customKey, setCustomKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('glm-4-plus');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Eski sürüm ziyaretçinin tarayıcısında "özel API anahtarı" saklıyordu; artık yalnız sunucu anahtarı kullanılır.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedKey = localStorage.getItem('ysn_glm_api_key') || '';
-      const savedModel = localStorage.getItem('ysn_glm_model') || 'glm-4-plus';
-      setCustomKey(savedKey);
-      setSelectedModel(savedModel);
-    }
+    try { localStorage.removeItem('ysn_glm_api_key'); localStorage.removeItem('ysn_glm_model'); } catch { /* yok say */ }
   }, []);
 
   const [messages, setMessages] = useState<Message[]>([
@@ -58,18 +53,9 @@ export default function AiAssistant() {
     }
   }, [messages, isOpen, isTyping]);
 
-  const saveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ysn_glm_api_key', customKey.trim());
-      localStorage.setItem('ysn_glm_model', selectedModel);
-    }
-    setShowConfig(false);
-  };
-
   const handleSend = async (textToSend?: string) => {
     const query = textToSend || input;
-    if (!query.trim()) return;
+    if (!query.trim() || isTyping) return;
 
     const userMsg: Message = {
       id: 'usr-' + Date.now(),
@@ -84,7 +70,7 @@ export default function AiAssistant() {
     setIsTyping(true);
 
     try {
-      const apiMessages = nextMessages.map(m => ({
+      const apiMessages = nextMessages.filter(m => !m.error).map(m => ({
         role: m.sender === 'user' ? 'user' : 'assistant',
         content: m.text
       }));
@@ -92,15 +78,25 @@ export default function AiAssistant() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: apiMessages,
-          model: selectedModel,
-          apiKey: customKey || undefined
-        })
+        body: JSON.stringify({ messages: apiMessages })
       });
 
-      const data = await res.json();
-      const replyText = data.reply || 'Üzgünüm, şu an yanıt üretilemedi.';
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success || typeof data.reply !== 'string') {
+        setMessages(prev => [...prev, {
+          id: 'ai-err-' + Date.now(),
+          sender: 'ai',
+          error: true,
+          text: data?.error || 'Asistan şu anda yanıt veremiyor. Lütfen biraz sonra tekrar deneyin.',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          actions: [
+            { label: '📄 Teklif Al', action: 'quote_modal' },
+            { label: '📅 Randevu Talep Et', action: 'schedule_demo' }
+          ]
+        }]);
+        return;
+      }
+      const replyText: string = data.reply;
 
       const q = (query + ' ' + replyText).toLowerCase();
       let actions: { label: string; action: string; url?: string }[] = [];
@@ -138,6 +134,7 @@ export default function AiAssistant() {
         {
           id: 'ai-err-' + Date.now(),
           sender: 'ai',
+          error: true,
           text: 'Bağlantı sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
@@ -230,15 +227,6 @@ export default function AiAssistant() {
             
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setShowConfig(!showConfig)}
-                title="Model & API Ayarları"
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                  showConfig ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                }`}
-              >
-                <Settings2 className="w-4 h-4" />
-              </button>
-              <button
                 onClick={() => setIsOpen(false)}
                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
               >
@@ -246,52 +234,6 @@ export default function AiAssistant() {
               </button>
             </div>
           </div>
-
-          {/* Config Drawer */}
-          {showConfig && (
-            <form onSubmit={saveSettings} className="p-4 bg-blue-50/70 border-b border-blue-200/60 space-y-3 text-xs animate-in slide-in-from-top-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-blue-900 flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5" /> Yapay Zeka Model Yapılandırması
-                </span>
-                <span className="text-[11px] text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full font-semibold">
-                  YSNSOFT Motoru
-                </span>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                  Özel API Anahtarı (İsteğe Bağlı):
-                </label>
-                <div className="flex items-center gap-2 bg-white rounded-xl px-2.5 py-1.5 border border-blue-200">
-                  <Key className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <input
-                    type="password"
-                    value={customKey}
-                    onChange={e => setCustomKey(e.target.value)}
-                    placeholder="Boş bırakılırsa şirket varsayılanı kullanılır"
-                    className="w-full bg-transparent text-xs text-[#1D1D1F] focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <select
-                  value={selectedModel}
-                  onChange={e => setSelectedModel(e.target.value)}
-                  className="bg-white px-2.5 py-1.5 border border-blue-200 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none"
-                >
-                  <option value="glm-4-plus">YSNSOFT Plus (Yüksek Akıl)</option>
-                  <option value="glm-4-air">YSNSOFT Air (Hızlı)</option>
-                  <option value="glm-4-flash">YSNSOFT Flash (Anlık)</option>
-                </select>
-                <button
-                  type="submit"
-                  className="px-3.5 py-1.5 bg-[#0071E3] hover:bg-blue-600 text-white font-semibold rounded-xl text-xs transition-colors"
-                >
-                  Kaydet
-                </button>
-              </div>
-            </form>
-          )}
 
           {/* Messages Body */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">

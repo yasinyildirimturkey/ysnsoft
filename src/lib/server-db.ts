@@ -91,22 +91,28 @@ export interface AppointmentItem {
   createdAt: string;
 }
 
+/**
+ * İç fatura / tahsilat kaydı. Bu bir RESMİ e-Fatura değildir: GİB'e hiçbir şey gönderilmez.
+ * (Eskiden kayıtlar "GİB İletildi" ve rastgele üretilmiş ETTN ile gösteriliyordu.)
+ */
 export interface InvoiceItem {
   id: string;
+  /** İç kayıt numarası: YSN-2026-0001 */
   invoiceNo: string;
-  clientName: string;
-  clientVknTckn: string;
+  client: string;
+  taxNumber: string;
+  product: string;
+  /** KDV hariç */
+  amount: number;
+  taxRate: number;
+  /** KDV dahil */
+  totalAmount: number;
+  status: 'paid' | 'pending' | 'overdue' | 'cancelled';
+  /** YYYY-AA-GG */
   issueDate: string;
   dueDate: string;
-  items: { description: string; qty: number; unitPrice: number; total: number }[];
-  subtotal: number;
-  kdvRate: number;
-  kdvAmount: number;
-  grandTotal: number;
-  currency: string;
-  status: 'paid' | 'pending' | 'overdue' | 'draft';
-  gibStatus: 'GİB Onaylandı' | 'GİB İletildi' | 'Taslak';
-  ettn: string;
+  paymentType: 'Havale / EFT' | 'Sanal POS' | 'Çek' | 'Nakit';
+  createdAt: string;
 }
 
 export interface GeoSettingsItem {
@@ -215,106 +221,11 @@ const DEFAULT_SITES: SiteItem[] = [
   }
 ];
 
-const DEFAULT_LEADS: LeadItem[] = [
-  {
-    id: 'lead-1',
-    name: 'Av. Mehmet Yılmaz',
-    email: 'mehmet@yilmazhukuk.com',
-    phone: '+90 532 100 2030',
-    company: 'Yılmaz Hukuk & Danışmanlık',
-    budget: '₺100.000 - ₺250.000',
-    projectType: 'LegalTech (KGLEX Benzeri)',
-    message: 'UYAP entegrasyonu ve icra dosyası otomatik sorgulama altyapısı talep ediyoruz.',
-    source: 'Hero Form',
-    createdAt: new Date().toISOString(),
-    status: 'new'
-  },
-  {
-    id: 'lead-2',
-    name: 'Harita Müh. Selin Aktaş',
-    email: 'selin@aktasharita.com',
-    phone: '+90 544 200 4050',
-    company: 'Aktaş Harita Planlama',
-    budget: '₺250.000 - ₺500.000',
-    projectType: '3D Harita / GIS (HaritaPlan)',
-    message: '3194 sayılı kanun madde 18 parselasyon hesaplama motorunu belediyemiz için özelleştirmek istiyoruz.',
-    source: 'Scope Calculator',
-    createdAt: new Date().toISOString(),
-    status: 'contacted'
-  }
-];
+const DEFAULT_LEADS: LeadItem[] = [];
 
-const DEFAULT_APPOINTMENTS: AppointmentItem[] = [
-  {
-    id: 'apt-1',
-    name: 'Av. Deniz Kaya',
-    email: 'deniz@kayalaw.com',
-    phone: '+90 533 111 2233',
-    date: '2026-11-04',
-    time: '14:30',
-    projectFocus: 'KGLEX Hukuk Otomasyonu',
-    notes: 'Büromuzdaki 12 avukat için UYAP bot ve arşiv entegrasyonu demosu.',
-    meetingLink: 'https://meet.google.com/ysn-demo-law',
-    status: 'confirmed',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'apt-2',
-    name: 'Burak Demir',
-    email: 'burak@panelde.com',
-    phone: '+90 535 444 5566',
-    date: '2026-11-05',
-    time: '11:00',
-    projectFocus: 'Panelde Emlak Portalı V2',
-    notes: 'Multi-tenant mimari ölçekleme ve mobil uygulama entegrasyonu.',
-    meetingLink: 'https://meet.google.com/ysn-panelde-arch',
-    status: 'confirmed',
-    createdAt: new Date().toISOString()
-  }
-];
+const DEFAULT_APPOINTMENTS: AppointmentItem[] = [];
 
-const DEFAULT_INVOICES: InvoiceItem[] = [
-  {
-    id: 'inv-101',
-    invoiceNo: 'YSN2026000000142',
-    clientName: 'Açıkel Hukuk & Arabuluculuk Bürosu',
-    clientVknTckn: '1230495861',
-    issueDate: '2026-10-15',
-    dueDate: '2026-11-15',
-    items: [
-      { description: 'KGLEX SaaS Yıllık Lisans & UYAP Bot Entegrasyonu', qty: 1, unitPrice: 120000, total: 120000 },
-      { description: 'Cloud SLA & 7/24 Kesintisiz Bakım Desteği', qty: 1, unitPrice: 30000, total: 30000 }
-    ],
-    subtotal: 150000,
-    kdvRate: 20,
-    kdvAmount: 30000,
-    grandTotal: 180000,
-    currency: 'TRY',
-    status: 'paid',
-    gibStatus: 'GİB Onaylandı',
-    ettn: 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
-  },
-  {
-    id: 'inv-102',
-    invoiceNo: 'YSN2026000000143',
-    clientName: 'HaritaPlan CBS & Mühendislik Ltd. Şti.',
-    clientVknTckn: '9870123456',
-    issueDate: '2026-10-22',
-    dueDate: '2026-11-22',
-    items: [
-      { description: '3194 Madde 18 DOP Hesaplama Motoru Modül Geliştirme (Sprint 3)', qty: 1, unitPrice: 200000, total: 200000 },
-      { description: '3D Kent Modelleri WebGL Render Motoru Optimizasyonu', qty: 1, unitPrice: 40000, total: 40000 }
-    ],
-    subtotal: 240000,
-    kdvRate: 20,
-    kdvAmount: 48000,
-    grandTotal: 288000,
-    currency: 'TRY',
-    status: 'pending',
-    gibStatus: 'GİB İletildi',
-    ettn: 'e28bb32c-69dd-4483-b678-1f13c3d4e580'
-  }
-];
+const DEFAULT_INVOICES: InvoiceItem[] = [];
 
 const DEFAULT_GEO_SETTINGS: GeoSettingsItem = {
   city: 'İstanbul',
@@ -352,6 +263,34 @@ export function deleteSite(idOrDomain: string): SiteItem[] {
 }
 
 // Lead Functions
+// Eski sürümlerin sunucuya yazdığı uydurma örnek kayıtlar (gerçek müşteri değil): panelde gösterilmez, silinmez.
+const SEED_LEAD_IDS = new Set(['lead-1', 'lead-2']);
+const SEED_APPOINTMENT_IDS = new Set(['apt-1', 'apt-2']);
+
+/** Panel için: yalnız gerçek talepler, en yeni üstte. */
+export function getRealLeads(): LeadItem[] {
+  return getStoredLeads().filter((l) => !SEED_LEAD_IDS.has(l.id)).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+export function getRealAppointments(): AppointmentItem[] {
+  return getStoredAppointments().filter((a) => !SEED_APPOINTMENT_IDS.has(a.id)).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+export function updateLeadStatus(id: string, status: LeadItem['status']): boolean {
+  const current = getStoredLeads();
+  const i = current.findIndex((l) => l.id === id);
+  if (i < 0) return false;
+  current[i] = { ...current[i], status };
+  if (!writeJsonFile('leads.json', current)) throw new Error('Kaydedilemedi');
+  return true;
+}
+export function updateAppointmentStatus(id: string, status: AppointmentItem['status']): boolean {
+  const current = getStoredAppointments();
+  const i = current.findIndex((a) => a.id === id);
+  if (i < 0) return false;
+  current[i] = { ...current[i], status };
+  if (!writeJsonFile('appointments.json', current)) throw new Error('Kaydedilemedi');
+  return true;
+}
+
 export function getStoredLeads(): LeadItem[] {
   return readJsonFile<LeadItem[]>('leads.json', DEFAULT_LEADS);
 }
@@ -364,7 +303,7 @@ export function saveLead(lead: LeadItem): LeadItem[] {
   } else {
     current.unshift(lead);
   }
-  writeJsonFile('leads.json', current);
+  if (!writeJsonFile('leads.json', current)) throw new Error('Talep kaydedilemedi');
   return current;
 }
 
@@ -388,7 +327,7 @@ export function saveAppointment(appointment: AppointmentItem): AppointmentItem[]
   } else {
     current.unshift(appointment);
   }
-  writeJsonFile('appointments.json', current);
+  if (!writeJsonFile('appointments.json', current)) throw new Error('Randevu kaydedilemedi');
   return current;
 }
 
@@ -404,16 +343,35 @@ export function getStoredInvoices(): InvoiceItem[] {
   return readJsonFile<InvoiceItem[]>('invoices.json', DEFAULT_INVOICES);
 }
 
+// Eski sürümün örnek kayıtları (inv-101, inv-102; farklı şekilde) panelde gösterilmez
+const isInvoiceRecord = (i: unknown): i is InvoiceItem =>
+  !!i && typeof i === 'object' && typeof (i as InvoiceItem).client === 'string' && typeof (i as InvoiceItem).totalAmount === 'number';
+
+/** Panel için: yalnız gerçek kayıtlar, en yeni üstte. */
+export function getRealInvoices(): InvoiceItem[] {
+  return getStoredInvoices().filter(isInvoiceRecord).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+/** Sıradaki iç kayıt numarası: YSN-<yıl>-<4 hane>, yıl başında 0001'den başlar. */
+export function nextInvoiceNo(year = new Date().getFullYear()): string {
+  const prefix = `YSN-${year}-`;
+  const max = getRealInvoices().reduce((m, i) => (i.invoiceNo.startsWith(prefix) ? Math.max(m, Number(i.invoiceNo.slice(prefix.length)) || 0) : m), 0);
+  return `${prefix}${String(max + 1).padStart(4, '0')}`;
+}
+
 export function saveInvoice(invoice: InvoiceItem): InvoiceItem[] {
   const current = getStoredInvoices();
-  const index = current.findIndex(i => i.id === invoice.id || i.invoiceNo === invoice.invoiceNo);
-  if (index >= 0) {
-    current[index] = { ...current[index], ...invoice };
-  } else {
-    current.unshift(invoice);
-  }
-  writeJsonFile('invoices.json', current);
+  current.unshift(invoice);
+  if (!writeJsonFile('invoices.json', current)) throw new Error('Fatura kaydı yazılamadı');
   return current;
+}
+
+export function updateInvoiceStatus(id: string, status: InvoiceItem['status']): boolean {
+  const current = getStoredInvoices();
+  const i = current.findIndex((x) => isInvoiceRecord(x) && x.id === id);
+  if (i < 0) return false;
+  current[i] = { ...current[i], status };
+  return writeJsonFile('invoices.json', current);
 }
 
 // Geo Settings Functions

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/admin-auth';
 import { getStoredSites } from '@/lib/server-db';
+import { publicHttpsUrl } from '@/lib/public-host';
 
 interface SeoAuditResult {
   domain: string;
@@ -61,10 +62,9 @@ export async function GET(request: Request) {
   let targetsToAudit: { domain: string; url: string }[] = [];
 
   if (targetDomain) {
-    targetsToAudit = [{
-      domain: targetDomain.replace(/^https?:\/\//, '').replace(/\/$/, ''),
-      url: targetDomain.startsWith('http') ? targetDomain : `https://${targetDomain}`
-    }];
+    const safe = publicHttpsUrl(targetDomain);
+    if (!safe) return NextResponse.json({ success: false, error: 'Geçerli, herkese açık bir alan adı girin.' }, { status: 400 });
+    targetsToAudit = [{ domain: safe.hostname, url: safe.href }];
   } else {
     try {
       const stored = getStoredSites();
@@ -87,11 +87,22 @@ export async function GET(request: Request) {
     }
   }
 
+  /** robots.txt / sitemap.xml gerçekten var mı (eskiden her site için sabit "var" yazılıyordu). */
+  const probe = async (url: string, looksRight: (body: string) => boolean): Promise<boolean> => {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YSNSOFT-SeoAudit; +https://ysnsoft.com)' }, signal: AbortSignal.timeout(5000), cache: 'no-store' });
+      if (!res.ok) return false;
+      return looksRight((await res.text()).slice(0, 4000));
+    } catch {
+      return false;
+    }
+  };
+
   const auditDomain = async (t: { domain: string; url: string }): Promise<SeoAuditResult> => {
     const start = Date.now();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const res = await fetch(t.url, {
         headers: {
@@ -113,26 +124,34 @@ export async function GET(request: Request) {
       const hasSchemaOrg = html.includes('application/ld+json');
       const hasGeoTags = html.includes('geo.position') || html.includes('geo.region') || html.includes('ICBM');
 
-      // Robots check
-      let hasRobots = true;
-      let hasSitemap = true;
-      if (t.domain === 'ysnsoft.com') {
-        hasRobots = true;
-        hasSitemap = true;
-      }
+      const origin = new URL(res.url || t.url).origin;
+      const [hasRobots, hasSitemap] = await Promise.all([
+        probe(`${origin}/robots.txt`, (b) => /user-agent\s*:/i.test(b) && !/<html/i.test(b)),
+        probe(`${origin}/sitemap.xml`, (b) => /<(urlset|sitemapindex)\b/i.test(b)),
+      ]);
+      const hasSsl = (res.url || t.url).startsWith('https://');
 
-      let score = 50;
-      if (res.ok) score += 15;
-      if (hasTitle) score += 10;
-      if (hasDescription) score += 10;
+      // 100 üzerinden; her madde gerçekten ölçülür (eskiden 50 puan "bedava" veriliyordu)
+      let score = 0;
+      if (res.ok) score += 25;
+      if (hasSsl) score += 10;
+      if (hasTitle) score += 15;
+      if (hasDescription) score += 15;
       if (hasSchemaOrg) score += 10;
+      if (hasRobots) score += 10;
+      if (hasSitemap) score += 10;
       if (hasGeoTags) score += 5;
 
       const recommendations: string[] = [];
       if (!hasGeoTags) recommendations.push('Yerel arama optimizasyonu için geo.region ve ICBM koordinat etiketleri eklenmelidir.');
       if (!hasSchemaOrg) recommendations.push('Google Zengin Sonuçlar (Rich Snippets) için JSON-LD Schema.org grafiği eklenmelidir.');
       if (!hasDescription) recommendations.push('Sayfa açıklaması (meta description) optimize edilmelidir.');
-      if (latencyMs > 400) recommendations.push('Sayfa açılış gecikmesi 400ms üzerinde; Edge cache kullanılmalıdır.');
+      if (!res.ok) recommendations.push(`Ana sayfa HTTP ${res.status} döndü.`);
+      if (!hasTitle) recommendations.push('Sayfa başlığı (<title>) eksik.');
+      if (!hasRobots) recommendations.push('robots.txt bulunamadı veya geçersiz.');
+      if (!hasSitemap) recommendations.push('sitemap.xml bulunamadı veya geçersiz.');
+      if (!hasSsl) recommendations.push('Site HTTPS üzerinden açılmıyor.');
+      if (latencyMs > 1500) recommendations.push(`Sayfa ${latencyMs} ms'de yanıt verdi (bu sunucudan ölçüldü); önbellek ve sunucu hızı kontrol edilmeli.`);
 
       return {
         domain: t.domain,
@@ -140,7 +159,7 @@ export async function GET(request: Request) {
         status: score >= 80 ? 'ok' : score >= 60 ? 'warning' : 'error',
         httpCode: res.status,
         latencyMs,
-        hasSsl: t.url.startsWith('https'),
+        hasSsl,
         hasTitle,
         titleSnippet,
         hasDescription,
@@ -165,8 +184,8 @@ export async function GET(request: Request) {
         hasGeoTags: false,
         hasRobots: false,
         hasSitemap: false,
-        score: 20,
-        recommendations: ['Siteye HTTP isteği ulaştırılamadı veya zaman aşımına uğradı.']
+        score: 0,
+        recommendations: [`Siteye ulaşılamadı veya 8 sn içinde yanıt gelmedi${err instanceof Error ? ` (${err.message})` : ''}.`]
       };
     }
   };
@@ -218,7 +237,7 @@ export const metadata: Metadata = {
   description: '${siteName} - ${category}. YSNSOFT güvencesiyle yüksek performanslı ve güvenli kurumsal bulut çözümü.',
   keywords: ['${domain}', '${siteName}', '${category}', '${city}', '${district}', 'YSNSOFT', 'SaaS'],
   authors: [{ name: 'YSNSOFT', url: 'https://ysnsoft.com' }],
-  creator: 'YSNSOFT Bilişim Teknolojileri A.Ş.',
+  creator: 'YSNSOFT',
   publisher: 'YSNSOFT',
   alternates: {
     canonical: '${fullUrl}',
@@ -267,7 +286,7 @@ export const metadata: Metadata = {
           'name': siteName,
           'publisher': {
             '@type': 'Organization',
-            'name': 'YSNSOFT Bilişim Teknolojileri A.Ş.',
+            'name': 'YSNSOFT',
             'url': 'https://ysnsoft.com'
           }
         }
