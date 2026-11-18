@@ -124,6 +124,12 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
               json_extract(p.profile, '$.mismatch') AS site_mismatch,
               (SELECT d.token FROM drafts d WHERE d.business_id = b.id) AS draft_token,
               (SELECT d.expires_at FROM drafts d WHERE d.business_id = b.id) AS draft_expires,
+              (SELECT json_object('stock', json_extract(d.kit, '$.stockPhotos'), 'photos', json_array_length(json_extract(d.kit, '$.photos')),
+                      'uploads', json_extract(d.kit, '$.uploads'), 'logo', json_extract(d.kit, '$.logo'), 'hours', json_extract(d.kit, '$.hours') IS NOT NULL,
+                      'placeholder', json_extract(d.kit, '$.copy.placeholder'), 'suggested', json_extract(d.kit, '$.copy.suggested'),
+                      'conflicts', json_extract(d.kit, '$.copy.name_conflicts'), 'before', json_extract(d.kit, '$.before.shot') IS NOT NULL,
+                      'owner', json_extract(d.kit, '$.owner.name'))
+                 FROM drafts d WHERE d.business_id = b.id) AS draft_quality,
               (SELECT group_concat(a.name, ' · ') FROM business_areas ba JOIN areas a ON a.id = ba.area_id WHERE ba.business_id = b.id) AS districts
          ${FROM_SQL}
         WHERE ${where.join(' AND ')}
@@ -142,6 +148,8 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
       let verification = {};
       try { if (r.verification) verification = JSON.parse(r.verification) ?? {}; } catch { /* bozuk kayıt */ }
       const items = (findings.items ?? []).map((f) => (verification[f.code] ? { ...f, verified: verification[f.code].status } : f));
+      let draftQuality = null;
+      try { if (r.draft_quality) draftQuality = JSON.parse(r.draft_quality); } catch { /* bozuk kayıt */ }
       let mismatch = null;
       try { if (r.site_mismatch) mismatch = JSON.parse(r.site_mismatch); } catch { /* bozuk kayıt */ }
       let lastVisit = null;
@@ -149,7 +157,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
       // Haftalık açılış aralıkları (dakika); anlaşılmayan biçimde null → "saat bilinmiyor"
       const views = demoViews(r.draft_token);
       const row = { ...r, findings: items, tech: findings.info?.tech ?? null, last_visit: lastVisit, week: osmWeek(r.opening_hours),
-        appointment: byAppointment(r.opening_hours), demo_views: views?.count ?? 0, demo_last_view: views?.last ?? null, site_mismatch: mismatch };
+        appointment: byAppointment(r.opening_hours), demo_views: views?.count ?? 0, demo_last_view: views?.last ?? null, site_mismatch: mismatch, draft_quality: draftQuality };
       delete row.verification; // ham JSON panele gitmesin; bilgi bulguların içinde
       return row;
   });

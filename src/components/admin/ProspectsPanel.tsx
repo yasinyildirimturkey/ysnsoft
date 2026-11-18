@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import ProspectOffer from './ProspectOffer';
 import ProspectFunnel from './ProspectFunnel';
+import DraftChecklist, { type DraftQuality } from './DraftChecklist';
 import ProspectMap from './ProspectMap';
 import ProspectPhotos from './ProspectPhotos';
 import ProspectVisits from './ProspectVisits';
@@ -78,6 +79,8 @@ interface Prospect {
   demo_views?: number;
   /** Kayıtlı web adresi başka bir firmanın sitesine gidiyorsa (devralma/yanlış kayıt): taslak üretilmez */
   site_mismatch?: { host: string; owner: string | null } | null;
+  /** Demonun eksik/tahmini kısımları (örnek foto, öneri metin, logo, saat…): sahada tamamlanacaklar */
+  draft_quality?: DraftQuality | null;
   demo_last_view?: string | null;
 }
 
@@ -1114,6 +1117,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                   </button>
                 </div>
               </div>
+              {selected.draft_token && selected.draft_quality && <DraftChecklist quality={selected.draft_quality} />}
               <ProspectPhotos key={selected.id} id={selected.id} />
               </div>
 
