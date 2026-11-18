@@ -9,8 +9,6 @@ import {
   getStoredInvoices,
   saveInvoice,
   updateInvoiceStatus,
-  getStoredSmtpSettings,
-  saveSmtpSettings,
   getStoredSystemSettings,
   saveSystemSettings,
   getStoredProducts,
@@ -22,12 +20,12 @@ import {
   Lead, 
   Appointment,
   InvoiceRecord,
-  SmtpSettings,
   SystemSettings,
   PRESET_ADMIN_USERS
 } from '@/lib/store';
 import { PRODUCTS, Product } from '@/data/products';
 import ProspectsPanel from '@/components/admin/ProspectsPanel';
+import SystemMailPanel from '@/components/admin/SystemMailPanel';
 import UsersPanel from '@/components/admin/UsersPanel';
 import { ROLE_INFO, can, isAdminRole } from '@/lib/roles';
 import { 
@@ -154,15 +152,6 @@ export default function AdminDashboardPage() {
   const [activeUserEmail, setActiveUserEmail] = useState<string>('yasin@ysnsoft.com');
 
   // SMTP & System Settings States
-  const [smtpSettings, setSmtpSettings] = useState<SmtpSettings>({
-    host: 'mail.ysnsoft.com',
-    port: 587,
-    user: 'noreply@ysnsoft.com',
-    pass: '',
-    fromName: 'YSNSOFT Bilişim Teknolojileri',
-    fromEmail: 'noreply@ysnsoft.com',
-    secure: true
-  });
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     companyName: 'YSNSOFT Bilişim Teknolojileri A.Ş.',
     companyPhone: '+90 532 725 50 98',
@@ -174,8 +163,6 @@ export default function AdminDashboardPage() {
     mersisNo: '0987654321000015',
     ticaretSicilNo: '348291-5'
   });
-  const [smtpTesting, setSmtpTesting] = useState(false);
-  const [smtpTestResult, setSmtpTestResult] = useState<string | null>(null);
 
   // AI Studio States
   const [adminGlmKey, setAdminGlmKey] = useState('');
@@ -230,7 +217,8 @@ export default function AdminDashboardPage() {
       setLeads(getStoredLeads());
       setAppointments(getStoredAppointments());
       setInvoices(getStoredInvoices());
-      setSmtpSettings(getStoredSmtpSettings());
+      // Eski sürüm SMTP ayarlarını (şifre dahil) tarayıcıda tutuyordu: artık sunucuda; tarayıcıdaki kopya silinir
+      try { localStorage.removeItem('ysn_smtp_settings'); } catch { /* yok say */ }
       setSystemSettings(getStoredSystemSettings());
       setProducts(getStoredProducts());
       setGeoConfig(getStoredGeoSettings());
@@ -407,21 +395,6 @@ export default function AdminDashboardPage() {
       localStorage.setItem('ysn_glm_model', adminGlmModel);
       notify('Yapay Zeka API Anahtarı ve Model konfigürasyonu başarıyla kaydedildi!');
     }
-  };
-
-  const handleSaveSmtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveSmtpSettings(smtpSettings);
-    notify('SMTP E-Posta ayarları başarıyla güncellendi!');
-  };
-
-  const handleTestSmtp = () => {
-    setSmtpTesting(true);
-    setSmtpTestResult(null);
-    setTimeout(() => {
-      setSmtpTesting(false);
-      setSmtpTestResult(`✓ ${smtpSettings.host}:${smtpSettings.port} bağlantısı sağlandı. ${systemSettings.notificationEmail} üzerinden ${systemSettings.supportEmail} adresine test e-postası başarıyla iletildi.`);
-    }, 800);
   };
 
   const handleSaveSystemSettings = (e: React.FormEvent) => {
@@ -2480,133 +2453,8 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
               </form>
             </div>
 
-            {/* 2. SMTP E-Posta Sunucu Ayarları */}
-            <div className="apple-card bg-white border border-black/[0.07] p-6 max-w-3xl">
-              <div className="flex items-center justify-between border-b border-black/[0.06] pb-4 mb-5">
-                <div>
-                  <h3 className="text-base font-bold text-[#1D1D1F] flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-blue-600" />
-                    SMTP E-Posta Sunucu Yapılandırması
-                  </h3>
-                  <p className="text-xs text-[#6E6E73] mt-0.5">
-                    Gelen teklif talepleri, randevu teyitleri ve fatura PDF gönderimleri için giden sunucu
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>SMTP TLS Aktif</span>
-                </div>
-              </div>
-
-              {smtpTestResult && (
-                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{smtpTestResult}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSaveSmtp} className="space-y-4 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-semibold text-[#1D1D1F] block mb-1">SMTP Sunucu Adresi (Host)</label>
-                    <input
-                      type="text"
-                      value={smtpSettings.host}
-                      onChange={e => setSmtpSettings({ ...smtpSettings, host: e.target.value })}
-                      placeholder="mail.ysnsoft.com"
-                      className="w-full px-3.5 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08] font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-semibold text-[#1D1D1F] block mb-1">Port</label>
-                    <input
-                      type="number"
-                      value={smtpSettings.port}
-                      onChange={e => setSmtpSettings({ ...smtpSettings, port: Number(e.target.value) })}
-                      placeholder="587"
-                      className="w-full px-3.5 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08] font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-semibold text-[#1D1D1F] block mb-1">SMTP Kullanıcı Adı / E-Posta</label>
-                    <input
-                      type="text"
-                      value={smtpSettings.user}
-                      onChange={e => setSmtpSettings({ ...smtpSettings, user: e.target.value })}
-                      placeholder="noreply@ysnsoft.com"
-                      className="w-full px-3.5 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-semibold text-[#1D1D1F] block mb-1">SMTP Şifre</label>
-                    <input
-                      type="password"
-                      value={smtpSettings.pass}
-                      onChange={e => setSmtpSettings({ ...smtpSettings, pass: e.target.value })}
-                      placeholder="••••••••••••"
-                      className="w-full px-3.5 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08] font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-semibold text-[#1D1D1F] block mb-1">Gönderen E-Posta (From)</label>
-                    <input
-                      type="email"
-                      value={smtpSettings.fromEmail}
-                      onChange={e => setSmtpSettings({ ...smtpSettings, fromEmail: e.target.value })}
-                      placeholder="noreply@ysnsoft.com"
-                      className="w-full px-3.5 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-semibold text-[#1D1D1F] block mb-1">Gönderen Başlığı (From Name)</label>
-                    <input
-                      type="text"
-                      value={smtpSettings.fromName}
-                      onChange={e => setSmtpSettings({ ...smtpSettings, fromName: e.target.value })}
-                      placeholder="YSNSOFT Bilişim Teknolojileri"
-                      className="w-full px-3.5 py-2 bg-[#F5F5F7] rounded-xl border border-black/[0.08]"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between border-t border-black/[0.06]">
-                  <button
-                    type="button"
-                    disabled={smtpTesting}
-                    onClick={handleTestSmtp}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-[#1D1D1F] rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
-                  >
-                    {smtpTesting ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-                        <span>Sunucuya Bağlanılıyor...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Test E-Postası Gönder</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="apple-pill-btn px-6 py-2.5 text-xs font-semibold"
-                  >
-                    SMTP Ayarlarını Kaydet
-                  </button>
-                </div>
-              </form>
-            </div>
+            {/* 2. E-posta (sunucu ayarı) ve zamanlanmış işler — gerçek test */}
+            <SystemMailPanel />
 
             {/* 3. KGLEX Hukuk & Sistem Paritesi Durumu */}
             <div className="apple-card bg-white border border-black/[0.07] p-6 max-w-3xl">
