@@ -113,7 +113,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   const rows = all(
     db,
       `SELECT b.id, b.name, b.category, b.country, b.city, b.address, b.postcode, b.suburb, b.website, b.phone,
-              b.status, b.notes, b.lat, b.lon, b.visit_date, b.visit_order,
+              b.status, b.notes, b.lat, b.lon, b.visit_date, b.visit_order, b.offer_package, b.offer_setup, b.offer_monthly, b.offer_at,
               COALESCE(NULLIF(b.opening_hours, ''), json_extract(p.profile, '$.osm.tags.opening_hours')) AS opening_hours,
               (SELECT json_object('outcome', v.outcome, 'at', v.at, 'note', v.note, 'next_at', v.next_at)
                  FROM visits v WHERE v.business_id = b.id ORDER BY v.id DESC LIMIT 1) AS last_visit,
@@ -181,7 +181,7 @@ export const FUNNEL_STAGES = [
 ];
 const CLOSED_STATUSES = ['won', 'lost', 'do_not_contact'];
 // Saha kaydında "görüşüldü" sayılan sonuçlar (kapalıydı/tekrar gel sayılmaz)
-const MET_OUTCOMES = ['talked', 'demo_shown', 'offer_requested', 'not_interested', 'won'];
+const MET_OUTCOMES = ['talked', 'demo_shown', 'offer_requested', 'not_interested', 'won', 'demo_sent'];
 
 const localDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const daysSince = (sqlUtc, now = Date.now()) => (sqlUtc ? Math.floor((now - Date.parse(sqlUtc.replace(' ', 'T') + 'Z')) / 86400000) : null);
@@ -190,7 +190,7 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
   const region = regionWhere({ country, city, areaId, categories });
   const metList = MET_OUTCOMES.map((o) => `'${o}'`).join(',');
   // Kapsam: teklif verilebilir adaylar + üzerinde çalışılmış (durumu değişmiş ya da ziyaret kaydı olan) her işletme
-  const rows = all(db, `SELECT b.id, b.status, b.visit_date, ${KIND_SQL} AS kind,
+  const rows = all(db, `SELECT b.id, b.status, b.visit_date, b.offer_setup, b.offer_monthly, ${KIND_SQL} AS kind,
         EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome IN (${metList})) AS met,
         EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome = 'offer_requested') AS asked,
         EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome = 'demo_shown') AS demo_shown,
@@ -201,6 +201,8 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
 
   const reach = [0, 0, 0, 0, 0];
   let lost = 0, dnc = 0, drafts = 0, viewed = 0, shown = 0;
+  // Ciro: açık teklifler (henüz kazanılmamış/kaybedilmemiş) ve kazanılanlar; ilk yıl değeri = kurulum + 12 × aylık
+  const money = { open: { n: 0, setup: 0, monthly: 0 }, won: { n: 0, setup: 0, monthly: 0 } };
   for (const r of rows) {
     let s = 0;
     if (r.status === 'won') s = 4;
@@ -212,6 +214,10 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
     for (let i = 0; i <= s; i++) reach[i]++;
     if (r.token) { drafts++; if (demoViews(r.token)) viewed++; }
     if (r.demo_shown) shown++;
+    if (r.offer_setup !== null && r.offer_setup !== undefined) {
+      const m = r.status === 'won' ? money.won : ['lost', 'do_not_contact'].includes(r.status) ? null : money.open;
+      if (m) { m.n++; m.setup += r.offer_setup; m.monthly += r.offer_monthly ?? 0; }
+    }
   }
   const stages = FUNNEL_STAGES.map((st, i) => ({ ...st, n: reach[i], rate: i && reach[i - 1] ? Math.round((reach[i] / reach[i - 1]) * 100) : null }));
 
@@ -222,7 +228,7 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
       WHERE ${region.where.join(' AND ')} AND v.at >= datetime('now', '-56 days')
       GROUP BY 1 ORDER BY 1`, region.params);
 
-  return { stages, side: { lost, dnc, drafts, viewed, shown }, weeks, reminders: reminders(db) };
+  return { stages, side: { lost, dnc, drafts, viewed, shown }, money, weeks, reminders: reminders(db) };
 }
 
 /** Bugün yapılması gerekenler (tüm şehirler): kaçan ziyaret, sıcak demo, bekleyen teklif, sessiz kalan aday. */
@@ -275,4 +281,40 @@ export function reminders(db) {
   out.sort((a, b) => a.prio - b.prio || String(b.at).localeCompare(String(a.at)));
   const today_planned = all(db, 'SELECT COUNT(*) AS n FROM businesses WHERE visit_date = @today', { today })[0].n;
   return { today, today_planned, items: out.slice(0, 60), total: out.length };
+}
+
+/**
+ * Bölgedeki iyi örnekler: aynı şehir + kategoride, sitesi taranmış ve sorun puanı en düşük (en iyi) işletmeler.
+ * Görüşmede "sizin sektörde iyi bir site böyle görünüyor" diye gösterilir. Zincir şubeleri ve adayın kendisi hariç.
+ */
+// Geniş kategorilerde (zanaat, doktor, lokanta…) aynı meslekten örnek: adındaki meslek sözcüğüne göre
+const TRADES = [
+  /glas/i, /maler|lackier/i, /dach|bedach/i, /elektr/i, /sanit|heizung|klempner|install/i, /tischler|schreiner|holz/i,
+  /fliese/i, /garten|landschaft/i, /schlüssel|schloss/i, /bau(?!m)|maurer/i, /metall|schlosser|stahl/i,
+  /zahn|dental|kiefer|implant/i, /augen|optik/i, /haut|derma/i, /kinder|pädiat|paediat/i, /frauen|gyn/i, /ortho/i, /physio|therap|massage|krankengymn/i, /tier/i,
+  /pizz/i, /döner|doner|kebab|grill/i, /sushi|asia|wok|thai|vietnam|china|japan/i, /café|cafe|kaffee|coffee|bistro/i, /eis/i, /burger/i, /steak/i, /griech|grill|taverna/i, /ital|trattoria|osteria/i, /bäck|backstube|konditor/i, /metzger|fleisch/i,
+  /barber|herren/i, /kosmetik|beauty|nail|nagel/i, /friseur|hair|haar/i,
+];
+const tradeOf = (name) => TRADES.find((re) => re.test(String(name ?? ''))) ?? null;
+
+export function goodExamples(db, id, limit = 3) {
+  const biz = db.prepare('SELECT id, name, city, category, lat, lon FROM businesses WHERE id=?').get(id);
+  if (!biz) return [];
+  const rows = db.prepare(`SELECT b.id, b.name, b.suburb, b.lat, b.lon, s.final_url, ${SCORE_SQL} AS score
+      FROM businesses b
+      JOIN scans s ON s.id = (SELECT MAX(id) FROM scans WHERE business_id = b.id)
+      LEFT JOIN profiles p ON p.business_id = b.id
+      WHERE b.city = ? AND b.category = ? AND b.id != ? AND b.brand IS NULL AND s.ok = 1 AND s.final_url IS NOT NULL
+        AND ${SCORE_SQL} IS NOT NULL AND ${SCORE_SQL} <= 15
+        AND s.findings NOT LIKE '%"social_only"%' AND s.findings NOT LIKE '%"placeholder"%'
+      ORDER BY ${SCORE_SQL} ASC, b.name LIMIT 30`).all(biz.city, biz.category, biz.id);
+  // Eşit puanda yakın olan önce (aynı semtteki örnek daha ikna edici)
+  const dist = (r) => (biz.lat !== null && r.lat !== null ? Math.hypot(biz.lat - r.lat, (biz.lon - r.lon) * 0.62) : 9);
+  // Aynı meslekten örnek varsa yalnızca onlar; yoksa kategorinin en iyileri
+  const trade = tradeOf(biz.name);
+  const same = trade ? rows.filter((r) => trade.test(r.name)) : [];
+  return (same.length ? same : rows)
+    .sort((a, b) => a.score - b.score || dist(a) - dist(b))
+    .slice(0, limit)
+    .map((r) => ({ id: r.id, name: r.name, suburb: r.suburb, url: r.final_url, score: r.score, sameTrade: same.length > 0, km: dist(r) === 9 ? null : Math.round(dist(r) * 111 * 10) / 10 }));
 }

@@ -15,6 +15,9 @@ import {
   AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Globe, LayoutTemplate, MapPin, Phone, Printer,
 } from 'lucide-react';
 import DraftChecklist from './DraftChecklist';
+import OfferBox, { usePricing } from './OfferBox';
+import WhatsAppDemo from './WhatsAppDemo';
+import GoodExamples from './GoodExamples';
 import ProspectOffer from './ProspectOffer';
 import ProspectPhotos from './ProspectPhotos';
 import ProspectProfile from './ProspectProfile';
@@ -47,6 +50,8 @@ export default function ProspectPage() {
   const [offer, setOffer] = useState(false);
   const [ids, setIds] = useState<number[]>([]);
   const [backLabel, setBackLabel] = useState('Müşteri Adayları');
+  const [pricing] = usePricing();
+  const [visitsKey, setVisitsKey] = useState(0);
 
   const pRef = useRef<Prospect | null>(null);
   useEffect(() => { pRef.current = p; }, [p]);
@@ -167,6 +172,24 @@ export default function ProspectPage() {
     }
   };
 
+  const saveOffer = async (offer: { package: string; setup: number; monthly: number } | null, markSent: boolean) => {
+    if (!p) return;
+    try {
+      await api('/api/admin/prospects', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', id: p.id, offer, ...(markSent ? { status: 'offer_sent' } : {}) }),
+      });
+      await load(true);
+      const change = offer
+        ? { offer_package: offer.package, offer_setup: offer.setup, offer_monthly: offer.monthly, ...(markSent ? { status: 'offer_sent' } : {}) }
+        : { offer_package: null, offer_setup: null, offer_monthly: null, offer_at: null };
+      patchCachedRow(p.id, change);
+      notify(offer ? 'Teklif kaydedildi.' : 'Teklif silindi.');
+    } catch (e) {
+      notify(`Hata: ${e instanceof Error ? e.message : 'Teklif kaydedilemedi.'}`);
+    }
+  };
+
   const startJob = async (body: object, step: string, message: string) => {
     try {
       await api('/api/admin/prospects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -266,7 +289,12 @@ export default function ProspectPage() {
                     <button type="button" disabled={notes === (p.notes ?? '')} onClick={() => update({ notes }, 'Not kaydedildi.')}
                       className="apple-pill-btn px-4 py-1.5 text-xs font-semibold disabled:opacity-50">Notu kaydet</button>
                   </div>
-                  <div className="mt-4"><ProspectVisits key={`v${p.id}`} id={p.id} /></div>
+                  <div className="mt-4"><ProspectVisits key={`v${p.id}-${visitsKey}`} id={p.id} /></div>
+                </section>
+
+                <section className={card} aria-labelledby="h-offer">
+                  <h2 id="h-offer" className="text-sm font-semibold text-[#1D1D1F] mb-3">Teklif</h2>
+                  <OfferBox key={`o${p.id}`} prospect={p} pricing={pricing} onSave={saveOffer} />
                 </section>
 
                 <section className={card} aria-labelledby="h-draft">
@@ -291,6 +319,7 @@ export default function ProspectPage() {
                           <span>Demoyu aç</span> <ExternalLink className="w-3 h-3" aria-hidden="true" />
                         </a>
                         <button type="button" onClick={() => copyDraftLink(p.draft_token!)} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">Bağlantıyı kopyala</button>
+                        <WhatsAppDemo id={p.id} name={p.name} phone={p.phone} token={p.draft_token} onLogged={() => { setVisitsKey((k) => k + 1); load(true); notify('Gönderim ziyaret geçmişine kaydedildi.'); }} />
                       </div>
                       {p.draft_quality && <DraftChecklist quality={p.draft_quality} />}
                     </>
@@ -373,6 +402,11 @@ export default function ProspectPage() {
                   </section>
                 )}
 
+                <section className={card} aria-labelledby="h-examples">
+                  <h2 id="h-examples" className="text-sm font-semibold text-[#1D1D1F] mb-2">Bölgedeki iyi örnekler</h2>
+                  <GoodExamples key={`g${p.id}`} id={p.id} city={p.city} />
+                </section>
+
                 <section className={card}>
                   <ProspectProfile prospect={p} findings={p.findings} jobRunning={jobRunning} refreshKey={profileRefresh}
                     onEnrich={(eid) => startJob({ action: 'enrich', ids: [eid ?? p.id] }, 'enrich', 'Derin profil başlıyor…')} />
@@ -383,7 +417,7 @@ export default function ProspectPage() {
         )}
       </div>
 
-      {offer && p && <ProspectOffer prospect={p} onClose={() => setOffer(false)} />}
+      {offer && p && <ProspectOffer prospect={p} pricing={pricing} onClose={() => setOffer(false)} />}
       {toast && (
         <div role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-[#1D1D1F] text-white text-xs font-semibold shadow-lg">{toast}</div>
       )}

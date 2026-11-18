@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import DraftChecklist, { type DraftQuality } from './DraftChecklist';
 import { markFromField, prospectHref } from './prospect-shared';
+import WhatsAppDemo from './WhatsAppDemo';
 import {
   ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
 } from 'lucide-react';
@@ -49,6 +50,7 @@ const OUTCOME_STYLE: Record<string, string> = {
   come_back: 'bg-amber-500',
   closed: 'bg-slate-500',
   not_interested: 'bg-red-600',
+  demo_sent: 'bg-[#25D366]',
 };
 
 const telHref = (p: string) => `tel:${p.replace(/[^+\d]/g, '')}`;
@@ -283,7 +285,7 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
         </div>
       </div>
 
-      <div className="px-4 pb-3 grid grid-cols-3 gap-2 text-xs font-semibold">
+      <div className={`px-4 pb-3 grid ${r.draft_token ? 'grid-cols-4' : 'grid-cols-3'} gap-2 text-xs font-semibold`}>
         <a href={navUrl(r)} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7]">
           <Navigation className="w-4 h-4 text-[#0071E3]" aria-hidden="true" /> Yol tarifi
         </a>
@@ -297,6 +299,7 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
             <PlayCircle className="w-4 h-4 text-[#0071E3]" aria-hidden="true" /> Demo
           </a>
         ) : <span className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7] text-[#6E6E73]"><ExternalLink className="w-4 h-4" aria-hidden="true" /> Demo yok</span>}
+        {r.draft_token && <WhatsAppDemo compact id={r.id} name={r.name} phone={r.phone} token={r.draft_token} onLogged={onSaved} />}
       </div>
 
       {!open ? (
@@ -307,7 +310,7 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
         <div className="px-4 pb-4 pt-3 border-t border-black/[0.06] space-y-2.5">
           <p className="text-xs font-semibold text-[#6E6E73]">Ziyaret sonucu</p>
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(VISIT_OUTCOME_LABEL).map(([k, label]) => (
+            {Object.entries(VISIT_OUTCOME_LABEL).filter(([k]) => k !== 'demo_sent').map(([k, label]) => (
               <button
                 key={k}
                 type="button"

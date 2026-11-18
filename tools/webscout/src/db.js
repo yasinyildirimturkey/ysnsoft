@@ -19,6 +19,7 @@ export const VISIT_OUTCOMES = {
   closed: 'visit_planned',     // Kapalıydı
   not_interested: 'lost',      // İlgilenmedi
   won: 'won',                  // Anlaşıldı
+  demo_sent: 'visited',        // Görüşmeden sonra demo WhatsApp ile gönderildi (teklif aşamasındakini geri almaz)
 };
 export const PARTNER_STATUSES = [
   'new', 'contacted', 'meeting', 'active', 'declined', 'do_not_contact',
@@ -160,6 +161,11 @@ export function openDb(path = process.env.WEBSCOUT_DB || join(DATA_DIR, 'webscou
   // Durumun son değiştiği an (satış hunisi hatırlatmaları: "teklif verildi, 7 gündür ses yok").
   // Tetikleyici her yoldan (panel, saha kaydı, plan, CLI) gelen değişikliği yakalar.
   addColumn(db, 'businesses', 'status_at', 'TEXT');
+  // Verilen teklif: paket anahtarı, tek seferlik kurulum ve aylık ücret (tam euro), teklif tarihi. Kazanılınca anlaşma değeri olur.
+  addColumn(db, 'businesses', 'offer_package', 'TEXT');
+  addColumn(db, 'businesses', 'offer_setup', 'INTEGER');
+  addColumn(db, 'businesses', 'offer_monthly', 'INTEGER');
+  addColumn(db, 'businesses', 'offer_at', 'TEXT');
   db.exec(`CREATE TRIGGER IF NOT EXISTS trg_business_status_at AFTER UPDATE OF status ON businesses
     WHEN NEW.status IS NOT OLD.status
     BEGIN UPDATE businesses SET status_at = datetime('now') WHERE id = NEW.id; END;`);

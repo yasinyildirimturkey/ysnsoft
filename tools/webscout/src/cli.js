@@ -7,10 +7,11 @@ import {
 } from './osm.js';
 import { scanSite } from './scan.js';
 import { writeReports, summary } from './report.js';
-import { funnelReport, queryProspects, STATUS_LABELS } from './prospects.js';
+import { funnelReport, goodExamples, queryProspects, STATUS_LABELS } from './prospects.js';
 import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
 import { siteMismatch } from './sitematch.js';
+import { readPricing, writePricing } from './pricing.js';
 
 const HELP = `WebScout – yerel işletme sitelerini tara, puanla, takip et
 
@@ -625,6 +626,18 @@ function cmdProspectSet(db, opt) {
     const notes = opt['notes-b64'] === true ? '' : Buffer.from(String(opt['notes-b64']), 'base64').toString('utf8');
     db.prepare('UPDATE businesses SET notes=? WHERE id=?').run(notes.slice(0, 4000), id);
   }
+  if (opt['offer-b64'] !== undefined) {
+    // Teklif: {package, setup, monthly} (tam euro). Boş değer teklifi siler.
+    let offer = null;
+    if (opt['offer-b64'] !== true) {
+      try { offer = JSON.parse(Buffer.from(String(opt['offer-b64']), 'base64').toString('utf8')); } catch { /* aşağıda reddedilir */ }
+      const ok = offer && /^[a-z0-9_-]{1,30}$/.test(String(offer.package ?? ''))
+        && [offer.setup, offer.monthly].every((v) => Number.isInteger(v) && v >= 0 && v <= 1_000_000);
+      if (!ok) { printJson({ ok: false, error: 'Geçersiz teklif' }); process.exit(1); }
+    }
+    db.prepare("UPDATE businesses SET offer_package=?, offer_setup=?, offer_monthly=?, offer_at=CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END WHERE id=?")
+      .run(offer?.package ?? null, offer?.setup ?? null, offer?.monthly ?? null, offer ? 1 : null, id);
+  }
   if (opt['website-b64'] !== undefined) {
     // Elle düzeltme: OSM'de olmayan site adresi sahada/Google'da bulunduysa
     const raw = opt['website-b64'] === true ? '' : Buffer.from(String(opt['website-b64']), 'base64').toString('utf8').trim();
@@ -652,8 +665,9 @@ function cmdVisitAdd(db, opt) {
   if (next && !DAY_RE.test(next)) throw new Error('Geçersiz tarih');
   db.prepare('INSERT INTO visits (business_id, outcome, note, next_at, by_user) VALUES (?,?,?,?,?)')
     .run(id, outcome, b64text(opt['note-b64'], 2000), next, b64text(opt['user-b64'], 120) || null);
-  // "Kazanıldı" ya da "iletişime geçme" sahadaki bir sonuçla geri alınmaz
-  const status = ['won', 'do_not_contact'].includes(biz.status) ? biz.status : VISIT_OUTCOMES[outcome];
+  // "Kazanıldı"/"iletişime geçme" geri alınmaz; WhatsApp ile demo gönderimi teklif aşamasını da geri almaz
+  const keep = ['won', 'do_not_contact'].includes(biz.status) || (outcome === 'demo_sent' && biz.status === 'offer_sent');
+  const status = keep ? biz.status : VISIT_OUTCOMES[outcome];
   db.prepare('UPDATE businesses SET status=? WHERE id=?').run(status, id);
   // Tekrar gelinecekse o güne planlanır; rotadaki sırası o günün planında belirlenir
   if (next) db.prepare('UPDATE businesses SET visit_date=?, visit_order=NULL WHERE id=?').run(next, id);
@@ -788,7 +802,7 @@ const { pos, opt } = parseArgs(process.argv.slice(2));
 const cmd = pos[0];
 if (!cmd || opt.help) { console.log(HELP); process.exit(cmd ? 0 : 1); }
 
-const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
+const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'pricing', 'pricing-set', 'examples', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
 try {
   const db = openDb();
   switch (cmd) {
@@ -817,6 +831,9 @@ try {
     case 'plan-visits': cmdPlanVisits(db, opt); break;
     case 'hours-sync': await cmdHoursSync(db, opt); break;
     case 'site-check': cmdSiteCheck(db); break;
+    case 'pricing': printJson({ ok: true, pricing: readPricing() }); break;
+    case 'examples': printJson({ ok: true, examples: goodExamples(db, Number(opt.id)) }); break;
+    case 'pricing-set': printJson({ ok: true, pricing: writePricing(JSON.parse(Buffer.from(String(opt.b64 ?? ''), 'base64').toString('utf8'))) }); break;
     default: console.log(HELP); process.exit(1);
   }
 } catch (e) {
