@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "YSNSOFT Mühendislik Ekibi", url: "https://ysnsoft.com" }],
   creator: "Yasin Yıldırım",
-  publisher: "YSNSOFT Bilişim Teknolojileri A.Ş.",
+  publisher: "YSNSOFT",
   alternates: {
     canonical: "https://ysnsoft.com",
     languages: {
@@ -108,7 +108,7 @@ export const metadata: Metadata = {
     "geo.country": "TR",
     "target_country": "tr",
     "DC.title": "YSNSOFT | Kurumsal SaaS, Hukuk Teknolojileri & Bilişim Çözümleri",
-    "DC.creator": "YSNSOFT Bilişim Teknolojileri A.Ş.",
+    "DC.creator": "YSNSOFT",
     "DC.language": "tr-TR",
     "rating": "general",
     "revisit-after": "1 days",
@@ -127,8 +127,7 @@ export default function RootLayout({
       {
         "@type": "Organization",
         "@id": "https://ysnsoft.com/#organization",
-        "name": "YSNSOFT Bilişim Teknolojileri A.Ş.",
-        "legalName": "YSNSOFT Bilişim Teknolojileri Anonim Şirketi",
+        "name": "YSNSOFT",
         "url": "https://ysnsoft.com",
         "logo": "https://ysnsoft.com/favicon.ico",
         "telephone": "+90-532-725-5098",
@@ -314,7 +313,7 @@ export default function RootLayout({
             "name": "Veri güvenliği, KVKK ve 256-bit SSL şifreleme nasıl sağlanıyor?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Tüm YSNSOFT altyapısı TLS 1.3 ve 256-bit SSL şifrelemeyle korunur. Veritabanlarımızda Row-Level Security (RLS) uygulanır, günlük otomatik yedekleme coğrafi olarak izole edilir ve tüm sistemlerimiz KVKK & GDPR mevzuatlarına %100 uyumludur."
+              "text": "Tüm YSNSOFT altyapısı TLS 1.3 ve 256-bit SSL şifrelemeyle korunur. Veritabanlarımızda Row-Level Security (RLS) uygulanır, günlük otomatik yedekleme coğrafi olarak izole edilir ve KVKK / GDPR gereklilikleri her projede ayrıca değerlendirilir ve kontrol edilmelidir."
             }
           },
           {
@@ -322,7 +321,7 @@ export default function RootLayout({
             "name": "Satış sonrası teknik destek, SLA garantisi ve acil müdahale şartları nelerdir?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Tüm kurumsal müşterilerimize 7/24 kesintisiz telefon (+90 532 725 50 98), WhatsApp ve e-posta desteği sunuyoruz. Kritik kurumsal süreçler için %99.99 çalışma garantisi (SLA) ve 15 dakika içinde çözüm mimarı müdahalesi taahhüt ediyoruz."
+              "text": "Tüm kurumsal müşterilerimize 7/24 kesintisiz telefon (+90 532 725 50 98), WhatsApp ve e-posta desteği sunuyoruz. Destek kapsamı ve müdahale süreleri her projenin sözleşmesinde ayrıca belirlenir."
             }
           }
         ]

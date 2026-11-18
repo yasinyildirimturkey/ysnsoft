@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -13,40 +13,74 @@ import {
   Building 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { saveAppointment } from '@/lib/store';
+import { submitAppointment } from '@/lib/crm-client';
 
-const DAYS = [
-  { label: 'Pazartesi', date: '3 Kasım', iso: '2026-11-03' },
-  { label: 'Salı', date: '4 Kasım', iso: '2026-11-04' },
-  { label: 'Çarşamba', date: '5 Kasım', iso: '2026-11-05' },
-  { label: 'Perşembe', date: '6 Kasım', iso: '2026-11-06' },
-  { label: 'Cuma', date: '7 Kasım', iso: '2026-11-07' }
-];
+type Day = { label: string; date: string; iso: string };
+
+/** Yarından itibaren sıradaki 5 iş günü (eskiden sabit, geçmişte kalmış tarihler yazılıydı). */
+function nextWorkdays(count = 5): Day[] {
+  const out: Day[] = [];
+  const d = new Date();
+  while (out.length < count) {
+    d.setDate(d.getDate() + 1);
+    const wd = d.getDay();
+    if (wd === 0 || wd === 6) continue;
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    out.push({
+      label: d.toLocaleDateString('tr-TR', { weekday: 'long' }),
+      date: d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }),
+      iso,
+    });
+  }
+  return out;
+}
+
+// Tarih yalnız tarayıcıda hesaplanır (sunucu ön-render'ında "bugün" sabitlenmesin). Gün değişene kadar aynı dizi döner.
+let dayCache: { key: string; days: Day[] } | null = null;
+function clientDays(): Day[] {
+  const key = new Date().toDateString();
+  if (dayCache?.key !== key) dayCache = { key, days: nextWorkdays() };
+  return dayCache.days;
+}
+const noSubscribe = () => () => {};
+const serverDays = (): Day[] | null => null;
 
 const TIME_SLOTS = ['10:00', '11:30', '14:00', '15:30', '16:45'];
 
 export default function MeetingScheduler() {
-  const [selectedDay, setSelectedDay] = useState(DAYS[0]);
+  const DAYS = useSyncExternalStore<Day[] | null>(noSubscribe, clientDays, serverDays) ?? [];
+  const [pickedIso, setPickedIso] = useState<string | null>(null);
+  const selectedDay = DAYS.find((d) => d.iso === pickedIso) ?? DAYS[0] ?? { label: '', date: '', iso: '' };
+  const setSelectedDay = (d: Day) => setPickedIso(d.iso);
   const [selectedTime, setSelectedTime] = useState(TIME_SLOTS[1]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [topic, setTopic] = useState('KGLEX Hukuk & UYAP Robotu');
   const [booked, setBooked] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleBook = (e: React.FormEvent) => {
+  const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) return;
-
-    saveAppointment({
-      name,
-      company: company || 'Belirtilmedi',
-      email,
-      topic,
-      dateStr: `${selectedDay.label}, ${selectedDay.date}`,
-      timeStr: selectedTime
-    });
-
+    if (!name || !email || sending || !selectedDay.iso) return;
+    setSending(true);
+    setError('');
+    try {
+      await submitAppointment({
+        name,
+        company,
+        email,
+        topic,
+        dateStr: `${selectedDay.label}, ${selectedDay.date} (${selectedDay.iso})`,
+        timeStr: selectedTime
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Randevu talebi gönderilemedi.');
+      setSending(false);
+      return;
+    }
+    setSending(false);
     setBooked(true);
     confetti({
       particleCount: 100,
@@ -82,16 +116,16 @@ export default function MeetingScheduler() {
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-2xl font-semibold text-[#1D1D1F] mb-2">
-                Randevunuz Onaylandı!
+                Randevu talebiniz alındı
               </h3>
               <p className="text-sm text-[#515154] max-w-md mx-auto mb-6">
-                <strong>{selectedDay.label}, {selectedDay.date} saat {selectedTime}</strong> için Google Meet takvim davetiniz <strong>{email}</strong> adresine gönderildi.
+                <strong>{selectedDay.label}, {selectedDay.date} saat {selectedTime}</strong> için talebinizi aldık. Uygunluğu kontrol edip onayı ve görüşme bağlantısını <strong>{email}</strong> adresine göndereceğiz.
               </p>
 
               <div className="bg-white p-4 rounded-2xl border border-black/[0.06] text-xs text-[#1D1D1F] max-w-sm mx-auto mb-6 shadow-2xs">
                 <div className="flex items-center gap-2 mb-1 text-[#0071E3] font-semibold">
                   <Video className="w-4 h-4" />
-                  <span>Google Meet Canlı Toplantı</span>
+                  <span>Online görüşme (onay bekliyor)</span>
                 </div>
                 <span>Konu: {topic} Fizibilite & Demo Oturumu</span>
               </div>
@@ -156,7 +190,7 @@ export default function MeetingScheduler() {
                 <div className="p-3.5 bg-white rounded-2xl border border-black/[0.06] text-xs text-[#515154] flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#0071E3] shrink-0" />
                   <span>
-                    Toplantılar kıdemli çözüm mimarlarımız eşliğinde birebir Google Meet üzerinden gerçekleşir.
+                    Görüşmeler birebir ve online yapılır; talebinizi onayladığımızda bağlantıyı e-postayla iletiriz.
                   </span>
                 </div>
               </div>
@@ -219,11 +253,15 @@ export default function MeetingScheduler() {
                   </select>
                 </div>
 
+                {error && (
+                  <p role="alert" className="text-xs text-[#B91C1C] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">{error}</p>
+                )}
                 <button
                   type="submit"
-                  className="w-full apple-pill-btn py-3 text-xs font-medium flex items-center justify-center gap-2 shadow-md shadow-[#0071E3]/20 mt-2"
+                  disabled={sending}
+                  className="w-full apple-pill-btn py-3 disabled:opacity-60 text-xs font-medium flex items-center justify-center gap-2 shadow-md shadow-[#0071E3]/20 mt-2"
                 >
-                  <span>Randevuyu Oluştur ({selectedDay.date} - {selectedTime})</span>
+                  <span>{sending ? 'Gönderiliyor…' : `Randevu Talep Et (${selectedDay.date} - ${selectedTime})`}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

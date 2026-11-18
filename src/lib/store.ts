@@ -47,7 +47,7 @@ export interface InvoiceRecord {
   status: 'Ödendi' | 'Beklemede' | 'Vadesi Geçti' | 'İptal';
   issueDate: string;
   dueDate: string;
-  paymentType: 'Havale / EFT' | 'Sanal POS' | 'Çek';
+  paymentType: 'Havale / EFT' | 'Sanal POS' | 'Çek' | 'Nakit';
 }
 
 export interface SmtpSettings {
@@ -112,21 +112,21 @@ export const DEFAULT_SMTP_SETTINGS: SmtpSettings = {
   port: 587,
   user: 'noreply@ysnsoft.com',
   pass: '',
-  fromName: 'YSNSOFT Bilişim Teknolojileri',
+  fromName: 'YSNSOFT',
   fromEmail: 'noreply@ysnsoft.com',
   secure: true
 };
 
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
-  companyName: 'YSNSOFT Bilişim Teknolojileri A.Ş.',
+  companyName: 'YSNSOFT',
   companyPhone: '+90 532 725 50 98',
   whatsappNumber: '+90 532 725 50 98',
   supportEmail: 'destek@ysnsoft.com',
   infoEmail: 'info@ysnsoft.com',
   notificationEmail: 'noreply@ysnsoft.com',
   address: 'Pendik / İstanbul • Türkiye',
-  mersisNo: '0987654321000015',
-  ticaretSicilNo: '348291-5'
+  mersisNo: '',
+  ticaretSicilNo: ''
 };
 
 const DEFAULT_LEADS: Lead[] = [
@@ -466,7 +466,7 @@ export const DEFAULT_GEO_SETTINGS: GeoSettings = {
   icbm: '40.8795, 29.2578',
   postalCode: '34890',
   phone: '+90 532 725 50 98',
-  companyName: 'YSNSOFT Bilişim Teknolojileri A.Ş.'
+  companyName: 'YSNSOFT'
 };
 
 // Site & Product Storage Functions
@@ -543,7 +543,13 @@ export function getStoredSystemSettings(): SystemSettings {
     localStorage.setItem('ysn_system_settings', JSON.stringify(DEFAULT_SYSTEM_SETTINGS));
     return DEFAULT_SYSTEM_SETTINGS;
   }
-  try { return JSON.parse(data); } catch { return DEFAULT_SYSTEM_SETTINGS; }
+  try {
+    const parsed = { ...DEFAULT_SYSTEM_SETTINGS, ...JSON.parse(data) } as SystemSettings;
+    if (parsed.mersisNo === '0987654321000015') parsed.mersisNo = '';
+    if (parsed.ticaretSicilNo === '348291-5') parsed.ticaretSicilNo = '';
+    if (parsed.companyName === 'YSNSOFT Bilişim Teknolojileri A.Ş.') parsed.companyName = 'YSNSOFT';
+    return parsed;
+  } catch { return DEFAULT_SYSTEM_SETTINGS; }
 }
 
 export function saveSystemSettings(settings: SystemSettings) {

@@ -3,7 +3,7 @@
 //   GLM_API_KEY   zorunlu (yoksa yapay zekâ adımları sessizce atlanır)
 //   GLM_BASE_URL  varsayılan https://open.bigmodel.cn/api/paas/v4
 //   WEBSCOUT_GLM_MODEL  varsayılan glm-5.3; sağlayıcı modeli tanımazsa GLM_FALLBACK_MODEL (glm-4-plus) denenir
-// Sitenin sohbet asistanı GLM_MODEL'i kullanır (sunucuda glm-4-plus); WebScout bilerek ondan bağımsızdır.
+// Sitenin sohbet asistanı GLM_CHAT_MODEL'i kullanır (varsayılan ücretsiz glm-4.7-flash); WebScout bilerek ondan bağımsızdır.
 
 const BASE = (process.env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4').replace(/\/+$/, '');
 const MODEL = process.env.WEBSCOUT_GLM_MODEL || 'glm-5.3';

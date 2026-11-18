@@ -50,9 +50,9 @@ const SUITES: Suite[] = [
     desc: 'Duruşma ajandası, müvekkil sanal POS tahsilatı, KEP entegrasyonu ve yapay zekâ mevzuat arama robotu.',
     cta: 'KGLEX detayları',
     stats: [
-      { label: 'Aktif dava & icra dosyası', value: '18.420', note: '%100 senkron', positive: true },
-      { label: 'Otonom UYAP taraması', value: '450.000+', note: 'bu ay', tone: 'blue' },
-      { label: 'Tevkil & arabuluculuk ağı', value: '2.400 avukat', note: '81 il', positive: true },
+      { label: 'Dava & icra takibi', value: 'Tek panel', note: 'büro ekibi için', positive: true },
+      { label: 'UYAP evrak taraması', value: 'Otomatik', note: 'arka planda', tone: 'blue' },
+      { label: 'Müvekkil alanı', value: 'Web & mobil', note: 'dosya durumu', positive: true },
     ],
   },
   {
@@ -64,7 +64,7 @@ const SUITES: Suite[] = [
     desc: 'İfraz, tevhid, terk hesapları, tapu harcı dökümü, kentsel dönüşüm %50+1 ve HKMO antetli teklif modülleri.',
     cta: 'HaritaPlan detayları',
     stats: [
-      { label: '3194 Md. 18 DOP motoru', value: '1,2 sn', note: 'resmî format', tone: 'green', positive: true },
+      { label: '3194 Md. 18 DOP hesabı', value: 'Otomatik', note: 'çıktılar kontrol edilmeli', tone: 'green', positive: true },
       { label: 'CAD dosya desteği', value: 'Netcad & DXF', note: 'çift yönlü' },
       { label: '3D gabari & kesit', value: 'Three.js WebGL', note: 'tarayıcıda' },
     ],
@@ -78,8 +78,8 @@ const SUITES: Suite[] = [
     desc: 'Müşteri talep eşleme motoru, sanal POS, çoklu şube yetkilendirme ve otomatik e-fatura altyapısı.',
     cta: 'Panelde detayları',
     stats: [
-      { label: 'Bağlı ofis & acente', value: '1.500+ ofis', note: 'multi-tenant', tone: 'violet' },
-      { label: 'Canlı soket bağlantısı', value: '25.000+', note: 'Socket.IO anlık', positive: true },
+      { label: 'Ofis & şube yapısı', value: 'Çok kiracılı', note: 'her ofis ayrı', tone: 'violet' },
+      { label: 'Canlı güncelleme', value: 'Socket.IO', note: 'anlık bildirim', positive: true },
       { label: 'Mobil & web senkronu', value: 'Expo / RN', note: 'tek API', tone: 'blue' },
     ],
   },
@@ -92,18 +92,18 @@ const SUITES: Suite[] = [
     desc: 'Kamera ile AI cilt taraması, masadan QR menü siparişi ve Bodrum lüks villa/transfer rezervasyon motorları.',
     cta: 'Flamantyou & Samatya detayları',
     stats: [
-      { label: 'AI cilt analizi · Flamantyou', value: '%94 isabet', note: '+%42 sepet', tone: 'pink', positive: true },
-      { label: 'QR sipariş · Samatya', value: '3.500 sipariş/gün', note: 'soğuk zincir', tone: 'amber' },
-      { label: 'Rezervasyon · Dolphin Bodrum', value: '€4,2M hacim', note: 'çok dilli VIP', tone: 'sky', positive: true },
+      { label: 'AI cilt analizi · Flamantyou', value: 'Kamera ile', note: 'ürün önerisi', tone: 'pink', positive: true },
+      { label: 'QR sipariş · Samatya', value: 'Masadan sipariş', note: 'B2B + B2C', tone: 'amber' },
+      { label: 'Rezervasyon · Dolphin Bodrum', value: 'Villa & transfer', note: 'çok dilli', tone: 'sky', positive: true },
     ],
   },
 ];
 
 const PROOF = [
-  { value: '450.000+', label: 'aylık UYAP sorgusu' },
+  { value: 'Web & mobil', label: 'özel yazılım geliştirme' },
   { value: '8', label: 'canlı ürün ve portal' },
-  { value: '%99,99', label: 'SLA çalışma garantisi' },
-  { value: '15 dk', label: 'kritik müdahale süresi' },
+  { value: 'TR / EN / DE', label: 'çok dilli projeler' },
+  { value: 'Doğrudan', label: 'geliştiriciyle iletişim' },
 ];
 
 export default function Hero({ onOpenContact, onScrollTo, onSelectProduct }: HeroProps) {

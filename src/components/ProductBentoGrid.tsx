@@ -148,14 +148,14 @@ export default function ProductBentoGrid({ onSelectProduct, onOpenContact }: Pro
                   </p>
 
                   {/* Key Metrics Grid */}
-                  <div className="grid grid-cols-3 gap-2.5 mb-6">
+                  {prod.metrics.length > 0 && <div className="grid grid-cols-3 gap-2.5 mb-6">
                     {prod.metrics.map((m, idx) => (
                       <div key={idx} className="bg-[#F5F5F7] p-3 rounded-xl border border-black/[0.03]">
                         <div className="text-[11px] text-[#6E6E73] font-medium leading-tight">{m.label}</div>
                         <div className="text-base sm:text-lg font-semibold tracking-tight text-[#1D1D1F] mt-1 tabular">{m.value}</div>
                       </div>
                     ))}
-                  </div>
+                  </div>}
 
                   {/* Feature Highlights */}
                   <div className="space-y-2 mb-6">

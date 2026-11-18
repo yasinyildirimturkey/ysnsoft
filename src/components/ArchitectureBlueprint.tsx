@@ -35,7 +35,7 @@ export default function ArchitectureBlueprint() {
       color: '#10B981',
       badge: 'Ultra Düşük Gecikme',
       tech: ['Node.js & Express 4', 'Socket.IO Canlı İletişim', 'RESTful & GraphQL', 'Rate Limiting & CORS'],
-      description: 'Panelde’nin 25.000+ eşzamanlı emlak danışmanını senkronize eden, sanal POS ve e-fatura hareketlerini yöneten yüksek verimli servis mimarisi.'
+      description: 'Panelde’nin emlak danışmanlarını anlık senkronize eden, sanal POS ve e-fatura hareketlerini yöneten yüksek verimli servis mimarisi.'
     },
     {
       id: 'intelligence',

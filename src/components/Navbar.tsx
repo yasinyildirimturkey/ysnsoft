@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Layers, ArrowRight, Menu, X, Calendar, UserRound } from 'lucide-react';
+import { Layers, ArrowRight, Menu, X, Calendar } from 'lucide-react';
 
 interface NavbarProps {
   onOpenContact: (productName?: string) => void;
@@ -147,13 +147,6 @@ export default function Navbar({ onOpenContact, onScrollTo }: NavbarProps) {
 
             {/* Sağ taraf: ikincil ve birincil eylemler */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <a
-                href="/portal"
-                className="hidden xl:inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#515154] hover:text-[#1D1D1F] hover:bg-black/[0.04] rounded-full transition-colors"
-              >
-                <UserRound className="w-4 h-4" aria-hidden="true" />
-                <span>Müşteri Portalı</span>
-              </a>
               <button
                 type="button"
                 onClick={() => go('demo')}
@@ -227,12 +220,6 @@ export default function Navbar({ onOpenContact, onScrollTo }: NavbarProps) {
                 <li>
                   <a href="/blog" className="block px-4 py-3 text-[15px] font-medium text-[#1D1D1F] rounded-2xl hover:bg-black/[0.04]">
                     Ar-Ge & Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="/portal" className="flex items-center gap-2 px-4 py-3 text-[15px] font-medium text-[#1D1D1F] rounded-2xl hover:bg-black/[0.04]">
-                    <UserRound className="w-4 h-4 text-[#0071E3]" aria-hidden="true" />
-                    Müşteri Portalı
                   </a>
                 </li>
               </ul>

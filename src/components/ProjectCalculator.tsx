@@ -42,8 +42,8 @@ const ADDONS = [
   { id: 'payment-efat', name: 'Sanal POS, GİB E-Fatura & E-İmza', weeks: 1 },
   { id: 'mobile-app', name: 'iOS & Android Native Mobil Ek', weeks: 3 },
   { id: 'multilang', name: 'Çoklu Dil & Küresel Para Birimi', weeks: 0.5 },
-  { id: 'data-migration', name: 'Eski Sistemden %100 Veri Aktarımı', weeks: 0.5 },
-  { id: 'sla', name: '7/24 Kesintisiz SLA & Mühendislik', weeks: 0 }
+  { id: 'data-migration', name: 'Eski Sistemden Veri Aktarımı', weeks: 0.5 },
+  { id: 'sla', name: 'Bakım & Teknik Destek Paketi', weeks: 0 }
 ];
 
 export default function ProjectCalculator({ onConfigureSubmit }: ProjectCalculatorProps) {

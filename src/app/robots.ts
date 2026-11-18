@@ -9,7 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: [
           '/',
-          '/portal',
           '/blog',
           '/_next/static/',
           '/favicon.ico',
@@ -18,13 +17,13 @@ export default function robots(): MetadataRoute.Robots {
           '/admin',
           '/admin/',
           '/api/',
+          '/portal',
         ],
       },
       {
         userAgent: 'Googlebot',
         allow: [
           '/',
-          '/portal',
           '/blog',
           '/_next/static/',
         ],
@@ -32,13 +31,13 @@ export default function robots(): MetadataRoute.Robots {
           '/admin',
           '/admin/',
           '/api/',
+          '/portal',
         ],
       },
       {
         userAgent: 'Bingbot',
         allow: [
           '/',
-          '/portal',
           '/blog',
           '/_next/static/',
         ],
@@ -46,6 +45,7 @@ export default function robots(): MetadataRoute.Robots {
           '/admin',
           '/admin/',
           '/api/',
+          '/portal',
         ],
       },
     ],
