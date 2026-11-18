@@ -14,75 +14,24 @@ import {
   AlertCircle,
   Download,
   ExternalLink,
-  Globe,
   LayoutTemplate,
   Eye,
   List,
   Map as MapIcon,
-  MapPin,
-  Phone,
   Printer,
   RefreshCw,
   ScanSearch,
   Search,
 } from 'lucide-react';
 import ProspectOffer from './ProspectOffer';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  ACTIVITY_META, api, cameBackRecently, inputCls, KIND_META, LIST_IDS_KEY, LIST_SCROLL_KEY, LIST_STATE_KEY, markFromList, prospectHref, readSession, writeSession,
+  type Job, type Prospect,
+} from './prospect-shared';
 import ProspectFunnel from './ProspectFunnel';
-import DraftChecklist, { type DraftQuality } from './DraftChecklist';
 import ProspectMap from './ProspectMap';
-import ProspectPhotos from './ProspectPhotos';
-import ProspectVisits from './ProspectVisits';
-import ProspectProfile from './ProspectProfile';
-
-type Kind = 'no_site' | 'redesign' | 'unscanned' | 'ok' | 'chain';
-
-interface Finding {
-  code: string;
-  points: number;
-  de: string;
-  tr: string;
-  /** Seviye 2 doğrulaması (varsa): confirmed | partial | refuted | unverified */
-  verified?: string;
-}
-
-interface Prospect {
-  id: number;
-  name: string;
-  category: string;
-  country: string;
-  city: string;
-  address: string | null;
-  website: string | null;
-  phone: string | null;
-  status: string;
-  notes: string;
-  lat: number | null;
-  lon: number | null;
-  /** Geçerli puan: derin tarama yapıldıysa yanlış alarmlar düşülmüş hâli */
-  score: number | null;
-  /** İlk tarama puanı (doğrulamadan önce) */
-  raw_score: number | null;
-  final_url: string | null;
-  scanned_at: string | null;
-  kind: Kind;
-  districts: string | null;
-  suburb: string | null;
-  findings: Finding[];
-  tech: string | null;
-  /** Seviye 2 derin profil çıkarıldıysa: işletmenin açık olup olmadığına dair tahmin */
-  activity: 'active_likely' | 'closed_suspected' | 'unknown' | null;
-  enriched_at: string | null;
-  /** Seviye 3 şablon taslağı üretildiyse gizli demo adresinin belirteci (/demo/<token>) */
-  draft_token: string | null;
-  draft_expires: string | null;
-  /** Müşterinin demoyu kaç kez açtığı (biz/botlar hariç) ve en son ne zaman */
-  demo_views?: number;
-  /** Kayıtlı web adresi başka bir firmanın sitesine gidiyorsa (devralma/yanlış kayıt): taslak üretilmez */
-  site_mismatch?: { host: string; owner: string | null } | null;
-  /** Demonun eksik/tahmini kısımları (örnek foto, öneri metin, logo, saat…): sahada tamamlanacaklar */
-  draft_quality?: DraftQuality | null;
-  demo_last_view?: string | null;
-}
 
 /** "dün 21:40", "bugün 09:12", "12.11. 18:05" */
 function whenShort(iso: string) {
@@ -101,14 +50,6 @@ interface District {
   city: string;
   name: string;
   admin_level: number;
-}
-
-interface Job {
-  state: 'running' | 'done' | 'error';
-  step: string;
-  message: string;
-  progress?: { done: number; total: number };
-  errors?: string[];
 }
 
 interface Meta {
@@ -140,14 +81,6 @@ interface Breakdown {
   unscanned: number;
 }
 
-const KIND_META: Record<Kind, { label: string; cls: string }> = {
-  no_site: { label: 'Yeni site', cls: 'bg-[#0071E3]/10 text-[#0058B0]' },
-  redesign: { label: 'Yenileme', cls: 'bg-amber-100 text-amber-800' },
-  unscanned: { label: 'Taranmadı', cls: 'bg-black/[0.06] text-[#515154]' },
-  ok: { label: 'Site iyi', cls: 'bg-emerald-100 text-emerald-800' },
-  chain: { label: 'Zincir', cls: 'bg-black/[0.06] text-[#515154]' },
-};
-
 const KIND_FILTERS: { id: string; label: string }[] = [
   { id: 'offer', label: 'Teklif verilebilir' },
   { id: 'no_site', label: 'Sitesi yok' },
@@ -158,17 +91,9 @@ const KIND_FILTERS: { id: string; label: string }[] = [
   { id: 'all', label: 'Tümü' },
 ];
 
-const ACTIVITY_META = {
-  active_likely: { label: 'Muhtemelen açık', cls: 'bg-emerald-100 text-emerald-800' },
-  closed_suspected: { label: 'Kapanmış olabilir', cls: 'bg-red-100 text-red-800' },
-  unknown: { label: 'Profil var', cls: 'bg-black/[0.06] text-[#515154]' },
-} as const;
-
 /** Bölge taramasından sonra derin profili otomatik çıkarılacak aday sayısı (Seviye 2). */
 const AUTO_ENRICH_TOP = 10;
 
-const inputCls =
-  'w-full px-3 py-2 text-xs bg-[#F5F5F7] rounded-xl border border-black/[0.08] text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#0071E3]';
 const labelCls = 'block text-[11px] font-semibold text-[#6E6E73] mb-1.5';
 
 function scoreCls(score: number) {
@@ -177,36 +102,35 @@ function scoreCls(score: number) {
   return 'bg-emerald-600 text-white';
 }
 
-async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { cache: 'no-store', ...init });
-  const json = await res.json().catch(() => null);
-  if (!res.ok || !json || json.success === false) {
-    throw new Error(json?.error || `İstek başarısız (HTTP ${res.status})`);
-  }
-  return json as T;
-}
+interface ListState { country: string; city: string; areaId: string; cats: string[]; kind: string; view: 'list' | 'map'; status: string; minScore: number; q: string }
 
 export default function ProspectsPanel({ notify }: { notify: (message: string) => void }) {
+  const router = useRouter();
+  // Son süzgeç (bu sekmede): aday sayfasından dönünce ya da menüden yeniden açınca aynı liste gelir
+  const [saved] = useState<Partial<ListState>>(() => readSession<ListState>(LIST_STATE_KEY) ?? {});
   const [unavailable, setUnavailable] = useState<string | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [job, setJob] = useState<Job | null>(null);
 
   // Bölge + tür seçimi (hem taramayı hem listeyi yönlendirir)
-  const [country, setCountry] = useState('DE');
-  const [city, setCity] = useState('Duisburg');
-  const [areaId, setAreaId] = useState('');
-  const [cats, setCats] = useState<string[]>([]);
+  const [country, setCountry] = useState(saved.country ?? 'DE');
+  const [city, setCity] = useState(saved.city ?? 'Duisburg');
+  const [areaId, setAreaId] = useState(saved.areaId ?? '');
+  const [cats, setCats] = useState<string[]>(saved.cats ?? []);
   const [withScan, setWithScan] = useState(true);
   const [autoEnrich, setAutoEnrich] = useState(true);
-  const [profileRefresh, setProfileRefresh] = useState(0);
   const [districtsLoading, setDistrictsLoading] = useState(false);
 
   // Liste süzgeçleri
-  const [kind, setKind] = useState('offer');
-  const [view, setView] = useState<'list' | 'map'>('list');
-  const [status, setStatus] = useState('');
-  const [minScore, setMinScore] = useState(40);
-  const [q, setQ] = useState('');
+  const [kind, setKind] = useState(saved.kind ?? 'offer');
+  const [view, setView] = useState<'list' | 'map'>(saved.view ?? 'list');
+  const [status, setStatus] = useState(saved.status ?? '');
+  const [minScore, setMinScore] = useState(saved.minScore ?? 40);
+  const [q, setQ] = useState(saved.q ?? '');
+
+  useEffect(() => {
+    writeSession(LIST_STATE_KEY, { country, city, areaId, cats, kind, view, status, minScore, q } satisfies ListState);
+  }, [country, city, areaId, cats, kind, view, status, minScore, q]);
 
   const [rows, setRows] = useState<Prospect[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -215,9 +139,6 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
 
-  const [selected, setSelected] = useState<Prospect | null>(null);
-  const [draftNotes, setDraftNotes] = useState('');
-  const [draftSite, setDraftSite] = useState('');
   const [offerFor, setOfferFor] = useState<Prospect | null>(null);
 
   const cityTrim = city.trim();
@@ -264,6 +185,14 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
   }, [country, cityTrim, areaId, cats]);
 
   const requestSeq = useRef(0);
+  const restoredScroll = useRef(false);
+  // Kaydırma konumu (yalnızca Geri ile dönüşte kullanılır; menüden açılınca liste baştan başlar)
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => { clearTimeout(t); t = setTimeout(() => writeSession(LIST_SCROLL_KEY, Math.round(window.scrollY)), 150); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { clearTimeout(t); window.removeEventListener('scroll', onScroll); };
+  }, []);
   const loadList = useCallback(async () => {
     const seq = ++requestSeq.current;
     setLoading(true);
@@ -279,8 +208,13 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
       );
       if (seq !== requestSeq.current || !res.available) return;
       setRows(res.rows);
+      writeSession(LIST_IDS_KEY, res.rows.map((r) => r.id));
+      if (!restoredScroll.current) {
+        restoredScroll.current = true;
+        const y = readSession<number>(LIST_SCROLL_KEY);
+        if (y && cameBackRecently(20_000)) requestAnimationFrame(() => window.scrollTo(0, y));
+      }
       // Açık detay penceresi de güncel satırı göstersin (ör. taslak üretildikten sonra bağlantı belirir)
-      setSelected((s) => (s ? res.rows.find((r) => r.id === s.id) ?? s : s));
       setSummary(res.summary);
       setBreakdown(res.breakdown);
       setMatched(res.matched);
@@ -316,7 +250,6 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
           notify(res.job?.state === 'error' ? `Tarama hatası: ${res.job.message}` : (res.job?.message ?? 'Tarama tamamlandı.'));
           loadMeta();
           loadList();
-          setProfileRefresh((n) => n + 1);
         }
       } catch {
         // geçici ağ hatası: bir sonraki turda yeniden dene
@@ -382,16 +315,6 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
     }
   };
 
-  /** Seviye 3: tek aday için şablon taslağı (gizli demo sayfası) üretir ya da yeniler. */
-  const startDraft = async (id: number) => {
-    try {
-      await api('/api/admin/prospects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'draft', id }) });
-      setJob({ state: 'running', step: 'draft', message: 'Şablon taslağı başlıyor…', progress: { done: 0, total: 1 } });
-    } catch (e) {
-      notify(`Hata: ${e instanceof Error ? e.message : 'Şablon taslağı başlatılamadı.'}`);
-    }
-  };
-
   /** Seviye 3 toplu: geçerli süzgeçteki en iyi adaylara taslak üretir (bitince "Taslak hazır" süzgecine geçer). */
   const startDraftTop = async () => {
     try {
@@ -407,16 +330,6 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
     }
   };
 
-  const copyDraftLink = async (token: string) => {
-    const url = `${window.location.origin}/demo/${token}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      notify('Taslak bağlantısı kopyalandı.');
-    } catch {
-      notify(url);
-    }
-  };
-
   const updateProspect = async (id: number, patch: { status?: string; notes?: string; website?: string }, okMessage?: string) => {
     try {
       await api('/api/admin/prospects', {
@@ -425,7 +338,6 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
         body: JSON.stringify({ action: 'update', id, ...patch }),
       });
       setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...(patch.status ? { status: patch.status } : {}), ...(patch.notes !== undefined ? { notes: patch.notes } : {}) } : r)));
-      setSelected((s) => (s && s.id === id ? { ...s, ...(patch.status ? { status: patch.status } : {}), ...(patch.notes !== undefined ? { notes: patch.notes } : {}) } : s));
       if (patch.website !== undefined) loadList();
       if (okMessage) notify(okMessage);
     } catch (e) {
@@ -433,32 +345,10 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
     }
   };
 
-  const openDetail = (p: Prospect) => {
-    setSelected(p);
-    setDraftNotes(p.notes ?? '');
-    setDraftSite(p.website ?? '');
-  };
-
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelected(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [selected]);
-
-  /** Listede olmayan adayı (ör. hatırlatmadan) tek başına çekip detayını açar. */
-  const openById = async (id: number) => {
-    const inList = rows.find((r) => r.id === id);
-    if (inList) { openDetail(inList); return; }
-    try {
-      const res = await api<{ rows: Prospect[] }>(`/api/admin/prospects?kind=all&id=${id}`);
-      if (res.rows?.[0]) openDetail(res.rows[0]);
-      else notify('Aday bulunamadı.');
-    } catch (e) {
-      notify(`Hata: ${e instanceof Error ? e.message : 'Aday açılamadı.'}`);
-    }
+  /** Adayın kendi sayfasını açar; liste süzgeci ve konumu hafızada kalır, "← Müşteri Adayları" buraya döner. */
+  const openProspect = (id: number) => {
+    markFromList();
+    router.push(prospectHref(id));
   };
 
   const exportCsv = () => {
@@ -662,7 +552,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
       )}
 
       {/* 2b) Satış hunisi + yapılacaklar */}
-      {summary && <ProspectFunnel query={regionQuery().toString()} stamp={summary} onOpen={openById} />}
+      {summary && <ProspectFunnel query={regionQuery().toString()} stamp={summary} onOpen={openProspect} />}
 
       {/* 3) Süzgeçler */}
       <div className="apple-card p-4 sm:p-5 bg-white border border-black/[0.07] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -778,10 +668,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
         ) : view === 'map' ? (
           <ProspectMap
             rows={rows}
-            onOpen={(id) => {
-              const p = rows.find((r) => r.id === id);
-              if (p) openDetail(p);
-            }}
+            onOpen={openProspect}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -807,7 +694,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                       )}
                     </td>
                     <td className="p-4 min-w-44">
-                      <div className="font-bold text-[#1D1D1F]">{r.name}</div>
+                      <Link href={prospectHref(r.id)} onClick={markFromList} className="block font-bold text-[#1D1D1F] hover:text-[#0071E3] hover:underline">{r.name}</Link>
                       <span className="text-[#6E6E73] text-[11px]">
                         {catLabel[r.category] ?? r.category} · {r.city}
                         {(r.districts || r.suburb) && ` · ${r.districts ?? r.suburb}`}
@@ -910,9 +797,9 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
                             <span>Teklif</span>
                           </button>
                         )}
-                        <button type="button" onClick={() => openDetail(r)} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">
+                        <Link href={prospectHref(r.id)} onClick={markFromList} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">
                           Detay
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>
@@ -964,221 +851,6 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
 
       {offerFor && <ProspectOffer prospect={offerFor} onClose={() => setOfferFor(null)} />}
 
-      {/* Detay penceresi */}
-      {selected && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Aday detayı"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setSelected(null); }}
-          className="admin-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
-        >
-          <div className="apple-card bg-white p-6 sm:p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto border border-black/[0.1] shadow-2xl relative">
-            <div className="flex items-start justify-between gap-3 pb-4 border-b border-black/[0.06] mb-5">
-              <div className="min-w-0">
-                <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold ${KIND_META[selected.kind].cls}`}>
-                  {KIND_META[selected.kind].label}{selected.kind === 'no_site' || selected.kind === 'redesign' ? ' teklifi' : ''}
-                </span>
-                <h4 className="text-lg font-bold text-[#1D1D1F] mt-1">{selected.name}</h4>
-                <span className="text-xs text-[#6E6E73]">{catLabel[selected.category] ?? selected.category} · {selected.city}</span>
-              </div>
-              <button type="button" onClick={() => setSelected(null)} aria-label="Kapat" className="admin-close">✕</button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <span className="text-[#6E6E73] flex items-center gap-1"><MapPin className="w-3 h-3" aria-hidden="true" /> Adres</span>
-                  <strong className="text-[#1D1D1F]">{selected.address || '—'}</strong>
-                  {selected.lat !== null && selected.lon !== null && (
-                    <a
-                      href={`https://www.openstreetmap.org/?mlat=${selected.lat}&mlon=${selected.lon}#map=18/${selected.lat}/${selected.lon}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-[#0071E3] font-semibold hover:underline mt-0.5"
-                    >
-                      Haritada aç
-                    </a>
-                  )}
-                </div>
-                <div>
-                  <span className="text-[#6E6E73] flex items-center gap-1"><Phone className="w-3 h-3" aria-hidden="true" /> Telefon</span>
-                  {selected.phone ? (
-                    <a href={`tel:${selected.phone.replace(/[^+\d]/g, '')}`} className="text-[#0071E3] font-semibold underline">{selected.phone}</a>
-                  ) : (
-                    <strong className="text-[#1D1D1F]">—</strong>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                {selected.site_mismatch && (
-                  <p role="alert" className="mb-2 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs leading-relaxed flex gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
-                    <span>
-                      Kayıtlı web adresi <b>{selected.site_mismatch.host}</b> sitesine gidiyor
-                      {selected.site_mismatch.owner ? <> (Impressum: <b>{selected.site_mismatch.owner}</b>)</> : null}; sitede bu işletmenin adı geçmiyor.
-                      Firma devredilmiş ya da kayıt yanlış olabilir — sahada kontrol edin, doğru adresi aşağıya yazın. O zamana kadar taslak üretilmez.
-                    </span>
-                  </p>
-                )}
-                <label htmlFor="pr-site" className="text-[#6E6E73] flex items-center gap-1 mb-1">
-                  <Globe className="w-3 h-3" aria-hidden="true" /> Web sitesi {selected.website ? '' : '(kayıtlı değil — sahada/Google’da bulduysanız yazın)'}
-                </label>
-                <div className="flex gap-2">
-                  <input id="pr-site" value={draftSite} onChange={(e) => setDraftSite(e.target.value)} placeholder="ornek.de" className={inputCls} />
-                  <button
-                    type="button"
-                    disabled={draftSite.trim() === (selected.website ?? '')}
-                    onClick={() => { updateProspect(selected.id, { website: draftSite.trim() }, 'Web adresi kaydedildi.'); setSelected(null); }}
-                    className="apple-pill-btn-secondary shrink-0 px-3 py-2 text-xs font-semibold disabled:opacity-50"
-                  >
-                    Kaydet
-                  </button>
-                </div>
-              </div>
-
-              {selected.findings.length > 0 && (
-                <div className="p-3.5 bg-[#F5F5F7] rounded-xl border border-black/[0.04]">
-                  <span className="text-[#6E6E73] block mb-2">
-                    Teknik bulgular{selected.score !== null && selected.kind !== 'no_site' ? ` — sorun puanı ${selected.score}/100` : ''}
-                    {selected.score !== null && selected.raw_score !== null && selected.raw_score !== selected.score && (
-                      <span> (ilk tarama {selected.raw_score}; yanlış alarmlar düşüldü)</span>
-                    )}
-                  </span>
-                  <ul className="space-y-1.5">
-                    {selected.findings.map((f) => {
-                      const refuted = f.verified === 'refuted';
-                      return (
-                        <li key={f.code} className={`flex items-start justify-between gap-3 ${refuted ? 'opacity-60' : ''}`}>
-                          <span>
-                            <span className={`text-[#1D1D1F] font-semibold ${refuted ? 'line-through' : ''}`}>{f.tr}</span>
-                            {refuted && <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-red-100 text-red-800 text-[10px] font-bold">Yanlış alarm</span>}
-                            <span className="block text-[#6E6E73] text-[11px]" lang="de">{f.de}</span>
-                          </span>
-                          <span className={`tabular text-[#6E6E73] shrink-0 ${refuted ? 'line-through' : ''}`}>+{f.points}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <p className="text-[11px] text-[#6E6E73] mt-2.5">Görüşmede “hukuka aykırı” demeyin; “kontrol edilmeli” deyin.</p>
-                </div>
-              )}
-
-              <ProspectProfile
-                prospect={selected}
-                findings={selected.findings}
-                jobRunning={jobRunning}
-                refreshKey={profileRefresh}
-                onEnrich={startEnrich}
-              />
-
-              {/* Seviye 3: şablon taslağı */}
-              <div className="p-3.5 rounded-xl border border-black/[0.08]">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <strong className="text-[#1D1D1F] flex items-center gap-1.5">
-                    <LayoutTemplate className="w-3.5 h-3.5" aria-hidden="true" /> Şablon taslağı
-                  </strong>
-                  {selected.draft_token ? (
-                    <span className="block text-[11px] text-[#6E6E73] mt-0.5">
-                      Hazır · {selected.draft_expires ? `${new Date(selected.draft_expires).toLocaleDateString('tr-TR')} tarihine kadar açık` : 'süreli'} · arama motorlarına kapalı gizli adres
-                    </span>
-                  ) : (
-                    <span className="block text-[11px] text-[#6E6E73] mt-0.5 leading-relaxed">
-                      İşletmenin adı, adresi, saatleri, logosu ve kendi görselleriyle telefon ve masaüstü uyumlu örnek site (yaklaşık 1 dk).
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {selected.draft_token && (
-                    <>
-                      <a
-                        href={`/demo/${selected.draft_token}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="apple-pill-btn px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
-                      >
-                        <span>Taslağı aç</span>
-                        <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                      </a>
-                      <button type="button" onClick={() => copyDraftLink(selected.draft_token!)} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">
-                        Bağlantıyı kopyala
-                      </button>
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    disabled={jobRunning}
-                    onClick={() => startDraft(selected.id)}
-                    className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-                  >
-                    {jobRunning ? 'Çalışıyor…' : selected.draft_token ? 'Yeniden üret' : 'Taslak oluştur'}
-                  </button>
-                </div>
-              </div>
-              {selected.draft_token && selected.draft_quality && <DraftChecklist quality={selected.draft_quality} />}
-              <ProspectPhotos key={selected.id} id={selected.id} />
-              </div>
-
-              <div>
-                <span className="text-[#6E6E73] block mb-1">Durum</span>
-                <div className="flex flex-wrap gap-2">
-                  {meta.statuses.map((s) => (
-                    <button
-                      key={s.key}
-                      type="button"
-                      aria-pressed={selected.status === s.key}
-                      onClick={() => updateProspect(selected.id, { status: s.key })}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                        selected.status === s.key ? 'bg-[#0071E3] text-white shadow-xs' : 'bg-[#F5F5F7] text-[#1D1D1F]'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <ProspectVisits key={`v${selected.id}`} id={selected.id} />
-
-              <div>
-                <label htmlFor="pr-notes" className="text-[#6E6E73] block mb-1">Ziyaret notları</label>
-                <textarea
-                  id="pr-notes"
-                  rows={4}
-                  value={draftNotes}
-                  onChange={(e) => setDraftNotes(e.target.value)}
-                  placeholder="Kiminle görüşüldü, ne dendi, ne zaman tekrar gidilecek…"
-                  className={`${inputCls} resize-y leading-relaxed`}
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-black/[0.06] flex flex-wrap items-center justify-end gap-2">
-              {(selected.kind === 'no_site' || selected.kind === 'redesign') && (
-                <button
-                  type="button"
-                  onClick={() => { setOfferFor(selected); setSelected(null); }}
-                  className="apple-pill-btn-secondary px-4 py-2 text-xs font-semibold flex items-center gap-1.5 mr-auto"
-                >
-                  <Printer className="w-3.5 h-3.5 text-[#10B981]" aria-hidden="true" />
-                  <span>Almanca teklif sayfası</span>
-                </button>
-              )}
-              <button type="button" onClick={() => setSelected(null)} className="apple-pill-btn-secondary px-4 py-2 text-xs font-semibold">Kapat</button>
-              <button
-                type="button"
-                disabled={draftNotes === (selected.notes ?? '')}
-                onClick={() => updateProspect(selected.id, { notes: draftNotes }, 'Not kaydedildi.')}
-                className="apple-pill-btn px-5 py-2 text-xs font-semibold disabled:opacity-50"
-              >
-                Notu kaydet
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import DraftChecklist, { type DraftQuality } from './DraftChecklist';
+import { markFromField, prospectHref } from './prospect-shared';
 import {
   ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
 } from 'lucide-react';
@@ -245,7 +246,7 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
           {done ? <CheckCircle2 className="w-4 h-4" aria-label="Ziyaret edildi" /> : n}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="font-bold text-[15px] leading-snug">{r.name}</h2>
+          <h2 className="font-bold text-[15px] leading-snug"><Link href={prospectHref(r.id)} onClick={markFromField} className="hover:underline">{r.name}</Link></h2>
           <p className="text-xs text-[#6E6E73]">{CATEGORY_LABEL[r.category ?? ''] ?? r.category}{r.address ? ` · ${r.address}` : ''}</p>
 
           <p className="mt-1.5 text-xs flex items-start gap-1.5">
