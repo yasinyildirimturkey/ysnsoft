@@ -7,6 +7,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import DraftChecklist, { type DraftQuality } from './DraftChecklist';
 import {
   ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
 } from 'lucide-react';
@@ -36,6 +37,7 @@ interface FieldRow {
   last_visit: LastVisit | null;
   demo_views?: number;
   demo_last_view?: string | null;
+  draft_quality?: DraftQuality | null;
 }
 
 const OUTCOME_STYLE: Record<string, string> = {
@@ -276,6 +278,7 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
             </p>
           ) : null}
           {postponed && r.visit_date &&<p className="mt-1 text-xs text-amber-700">Başka güne alındı: {fmtDay(r.visit_date)}</p>}
+          {r.draft_token && r.draft_quality && <DraftChecklist quality={r.draft_quality} />}
         </div>
       </div>
 
