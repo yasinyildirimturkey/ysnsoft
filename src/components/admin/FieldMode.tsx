@@ -12,10 +12,10 @@ import { markFromField, prospectHref } from './prospect-shared';
 import WhatsAppDemo from './WhatsAppDemo';
 import NotificationBell from './NotificationBell';
 import {
-  ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
+  ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, LocateFixed, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
 } from 'lucide-react';
 import {
-  CATEGORY_LABEL, DAY_NAMES, dayWindows, fmtRanges, isoDay, localDayOf, NEEDS_NEXT, openNow, STATE_LABEL,
+  CATEGORY_LABEL, DAY_NAMES, dayWindows, fmtMin, fmtRanges, isoDay, localDayOf, NEEDS_NEXT, openNow, planDay, STATE_LABEL,
   VISIT_OUTCOME_LABEL, weekdayOf, type Week,
 } from '@/lib/visit-plan';
 
@@ -79,6 +79,26 @@ interface TodayReminder { id: number; name: string; city: string; type: string }
 interface TodaySummary { today: string; today_planned: number; items: TodayReminder[]; total: number }
 
 const DAY_KEY = (d: string) => `saha:day:${d}`;
+
+// Sahada "bulunduğum yerden yeniden sırala": o güne özel, telefonda saklanır (internet gerekmez)
+interface LocalOrder { ids: number[]; eta: Record<number, number | null>; at: string }
+const ORDER_KEY = (d: string) => `saha:order:${d}`;
+function readOrder(d: string): LocalOrder | null {
+  try { const o = JSON.parse(localStorage.getItem(ORDER_KEY(d)) || 'null'); return o && Array.isArray(o.ids) ? o : null; } catch { return null; }
+}
+function writeOrder(d: string, o: LocalOrder | null) {
+  try { if (o) localStorage.setItem(ORDER_KEY(d), JSON.stringify(o)); else localStorage.removeItem(ORDER_KEY(d)); } catch { /* yok say */ }
+}
+function currentPosition(): Promise<{ lat: number; lon: number }> {
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) { reject(new Error('Bu cihaz konum vermiyor.')); return; }
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      (e) => reject(new Error(e.code === 1 ? 'Konum izni verilmedi. Tarayıcı ayarlarından bu siteye konum izni verin.' : 'Konum alınamadı; açık alanda tekrar deneyin.')),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
+    );
+  });
+}
 const QUEUE_KEY = 'saha:queue';
 
 function saveDay(d: string, rows: FieldRow[]) {
@@ -140,6 +160,9 @@ export default function FieldMode() {
   const [offlineAt, setOfflineAt] = useState<string | null>(null);
   const [queued, setQueued] = useState(0);
   const [today, setToday] = useState<TodaySummary | null>(null);
+  const [order, setOrder] = useState<LocalOrder | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [routeMsg, setRouteMsg] = useState('');
 
   const load = useCallback(async (d: string) => {
     if (!d) return;
@@ -153,11 +176,12 @@ export default function FieldMode() {
       if (j.available === false) throw new Error('Aday aracı bu sunucuda çalışmıyor.');
       setRows(j.rows ?? []);
       setOfflineAt(null);
+      setOrder(readOrder(d));
       saveDay(d, j.rows ?? []);
     } catch (e) {
       // Bağlantı yoksa bu gün için telefonda saklanan son liste gösterilir
       const cached = e instanceof TypeError ? readDay(d) : null;
-      if (cached) { setRows(cached.rows); setOfflineAt(cached.at); }
+      if (cached) { setRows(cached.rows); setOfflineAt(cached.at); setOrder(readOrder(d)); }
       else setError(e instanceof TypeError ? 'İnternet bağlantısı yok ve bu gün için kayıtlı liste bulunamadı.' : e instanceof Error ? e.message : 'Liste alınamadı');
     } finally {
       setLoading(false);
@@ -203,7 +227,13 @@ export default function FieldMode() {
   const isToday = Boolean(now && date === now.day);
   const doneToday = (r: FieldRow) => Boolean(r.last_visit && localDayOf(r.last_visit.at) === date);
 
-  const list = useMemo(() => (rows ?? []).slice().sort((a, b) => (a.visit_order ?? 999) - (b.visit_order ?? 999)), [rows]);
+  const list = useMemo(() => {
+    const base = (rows ?? []).slice().sort((a, b) => (a.visit_order ?? 999) - (b.visit_order ?? 999));
+    if (!order) return base;
+    // Yeniden sıralanmış duraklar önce (yeni sırayla), geri kalanlar (yapılanlar, konumsuzlar) planlanan sırayla
+    const pos = new Map(order.ids.map((id, i) => [id, i]));
+    return base.sort((a, b) => (pos.get(a.id) ?? 1000 + (a.visit_order ?? 999)) - (pos.get(b.id) ?? 1000 + (b.visit_order ?? 999)));
+  }, [rows, order]);
   const remaining = list.filter((r) => !doneToday(r) && r.visit_date === date && dayWindows({ ...r, lat: 0, lon: 0 }, day).state !== 'closed');
   const done = list.filter(doneToday).length;
 
@@ -215,6 +245,33 @@ export default function FieldMode() {
       ...(remaining.length > 1 ? { waypoints: remaining.slice(0, -1).slice(0, 9).map(placeOf).join('|') } : {}),
     })}`
     : '';
+
+  /** Kalan durakları telefonun konumundan, şimdiki saatten ve açılış saatlerinden başlayarak yeniden dizer. */
+  const reorderFromHere = async () => {
+    setRouteMsg('');
+    const stops = remaining.filter((r) => r.lat != null && r.lon != null).map((r) => ({ ...r, lat: r.lat as number, lon: r.lon as number }));
+    if (stops.length < 2) { setRouteMsg('Sıralanacak en az iki konumlu durak yok.'); return; }
+    setLocating(true);
+    try {
+      const here = await currentPosition();
+      const startMin = now?.min ?? new Date().getHours() * 60 + new Date().getMinutes();
+      const plan = planDay(stops, date, startMin, here);
+      const next: LocalOrder = {
+        ids: plan.map((p) => p.stop.id),
+        eta: Object.fromEntries(plan.map((p) => [p.stop.id, p.eta])),
+        at: new Date().toISOString(),
+      };
+      setOrder(next);
+      writeOrder(date, next);
+      const late = plan.filter((p) => p.state === 'late' || p.state === 'closed').length;
+      setRouteMsg(`Kalan ${plan.length} durak bulunduğunuz yerden yeniden sıralandı${late ? `; ${late} tanesi bugünkü açılış saatlerine sığmıyor (sonda)` : ''}.`);
+    } catch (e) {
+      setRouteMsg(e instanceof Error ? e.message : 'Konum alınamadı.');
+    } finally {
+      setLocating(false);
+    }
+  };
+  const resetOrder = () => { setOrder(null); writeOrder(date, null); setRouteMsg('Planlanan sıraya dönüldü.'); };
 
   return (
     <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F]">
@@ -288,6 +345,26 @@ export default function FieldMode() {
           </a>
         )}
 
+        {isToday && remaining.length > 1 && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void reorderFromHere()}
+              disabled={locating}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-[#0071E3]/30 text-[#0071E3] font-semibold text-sm shadow-sm disabled:opacity-60"
+            >
+              {locating ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <LocateFixed className="w-4 h-4" aria-hidden="true" />}
+              {locating ? 'Konum alınıyor…' : 'Bulunduğum yerden sırala'}
+            </button>
+            {order && (
+              <button type="button" onClick={resetOrder} className="px-4 py-3 rounded-2xl bg-white border border-black/[0.08] text-sm font-medium text-[#515154] shadow-sm">
+                Plana dön
+              </button>
+            )}
+          </div>
+        )}
+        {routeMsg && <p role="status" className="text-xs text-[#515154] bg-white rounded-xl px-3 py-2">{routeMsg}</p>}
+
         {rows && list.length === 0 && !loading && (
           <div className="p-6 rounded-2xl bg-white text-center text-sm text-[#6E6E73] leading-relaxed">
             <MapPin className="w-6 h-6 mx-auto mb-2 text-[#0071E3]" aria-hidden="true" />
@@ -308,6 +385,7 @@ export default function FieldMode() {
             date={date}
             day={day}
             nowMin={isToday && now ? now.min : null}
+            eta={order && !doneToday(r) ? order.eta[r.id] : undefined}
             done={doneToday(r)}
             onSaved={() => load(date)}
             onQueued={() => setQueued(readQueue().length)}
@@ -322,7 +400,9 @@ export default function FieldMode() {
   );
 }
 
-function StopCard({ row: r, n, date, day, nowMin, done, onSaved, onQueued }: {
+function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }: {
+  /** Yeniden sıralamada hesaplanan tahmini varış (dakika); null = bugüne sığmıyor, undefined = sıralanmadı */
+  eta?: number | null;
   row: FieldRow; n: number; date: string; day: number; nowMin: number | null; done: boolean; onSaved: () => void; onQueued: () => void;
 }) {
   const [outcome, setOutcome] = useState('');
@@ -379,6 +459,11 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved, onQueued }: {
         <div className="min-w-0 flex-1">
           <h2 className="font-bold text-[15px] leading-snug"><Link href={prospectHref(r.id)} onClick={markFromField} className="hover:underline">{r.name}</Link></h2>
           <p className="text-xs text-[#6E6E73]">{CATEGORY_LABEL[r.category ?? ''] ?? r.category}{r.address ? ` · ${r.address}` : ''}</p>
+          {eta !== undefined && (
+            <p className={`mt-1 inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md ${eta === null ? 'bg-amber-100 text-amber-900' : 'bg-blue-50 text-[#0071E3]'}`}>
+              {eta === null ? 'Bugünkü saatlere sığmıyor' : `Tahmini varış ~${fmtMin(eta)}`}
+            </p>
+          )}
 
           <p className="mt-1.5 text-xs flex items-start gap-1.5">
             <Clock className="w-3.5 h-3.5 mt-px shrink-0 text-[#6E6E73]" aria-hidden="true" />
