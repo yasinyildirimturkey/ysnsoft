@@ -1,0 +1,17 @@
+{
+  "name": "YSNSOFT Saha listesi",
+  "short_name": "Saha",
+  "description": "Günün ziyaret listesi: rota, ziyaret sonucu, demo ve WhatsApp.",
+  "start_url": "/admin/saha",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F5F7",
+  "theme_color": "#0071E3",
+  "lang": "tr",
+  "icons": [
+    { "src": "/saha-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/saha-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/saha-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

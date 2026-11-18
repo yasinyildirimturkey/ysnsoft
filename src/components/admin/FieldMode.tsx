@@ -69,6 +69,54 @@ function fmtDay(iso: string) {
   return `${DAY_NAMES[weekdayOf(iso)]} ${iso.slice(8, 10)}.${iso.slice(5, 7)}.`;
 }
 
+// ── Çevrimdışı çalışma (telefonda localStorage) ──
+// Günün listesi her başarılı yüklemede saklanır; bağlantı koparsa bu kopya gösterilir.
+// Bağlantı yokken girilen ziyaret sonuçları kuyruğa alınır, internet gelince sırayla gönderilir.
+interface CachedDay { at: string; rows: FieldRow[] }
+interface QueuedVisit { id: number; name: string; body: Record<string, unknown>; at: string }
+interface TodayReminder { id: number; name: string; city: string; type: string }
+interface TodaySummary { today: string; today_planned: number; items: TodayReminder[]; total: number }
+
+const DAY_KEY = (d: string) => `saha:day:${d}`;
+const QUEUE_KEY = 'saha:queue';
+
+function saveDay(d: string, rows: FieldRow[]) {
+  try { localStorage.setItem(DAY_KEY(d), JSON.stringify({ at: new Date().toISOString(), rows } satisfies CachedDay)); } catch { /* kota */ }
+}
+function readDay(d: string): CachedDay | null {
+  try { const v = localStorage.getItem(DAY_KEY(d)); return v ? (JSON.parse(v) as CachedDay) : null; } catch { return null; }
+}
+function readQueue(): QueuedVisit[] {
+  try { return JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]') as QueuedVisit[]; } catch { return []; }
+}
+function writeQueue(q: QueuedVisit[]) {
+  try { if (q.length) localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); else localStorage.removeItem(QUEUE_KEY); } catch { /* yok say */ }
+}
+function enqueue(v: QueuedVisit) { writeQueue([...readQueue(), v]); }
+
+/** Kuyruktakileri sırayla gönderir. Ağ hatasında durur (sonra yeniden denenir); sunucu reddederse o kayıt atılır. */
+async function flushQueue(): Promise<{ sent: number; left: number }> {
+  let q = readQueue();
+  let sent = 0;
+  while (q.length) {
+    try {
+      const res = await fetch('/api/admin/prospects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(q[0].body) });
+      if (res.status === 401 || res.status === 403) break; // oturum kapalı: girişten sonra gönderilir
+      sent += res.ok ? 1 : 0;
+    } catch {
+      break; // hâlâ bağlantı yok
+    }
+    q = q.slice(1);
+    writeQueue(q);
+  }
+  return { sent, left: q.length };
+}
+
+const isTodayStr = (d: string) => Boolean(d) && d === isoDay();
+const REMINDER_TR: Record<string, string> = {
+  hot_demo: 'Demo açıldı', missed_visit: 'Ziyaret kaçtı', offer_due: 'Teklif bekliyor', offer_silent: 'Teklif sessiz', stale: 'Hareketsiz',
+};
+
 export default function FieldMode() {
   const [date, setDate] = useState('');
   const [rows, setRows] = useState<FieldRow[] | null>(null);
@@ -88,6 +136,10 @@ export default function FieldMode() {
     return () => { clearTimeout(t); clearInterval(iv); };
   }, []);
 
+  const [offlineAt, setOfflineAt] = useState<string | null>(null);
+  const [queued, setQueued] = useState(0);
+  const [today, setToday] = useState<TodaySummary | null>(null);
+
   const load = useCallback(async (d: string) => {
     if (!d) return;
     setLoading(true);
@@ -99,17 +151,52 @@ export default function FieldMode() {
       if (!j.success) throw new Error(j.error || 'Liste alınamadı');
       if (j.available === false) throw new Error('Aday aracı bu sunucuda çalışmıyor.');
       setRows(j.rows ?? []);
+      setOfflineAt(null);
+      saveDay(d, j.rows ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Liste alınamadı');
+      // Bağlantı yoksa bu gün için telefonda saklanan son liste gösterilir
+      const cached = e instanceof TypeError ? readDay(d) : null;
+      if (cached) { setRows(cached.rows); setOfflineAt(cached.at); }
+      else setError(e instanceof TypeError ? 'İnternet bağlantısı yok ve bu gün için kayıtlı liste bulunamadı.' : e instanceof Error ? e.message : 'Liste alınamadı');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => { void load(date); }, 0);
-    return () => clearTimeout(t);
+  /** Çevrimdışıyken girilen sonuçları gönderir; sonra listeyi yeniler. */
+  const flush = useCallback(async () => {
+    const r = await flushQueue();
+    setQueued(r.left);
+    if (r.sent) void load(date);
   }, [date, load]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void load(date);
+      setQueued(readQueue().length);
+      if (navigator.onLine) void flush();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [date, load, flush]);
+
+  // Bağlantı gelince kuyruğu gönder; uygulama olarak kurulabilsin diye service worker
+  useEffect(() => {
+    const onOnline = () => { void flush(); };
+    window.addEventListener('online', onOnline);
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/saha-sw.js', { scope: '/admin/saha' }).catch(() => { /* desteklenmiyorsa sorun değil */ });
+    return () => window.removeEventListener('online', onOnline);
+  }, [flush]);
+
+  // Sabah özeti: bugün yapılacaklar (sıcak demolar, kaçan ziyaretler, bekleyen teklifler)
+  useEffect(() => {
+    if (!isTodayStr(date)) return;
+    let alive = true;
+    fetch('/api/admin/prospects?view=reminders', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => { if (alive && j.success) { setToday(j); try { localStorage.setItem('saha:today', JSON.stringify(j)); } catch { /* yok say */ } } })
+      .catch(() => { try { const c = localStorage.getItem('saha:today'); if (alive && c) setToday(JSON.parse(c)); } catch { /* yok say */ } });
+    return () => { alive = false; };
+  }, [date]);
 
   const day = date ? weekdayOf(date) : 0;
   const isToday = Boolean(now && date === now.day);
@@ -154,6 +241,39 @@ export default function FieldMode() {
 
       <div className="max-w-xl mx-auto px-4 py-4 space-y-3">
         {error && <p role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error} {error.startsWith('Oturum') && <Link className="underline font-semibold" href="/admin/login">Giriş</Link>}</p>}
+        {offlineAt && (
+          <p role="status" className="p-3 rounded-xl bg-amber-50 text-amber-900 text-sm">
+            İnternet yok: {new Date(offlineAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} itibarıyla kayıtlı liste gösteriliyor.
+          </p>
+        )}
+        {queued > 0 && (
+          <p role="status" className="p-3 rounded-xl bg-blue-50 text-blue-900 text-sm flex items-center justify-between gap-2">
+            <span>{queued} ziyaret sonucu telefonda bekliyor; internet gelince gönderilecek.</span>
+            <button type="button" onClick={() => void flush()} className="font-semibold underline shrink-0">Şimdi dene</button>
+          </p>
+        )}
+
+        {isToday && today && (today.today_planned > 0 || today.total > 0) && (
+          <section aria-label="Bugün" className="p-4 rounded-2xl bg-white shadow-sm">
+            <h2 className="text-sm font-bold">Günaydın — bugün</h2>
+            <p className="text-xs text-[#6E6E73] mt-0.5">
+              {today.today_planned} planlı ziyaret{today.total ? ` · ${today.total} hatırlatma` : ''}
+            </p>
+            {today.items.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {today.items.slice(0, 5).map((it) => (
+                  <li key={`${it.type}-${it.id}`} className="text-xs flex items-center gap-2">
+                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${it.type === 'hot_demo' ? 'bg-blue-100 text-blue-800' : it.type === 'missed_visit' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-900'}`}>
+                      {REMINDER_TR[it.type] ?? it.type}
+                    </span>
+                    <Link href={prospectHref(it.id)} onClick={markFromField} className="font-semibold truncate hover:underline">{it.name}</Link>
+                    <span className="text-[#6E6E73] shrink-0">{it.city}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         {remainingRoute && (
           <a
@@ -188,6 +308,7 @@ export default function FieldMode() {
             nowMin={isToday && now ? now.min : null}
             done={doneToday(r)}
             onSaved={() => load(date)}
+            onQueued={() => setQueued(readQueue().length)}
           />
         ))}
 
@@ -199,8 +320,8 @@ export default function FieldMode() {
   );
 }
 
-function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
-  row: FieldRow; n: number; date: string; day: number; nowMin: number | null; done: boolean; onSaved: () => void;
+function StopCard({ row: r, n, date, day, nowMin, done, onSaved, onQueued }: {
+  row: FieldRow; n: number; date: string; day: number; nowMin: number | null; done: boolean; onSaved: () => void; onQueued: () => void;
 }) {
   const [outcome, setOutcome] = useState('');
   const [note, setNote] = useState('');
@@ -224,18 +345,24 @@ function StopCard({ row: r, n, date, day, nowMin, done, onSaved }: {
     if (NEEDS_NEXT.has(outcome) && !next) { setErr('Bir sonraki ziyaret tarihini seçin.'); return; }
     setSaving(true);
     setErr('');
+    const body = { action: 'visit', id: r.id, outcome, note, ...(next && NEEDS_NEXT.has(outcome) ? { next } : {}) };
     try {
       const res = await fetch('/api/admin/prospects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'visit', id: r.id, outcome, note, ...(next && NEEDS_NEXT.has(outcome) ? { next } : {}) }),
+        body: JSON.stringify(body),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || j.success === false) throw new Error(j.error || 'Kaydedilemedi');
       setOutcome(''); setNote(''); setNext(''); setOpen(false);
       onSaved();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Kaydedilemedi');
+      if (e instanceof TypeError) {
+        // Bağlantı yok: sonuç telefonda bekler, internet gelince gönderilir (veri kaybolmaz)
+        enqueue({ id: r.id, name: r.name, body, at: new Date().toISOString() });
+        setOutcome(''); setNote(''); setNext(''); setOpen(false);
+        onQueued();
+      } else setErr(e instanceof Error ? e.message : 'Kaydedilemedi');
     } finally {
       setSaving(false);
     }

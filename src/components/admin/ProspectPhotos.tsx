@@ -17,20 +17,53 @@ interface Upload {
 const MAX_EDGE = 2000;
 const MAX_FILES = 9;
 
+/**
+ * Otomatik iyileştirme (telefon fotoğrafları çoğu zaman loş ya da gri çıkar): her kanalda en karanlık ve en
+ * aydınlık %0,5'lik kısım atılıp ton aralığı gerilir (oto seviye), renk doygunluğu hafifçe artırılır.
+ * Zaten iyi pozlanmış fotoğrafa dokunulmaz; aşırı düzeltme yapılmaz (en çok 1,6 kat germe).
+ */
+function enhance(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const hist = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+  const step = Math.max(1, Math.floor((w * h) / 250_000)) * 4; // büyük fotoğrafta örnekleme yeterli
+  let n = 0;
+  for (let i = 0; i < d.length; i += step) { hist[0][d[i]]++; hist[1][d[i + 1]]++; hist[2][d[i + 2]]++; n++; }
+  const edge = (hst: Uint32Array, from: 'lo' | 'hi') => {
+    const cut = n * 0.005;
+    let acc = 0;
+    if (from === 'lo') { for (let v = 0; v < 256; v++) { acc += hst[v]; if (acc > cut) return v; } return 0; }
+    for (let v = 255; v >= 0; v--) { acc += hst[v]; if (acc > cut) return v; } return 255;
+  };
+  const lo = hist.map((x) => edge(x, 'lo'));
+  const hi = hist.map((x) => edge(x, 'hi'));
+  const gain = lo.map((l, c) => Math.min(1.6, 255 / Math.max(1, hi[c] - l)));
+  if (gain.every((g) => g < 1.06)) return; // iyi pozlanmış: dokunma
+  const lut = [0, 1, 2].map((c) => {
+    const t = new Uint8ClampedArray(256);
+    for (let v = 0; v < 256; v++) t[v] = (v - lo[c]) * gain[c];
+    return t;
+  });
+  for (let i = 0; i < d.length; i += 4) {
+    let r = lut[0][d[i]], g = lut[1][d[i + 1]], b = lut[2][d[i + 2]];
+    const y = 0.299 * r + 0.587 * g + 0.114 * b;
+    r = y + (r - y) * 1.08; g = y + (g - y) * 1.08; b = y + (b - y) * 1.08; // hafif canlılık
+    d[i] = r; d[i + 1] = g; d[i + 2] = b;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 async function shrink(file: File): Promise<Blob> {
   try {
     const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
     const scale = Math.min(1, MAX_EDGE / Math.max(bmp.width, bmp.height));
-    // Zaten küçük bir JPEG ise olduğu gibi gönder
-    if (scale === 1 && file.type === 'image/jpeg' && file.size < 900_000) {
-      bmp.close();
-      return file;
-    }
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bmp.width * scale);
     canvas.height = Math.round(bmp.height * scale);
-    canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
     bmp.close();
+    try { enhance(ctx, canvas.width, canvas.height); } catch { /* iyileştirme olmadan da yüklenir */ }
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.84));
     return blob ?? file;
   } catch {
@@ -38,7 +71,12 @@ async function shrink(file: File): Promise<Blob> {
   }
 }
 
-export default function ProspectPhotos({ id, onChange }: { id: number; onChange?: (count: number) => void }) {
+export default function ProspectPhotos({ id, onChange, onUploaded }: {
+  id: number;
+  onChange?: (count: number) => void;
+  /** Bir yükleme grubu (ya da kapak değişikliği) bitince: demo kendiliğinden yeniden üretilsin diye */
+  onUploaded?: () => void;
+}) {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -80,6 +118,7 @@ export default function ProspectPhotos({ id, onChange }: { id: number; onChange?
         apply(list);
       }
       if (files.length > MAX_FILES - uploads.length) setError(`En fazla ${MAX_FILES} fotoğraf; fazlası yüklenmedi.`);
+      if (list !== uploads) onUploaded?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yükleme başarısız.');
     } finally {
@@ -101,6 +140,7 @@ export default function ProspectPhotos({ id, onChange }: { id: number; onChange?
       const j = await res.json().catch(() => null);
       if (!res.ok || !j?.success) throw new Error(j?.error || 'İşlem başarısız.');
       apply(j.uploads);
+      onUploaded?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'İşlem başarısız.');
     } finally {
@@ -114,7 +154,7 @@ export default function ProspectPhotos({ id, onChange }: { id: number; onChange?
         <div className="min-w-0">
           <span className="text-[12px] font-semibold text-[#1D1D1F]">Saha fotoğrafları ({uploads.length}/{MAX_FILES})</span>
           <span className="block text-[11px] text-[#6E6E73] leading-relaxed">
-            Ziyarette işletmenin izniyle çekin. İlk fotoğraf kapak olur; yükledikten sonra taslağı yeniden üretin.
+            Ziyarette işletmenin izniyle çekin. İlk fotoğraf kapak olur. Yüklerken ışık ve renk otomatik düzeltilir{onUploaded ? '; demo kendiliğinden yenilenir' : ''}.
           </span>
         </div>
         <label
