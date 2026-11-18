@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   getStoredLeads, 
@@ -75,10 +75,33 @@ import {
   Target
 } from 'lucide-react';
 
+const ADMIN_MENUS = ['overview', 'leads', 'prospects', 'appointments', 'muhasebe', 'roller', 'domains', 'seo-geo', 'glm', 'settings'] as const;
+type AdminMenu = (typeof ADMIN_MENUS)[number];
+const isAdminMenu = (v: string | null): v is AdminMenu => (ADMIN_MENUS as readonly string[]).includes(v ?? '');
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [activeMenu, setActiveMenu] = useState<'overview' | 'leads' | 'prospects' | 'appointments' | 'muhasebe' | 'roller' | 'domains' | 'seo-geo' | 'glm' | 'settings'>('overview');
+  const [activeMenu, setMenuState] = useState<AdminMenu>('overview');
+  // Açık menü adres çubuğunda (?m=): tarayıcının Geri/İleri tuşu menüler arasında gezer, bağlantı paylaşılabilir,
+  // aday sayfasından "← Müşteri Adayları" doğrudan listeye döner.
+  const setActiveMenu = useCallback((m: AdminMenu) => {
+    setMenuState(m);
+    const url = m === 'overview' ? '/admin' : `/admin?m=${m}`;
+    if (window.location.pathname + window.location.search !== url) {
+      window.history.pushState(null, '', url);
+      window.scrollTo(0, 0);
+    }
+  }, []);
+  useEffect(() => {
+    const read = () => {
+      const m = new URLSearchParams(window.location.search).get('m');
+      setMenuState(isAdminMenu(m) ? m : 'overview');
+    };
+    const t = setTimeout(read, 0);
+    window.addEventListener('popstate', read);
+    return () => { clearTimeout(t); window.removeEventListener('popstate', read); };
+  }, []);
   
   // States
   const [leads, setLeads] = useState<Lead[]>([]);
