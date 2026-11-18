@@ -52,6 +52,7 @@ next-env.d.ts
 /data/leads.json
 /data/appointments.json
 /data/invoices.json
+/data/system-settings.json
 /data/sites.json
 /data/mail-log.jsonl
 /data/scheduler/

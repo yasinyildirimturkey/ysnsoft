@@ -3,11 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  getStoredSystemSettings,
-  saveSystemSettings,
-  getStoredProducts,
-  saveProduct,
-  deleteProduct,
   getStoredGeoSettings,
   saveGeoSettings,
   GeoSettings,
@@ -18,7 +13,7 @@ import {
   PRESET_ADMIN_USERS
 } from '@/lib/store';
 import { PRODUCTS, Product } from '@/data/products';
-import { createInvoice, fetchAppointments, fetchInvoices, fetchLeads, setAppointmentStatus, setInvoiceStatus, setLeadStatus } from '@/lib/crm-client';
+import { addSite, createInvoice, fetchAppointments, fetchInvoices, fetchLeads, fetchSettings, fetchSites, removeSite, saveSettings, setAppointmentStatus, setInvoiceStatus, setLeadStatus } from '@/lib/crm-client';
 import ProspectsPanel from '@/components/admin/ProspectsPanel';
 import SystemMailPanel from '@/components/admin/SystemMailPanel';
 import ProposalDocument from '@/components/admin/ProposalDocument';
@@ -114,7 +109,7 @@ export default function AdminDashboardPage() {
     categoryLabel: 'Bulut SaaS',
     tagline: '',
     shortDesc: '',
-    featuresText: 'Yüksek Performans, 256-bit SSL Güvenliği, Kesintisiz API Entegrasyonu',
+    featuresText: '',
     techStackText: 'Next.js 16, React 19, TypeScript, PostgreSQL'
   });
   const [sitePings, setSitePings] = useState<Record<string, { latency: number; status: string; checkedAt: string; ok: boolean }>>({});
@@ -243,8 +238,26 @@ export default function AdminDashboardPage() {
       void fetchInvoices().then((i) => { if (!cancelled) setInvoices(i); }).catch(() => { /* yetkisi olmayan rol için sekme boş kalır */ });
       // Eski sürüm SMTP ayarlarını (şifre dahil) tarayıcıda tutuyordu: artık sunucuda; tarayıcıdaki kopya silinir
       try { localStorage.removeItem('ysn_smtp_settings'); } catch { /* yok say */ }
-      setSystemSettings(getStoredSystemSettings());
-      setProducts(getStoredProducts());
+      // Şirket ayarları ve site listesi sunucudan (eskiden yalnız bu tarayıcıdaydı); eski tarayıcı kopyaları silinir
+      void fetchSettings().then((s) => { if (!cancelled) setSystemSettings(s); }).catch(() => { /* yetkisi olmayan rol */ });
+      void (async () => {
+        // Bu tarayıcıda daha önce panelden eklenmiş (ama sunucuya hiç ulaşmamış) siteler bir kez sunucuya taşınır
+        let local: Product[] = [];
+        try { local = JSON.parse(localStorage.getItem('ysn_admin_products') || '[]'); } catch { /* bozuk kayıt */ }
+        const custom = Array.isArray(local) ? local.filter(p => p?.displayDomain && !PRODUCTS.some(d => d.id === p.id)) : [];
+        let migrated = 0;
+        for (const p of custom) {
+          try {
+            await addSite({ name: p.name, domain: p.displayDomain, liveUrl: p.liveUrl, category: p.categoryLabel, tagline: p.tagline, description: p.shortDesc, features: p.features || [] });
+            migrated++;
+          } catch { /* geçersiz alan adı vb.: atlanır */ }
+        }
+        if (migrated === custom.length) {
+          try { localStorage.removeItem('ysn_admin_products'); localStorage.removeItem('ysn_system_settings'); } catch { /* yok say */ }
+        }
+        if (migrated > 0) notify(`${migrated} site bu tarayıcıdan sunucuya taşındı.`);
+        try { const p = await fetchSites(); if (!cancelled) setProducts(p); } catch { if (!cancelled) setProducts(PRODUCTS); }
+      })();
       setGeoConfig(getStoredGeoSettings());
 
       // Eski sürüm GLM anahtarını tarayıcıda tutuyordu (sunucu kullanmasa da "kaydedildi" diyordu): silinir
@@ -300,47 +313,44 @@ export default function AdminDashboardPage() {
     setPingingAll(false);
   };
 
-  const handleAddNewSite = (e: React.FormEvent) => {
+  // Siteler sunucuda (data/sites.json): eklenen/silinen site sitedeki vitrine de yansır.
+  // Eskiden yalnız bu tarayıcıya yazılıyordu ve vitrinde hiç görünmüyordu.
+  const reloadSites = () => fetchSites().then(setProducts).catch(() => notify('Hata: site listesi yüklenemedi.'));
+
+  const handleAddNewSite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSiteData.name || !newSiteData.displayDomain) {
       notify('Lütfen proje adı ve alan adını giriniz.');
       return;
     }
-
-    const cleanDomain = newSiteData.displayDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const cleanUrl = newSiteData.liveUrl || `https://${cleanDomain}`;
-
-    const newProd: Product = {
-      id: cleanDomain.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase(),
-      name: newSiteData.name,
-      tagline: newSiteData.tagline || `${newSiteData.name} Kurumsal Web & Bulut Portalı`,
-      category: newSiteData.category,
-      categoryLabel: newSiteData.categoryLabel || 'SaaS & Bilişim',
-      badge: 'Yayında',
-      shortDesc: newSiteData.shortDesc || `${newSiteData.name} için geliştirilmiş yüksek performanslı web sistemi.`,
-      longDesc: `${newSiteData.name}; YSNSOFT mimarisiyle inşa edilmiş güvenli ve ölçeklenebilir bir kurumsal platformdur.`,
-      metrics: [],
-      features: newSiteData.featuresText.split(',').map(f => f.trim()).filter(Boolean),
-      techStack: newSiteData.techStackText.split(',').map(t => t.trim()).filter(Boolean),
-      accentColor: '#0071E3',
-      previewType: newSiteData.category === 'legal' ? 'legal' : newSiteData.category === 'cad' ? 'cad' : 'portal',
-      liveUrl: cleanUrl,
-      displayDomain: cleanDomain
-    };
-
-    saveProduct(newProd);
-    setProducts(getStoredProducts());
-    setSiteModalOpen(false);
-    setSiteActionMessage(`"${newProd.name}" (${newProd.displayDomain}) sisteme başarıyla eklendi!`);
-    setTimeout(() => setSiteActionMessage(null), 4000);
+    try {
+      const res = await addSite({
+        name: newSiteData.name,
+        domain: newSiteData.displayDomain,
+        liveUrl: newSiteData.liveUrl,
+        category: newSiteData.categoryLabel,
+        tagline: newSiteData.tagline,
+        description: newSiteData.shortDesc,
+        features: newSiteData.featuresText.split(',').map(f => f.trim()).filter(Boolean),
+      });
+      await reloadSites();
+      setSiteModalOpen(false);
+      setSiteActionMessage(res.message);
+      setTimeout(() => setSiteActionMessage(null), 4000);
+    } catch (err) {
+      notify(`Hata: ${err instanceof Error ? err.message : 'site eklenemedi.'}`);
+    }
   };
 
-  const handleDeleteSite = (id: string, name: string) => {
-    if (confirm(`"${name}" projesini sistemden kaldırmak istediğinize emin misiniz?`)) {
-      deleteProduct(id);
-      setProducts(getStoredProducts());
-      setSiteActionMessage(`"${name}" sistemden kaldırıldı.`);
+  const handleDeleteSite = async (id: string, name: string) => {
+    if (!confirm(`"${name}" projesini listeden ve sitedeki vitrinden kaldırmak istediğinize emin misiniz?`)) return;
+    try {
+      await removeSite(id);
+      await reloadSites();
+      setSiteActionMessage(`"${name}" kaldırıldı.`);
       setTimeout(() => setSiteActionMessage(null), 3000);
+    } catch (err) {
+      notify(`Hata: ${err instanceof Error ? err.message : 'site kaldırılamadı.'}`);
     }
   };
 
@@ -397,10 +407,14 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleSaveSystemSettings = (e: React.FormEvent) => {
+  const handleSaveSystemSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveSystemSettings(systemSettings);
-    notify('Sistem ve şirket iletişim ayarları başarıyla kaydedildi!');
+    try {
+      setSystemSettings(await saveSettings(systemSettings));
+      notify('Şirket ayarları sunucuya kaydedildi.');
+    } catch (err) {
+      notify(`Hata: ${err instanceof Error ? err.message : 'ayarlar kaydedilemedi.'}`);
+    }
   };
 
   const handleTestGlm = async () => {

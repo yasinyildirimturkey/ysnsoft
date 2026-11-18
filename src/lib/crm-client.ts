@@ -5,7 +5,8 @@
  * sitedeki gerçek talepler sunucuya yazılıyor ama panelde hiç görünmüyordu; panel 4 uydurma örnek gösteriyordu.
  * Artık tek kaynak sunucudur (data/leads.json, data/appointments.json); panel oradan okur, durum değişikliği oraya yazılır.
  */
-import type { Appointment, InvoiceRecord, Lead } from '@/lib/store';
+import type { Appointment, InvoiceRecord, Lead, SystemSettings } from '@/lib/store';
+import { PRODUCTS, type Product } from '@/data/products';
 
 interface ServerLead { id: string; name: string; email: string; phone?: string; company?: string; budget?: string; projectType: string; message?: string; createdAt: string; status?: 'new' | 'contacted' | 'proposal_sent' | 'closed' }
 interface ServerAppointment { id: string; name: string; email: string; phone?: string; date: string; time: string; projectFocus: string; notes?: string; status: 'confirmed' | 'pending' | 'completed' | 'cancelled'; createdAt: string }
@@ -96,4 +97,42 @@ export async function createInvoice(inv: { client: string; taxNumber: string; pr
 
 export async function setInvoiceStatus(id: string, status: InvoiceRecord['status']) {
   await json(await fetch('/api/invoices', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: INV_STATUS_REV[status] }) }));
+}
+
+// ── Site listesi (Site Kontrol Merkezi) ──────────────────────────────────
+// Eskiden panelden eklenen site yalnız o tarayıcıya yazılıyordu; sitedeki vitrin ise sunucudaki listeyi okuyor.
+interface ServerSite { id: string; name: string; tagline?: string; category?: string; domain: string; liveUrl?: string; status?: string; features?: string[]; description?: string }
+
+/** Sunucudaki siteler, vitrindeki (LiveSiteShowcase) eşleştirmeyle aynı şekilde ürün kartına çevrilir. */
+export async function fetchSites(): Promise<Product[]> {
+  const j = await json<{ data: ServerSite[] }>(await fetch('/api/sites', { cache: 'no-store' }));
+  const fromServer = j.data.map((s): Product => {
+    const existing = PRODUCTS.find((p) => p.displayDomain === s.domain || p.id === s.id);
+    if (existing) return { ...existing, displayDomain: s.domain, liveUrl: s.liveUrl || existing.liveUrl };
+    return {
+      id: s.id, name: s.name, tagline: s.tagline || s.name, category: 'saas', categoryLabel: s.category || 'Web & SaaS',
+      badge: s.status === 'active' ? 'Canlıda' : 'Geliştiriliyor', shortDesc: s.description || s.tagline || '', longDesc: s.description || s.tagline || '',
+      metrics: [], features: s.features || [], techStack: [], accentColor: '#0071E3', previewType: 'portal',
+      liveUrl: s.liveUrl || `https://${s.domain}`, displayDomain: s.domain,
+    };
+  });
+  // Statik ürünlerden sunucuda olmayanlar da listede kalır (vitrin de onları gösteriyor)
+  const missing = PRODUCTS.filter((p) => !fromServer.some((s) => s.displayDomain === p.displayDomain));
+  return [...fromServer, ...missing];
+}
+
+export async function addSite(site: { name: string; domain: string; liveUrl: string; category: string; tagline: string; description: string; features: string[] }) {
+  return json<{ message: string }>(await fetch('/api/sites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(site) }));
+}
+
+export async function removeSite(id: string) {
+  return json<{ message: string }>(await fetch(`/api/sites?id=${encodeURIComponent(id)}`, { method: 'DELETE' }));
+}
+
+// ── Şirket ayarları (teklif belgesi) ──────────────────────────────────────
+export async function fetchSettings(): Promise<SystemSettings> {
+  return (await json<{ data: SystemSettings }>(await fetch('/api/admin/settings', { cache: 'no-store' }))).data;
+}
+export async function saveSettings(s: SystemSettings): Promise<SystemSettings> {
+  return (await json<{ data: SystemSettings }>(await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(s) }))).data;
 }
