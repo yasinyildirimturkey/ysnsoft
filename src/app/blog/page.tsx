@@ -31,11 +31,11 @@ const blogPosts: BlogPost[] = [
     readTime: '6 dk okuma',
     date: '28 Ekim 2026',
     author: { name: 'Yasin Yıldırım', role: 'Chief Software Architect & Founder', avatar: '👨‍💼' },
-    summary: 'T.C. Adalet Bakanlığı UYAP Portalındaki oturum düşmeleri, dinamik DOM ağacı ve re-captcha engellerini Python Playwright havuzu ve Redis kuyruk mimarisiyle nasıl aştık?',
-    tags: ['Next.js 16', 'Python', 'Playwright', 'Redis', 'Kubernetes', 'KGLEX'],
+    summary: 'UYAP dosyalarının her gün elle taranması yerine, büronun kendi yetkili oturumuyla çalışan arka plan robotları ve kuyruk mimarisiyle değişikliklerin nasıl özetlendiğini anlatıyoruz.',
+    tags: ['Next.js 16', 'Python', 'Playwright', 'Redis', 'KGLEX'],
     content: {
-      problem: 'Avukatların her sabah tensip zabıtlarını, icra haciz müzekkerelerini ve duruşma tarihlerini UYAP üzerinden tek tek manuel sorgulaması günde ortalama 3 saatlik iş gücü kaybına yol açıyordu.',
-      solution: 'KGLEX bünyesinde Kubernetes tabanlı dinamik worker havuzları kurguladık. Her bir işçi bot, SSL mTLS sertifikası ve oturum önbelleği ile gece 02:00 - 06:00 arasında tüm büronun dosyalarını tarayarak değişiklikleri diff algoritmasıyla ayrıştırır ve sabah avukatın ekranına özet bülten olarak sunar.',
+      problem: 'Avukatların tensip zabıtlarını, icra haciz müzekkerelerini ve duruşma tarihlerini UYAP üzerinden tek tek elle sorgulaması her gün ciddi zaman alıyor ve gözden kaçma riskini artırıyor.',
+      solution: 'KGLEX’te arka planda çalışan işçi robotlar, büronun yetkili oturumuyla belirlenen saatlerde dosyaları tarar, değişiklikleri bir önceki taramayla karşılaştırarak ayrıştırır ve sabah avukatın ekranına özet olarak sunar. Robotun bulduğu kayıtlar avukat tarafından kontrol edilmelidir.',
       architectureSnippet: `// KGLEX Queue Worker Consumer (Go / Python)
 func (w *UyapWorker) ProcessCaseAudit(ctx context.Context, caseRef *LegalCase) (*AuditReport, error) {
     session, err := w.sessionPool.AcquireMTLS(caseRef.BaroNumber)
@@ -47,11 +47,7 @@ func (w *UyapWorker) ProcessCaseAudit(ctx context.Context, caseRef *LegalCase) (
     events := session.FetchNewSafahatEntries(caseRef.FileID, caseRef.LastSyncDate)
     return w.diffEngine.GenerateReport(events)
 }`,
-      metrics: [
-        { label: 'Günlük Taranan Dosya', value: '50.000+' },
-        { label: 'Zaman Tasarrufu', value: '%85' },
-        { label: 'Hata Oranı', value: '%0.002' }
-      ]
+      metrics: []
     }
   },
   {
@@ -62,11 +58,11 @@ func (w *UyapWorker) ProcessCaseAudit(ctx context.Context, caseRef *LegalCase) (
     readTime: '8 dk okuma',
     date: '22 Ekim 2026',
     author: { name: 'Harita Müh. Danışman & YSN Ekibi', role: 'GIS Lead', avatar: '📐' },
-    summary: 'Masaüstü CAD programlarına bağımlı kalmadan tarayıcı üzerinde 300+ hektarlık imar adalarını saniyeler içinde parselleyen WebGL ve PostGIS matematik motoru.',
+    summary: 'Masaüstü CAD programlarına bağlı kalmadan imar adalarının tarayıcıda parsellenmesi ve DOP hesabının 3D görselleştirilmesi için kurduğumuz WebGL ve PostGIS tabanlı yaklaşım.',
     tags: ['WebGL', 'Three.js', 'PostGIS', 'Computational Geometry', 'HaritaPlan'],
     content: {
-      problem: 'Geleneksel imar uygulamalarında DOP (Düzenleme Ortaklık Payı) hesabı Excel ve eski CAD eklentilerinde yapıldığından 1 metrekarelik küsurat yuvarlama hataları dahi Danıştay iptal davalarına neden oluyordu.',
-      solution: 'HaritaPlan için geliştirdiğimiz ITRF95 projeksiyon motoru ve Voronoi tabanlı parselasyon algoritması ile kamulaştırma bedelleri, belediye hisse oranları ve DOP payları 0.0001 hassasiyetle hesaplanarak anında 3D görselleştirilir.',
+      problem: 'Geleneksel imar uygulamalarında DOP (Düzenleme Ortaklık Payı) hesabı çoğunlukla Excel ve eski CAD eklentileriyle yapılıyor; yuvarlama ve veri aktarım hataları sonradan itirazlara konu olabiliyor.',
+      solution: 'HaritaPlan’da kadastro parselleri ve kamu terk alanlarından DOP oranı hesaplanır, dağıtım sonuçları anında 3D olarak görselleştirilir. Hesap sonuçları resmi işlemden önce bir harita mühendisi tarafından kontrol edilmelidir.',
       architectureSnippet: `// HaritaPlan DOP Calculation Kernel
 export function calculateDOP(kadastroParseller: KadastroParcel[], kamuTerkAlan: number): DOPResult {
     const toplamKadastroAlani = kadastroParseller.reduce((acc, p) => acc + p.alan, 0);
@@ -76,11 +72,7 @@ export function calculateDOP(kadastroParseller: KadastroParcel[], kamuTerkAlan: 
     }
     return { dopOrani, tahsisCetveli: kadastroParseller.map(p => ({ ...p, imarTahsis: p.alan * (1 - dopOrani) })) };
 }`,
-      metrics: [
-        { label: 'Hesaplama Süresi', value: '< 180ms' },
-        { label: 'Hata Hassasiyeti', value: '0.0001 m²' },
-        { label: 'Mevzuat Uyumu', value: '%100' }
-      ]
+      metrics: []
     }
   },
   {
@@ -91,11 +83,11 @@ export function calculateDOP(kadastroParseller: KadastroParcel[], kamuTerkAlan: 
     readTime: '5 dk okuma',
     date: '16 Ekim 2026',
     author: { name: 'Yasin Yıldırım', role: 'Frontend & Cloud Architect', avatar: '👨‍💼' },
-    summary: 'Flamantyou kozmetik platformunda Core Web Vitals skorlarını 100/100 seviyesine nasıl çıkardık? Partial Prerendering ve Edge Image Optimization deneyimleri.',
+    summary: 'Flamantyou kozmetik platformunda görsel yoğun sayfaları hızlandırmak için Partial Prerendering, akışlı sunucu render’ı ve görsel optimizasyonundan nasıl yararlandık?',
     tags: ['Next.js 16', 'React 19', 'Edge Network', 'Turbopack', 'Flamantyou'],
     content: {
-      problem: 'Görsel yoğunluğu yüksek e-ticaret sitelerinde 3 saniyenin üzerindeki yüklenme süreleri dönüşüm oranlarında %40 düşüşe ve yüksek reklam maliyetlerine sebep oluyordu.',
-      solution: 'Next.js 16 App Router ve React 19 Streaming SSR kullanarak sayfa iskeletini 14ms içinde kullanıcıya ulaştırdık. MediaPipe AI cilt analizi modellerini ise istemci tarafında WebAssembly ile GPU hızlandırmalı çalıştırdık.',
+      problem: 'Görsel yoğunluğu yüksek e-ticaret sitelerinde yavaş açılan sayfalar ziyaretçi kaybına ve daha yüksek reklam maliyetine yol açabiliyor.',
+      solution: 'Next.js 16 App Router ve React 19 akışlı SSR ile sayfa iskeletini önce gönderip ürün içeriğini arkadan akıttık. MediaPipe cilt analizi modelini ise tarayıcıda WebAssembly ile çalıştırdık.',
       architectureSnippet: `// Next.js 16 App Router Partial Prerendering Config
 export const experimental_ppr = true;
 export const runtime = 'edge';
@@ -107,11 +99,7 @@ export default async function ProductShowcase() {
         </Suspense>
     );
 }`,
-      metrics: [
-        { label: 'TTFB (İlk Bayt Süresi)', value: '14 ms' },
-        { label: 'Lighthouse Performans', value: '100 / 100' },
-        { label: 'Dönüşüm Artışı', value: '+%38' }
-      ]
+      metrics: []
     }
   }
 ];
