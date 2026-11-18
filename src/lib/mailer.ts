@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import nodemailer, { type Transporter } from 'nodemailer';
+import { smtpTlsOptions } from '@/lib/mail-tls';
 
 const LOG = path.join(/* turbopackIgnore: true */ process.cwd(), 'data', 'mail-log.jsonl');
 
@@ -48,6 +49,7 @@ function getTransport() {
   transport = nodemailer.createTransport({
     host: c.host!, port: c.port, secure: c.secure,
     auth: { user: c.user!, pass: c.pass! },
+    tls: smtpTlsOptions(), // Plesk'in kendinden imzalı sertifikası parmak iziyle sabitlenir; doğrulama kapatılmaz
     connectionTimeout: 9_000, greetingTimeout: 9_000, socketTimeout: 12_000,
   });
   return transport;
