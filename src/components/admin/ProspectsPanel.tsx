@@ -27,7 +27,7 @@ import ProspectOffer from './ProspectOffer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  ACTIVITY_META, api, cameBackRecently, inputCls, KIND_META, LIST_IDS_KEY, LIST_SCROLL_KEY, LIST_STATE_KEY, markFromList, prospectHref, readSession, writeSession,
+  ACTIVITY_META, api, cacheListRows, cameBackRecently, inputCls, KIND_META, LIST_IDS_KEY, LIST_SCROLL_KEY, LIST_STATE_KEY, markFromList, prospectHref, readSession, writeSession,
   type Job, type Prospect,
 } from './prospect-shared';
 import ProspectFunnel from './ProspectFunnel';
@@ -209,6 +209,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
       if (seq !== requestSeq.current || !res.available) return;
       setRows(res.rows);
       writeSession(LIST_IDS_KEY, res.rows.map((r) => r.id));
+      cacheListRows(res.rows);
       if (!restoredScroll.current) {
         restoredScroll.current = true;
         const y = readSession<number>(LIST_SCROLL_KEY);

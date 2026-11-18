@@ -8,7 +8,7 @@
  * (durum, notlar, ziyaretler, demo ve kontrol listesi, saha fotoğrafları). Telefonda tek sütun, önce sağdakiler.
  * Önceki/sonraki aday: listenin son süzgeçteki sırası (sessionStorage) — listeye dönmeden bölgeyi gezmek için.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -20,7 +20,7 @@ import ProspectPhotos from './ProspectPhotos';
 import ProspectProfile from './ProspectProfile';
 import ProspectVisits from './ProspectVisits';
 import {
-  api, cameFromList, inputCls, KIND_META, LIST_IDS_KEY, markBackNavigation, PROSPECT_LIST_HREF, PROSPECT_STATUSES, prospectHref, readSession,
+  api, cachedRow, cameFromList, inputCls, patchCachedRow, KIND_META, LIST_IDS_KEY, markBackNavigation, PROSPECT_LIST_HREF, PROSPECT_STATUSES, prospectHref, readSession,
   type Job, type Prospect,
 } from './prospect-shared';
 
@@ -48,6 +48,9 @@ export default function ProspectPage() {
   const [ids, setIds] = useState<number[]>([]);
   const [backLabel, setBackLabel] = useState('Müşteri Adayları');
 
+  const pRef = useRef<Prospect | null>(null);
+  useEffect(() => { pRef.current = p; }, [p]);
+
   const notify = useCallback((m: string) => {
     setToast(m);
     setTimeout(() => setToast((t) => (t === m ? '' : t)), 3500);
@@ -58,8 +61,14 @@ export default function ProspectPage() {
       const res = await api<{ rows: Prospect[] }>(`/api/admin/prospects?kind=all&id=${id}`);
       const row = res.rows?.[0];
       if (!row) { setError('Aday bulunamadı.'); return; }
+      const prev = pRef.current;
       setP(row);
-      if (!keepEdits) { setNotes(row.notes ?? ''); setSite(row.website ?? ''); }
+      if (!keepEdits || !prev) { setNotes(row.notes ?? ''); setSite(row.website ?? ''); }
+      else {
+        // Yazılmakta olan not/adres korunur; kullanıcı dokunmadıysa sunucudaki güncel değer gelir
+        setNotes((n) => (n === (prev.notes ?? '') ? row.notes ?? '' : n));
+        setSite((s) => (s === (prev.website ?? '') ? row.website ?? '' : s));
+      }
       setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Aday yüklenemedi.');
@@ -69,7 +78,12 @@ export default function ProspectPage() {
   useEffect(() => {
     if (!Number.isInteger(id) || id <= 0) return;
     const t = setTimeout(() => {
-      load();
+      // Listeden gelindiyse satır zaten elde: anında göster, sunucudan günceli arkada gelsin
+      const cached = cachedRow(id);
+      setP(cached);
+      if (cached) { setNotes(cached.notes ?? ''); setSite(cached.website ?? ''); }
+      setError('');
+      load(Boolean(cached));
       const from = cameFromList();
       setBackLabel(from ?? 'Müşteri Adayları');
       // Önceki/sonraki yalnızca aday listesinden gelince anlamlı (saha listesinin sırası başka)
@@ -142,7 +156,11 @@ export default function ProspectPage() {
     try {
       await api('/api/admin/prospects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update', id: p.id, ...patch }) });
       if (patch.website !== undefined) await load(true);
-      else setP({ ...p, ...(patch.status ? { status: patch.status } : {}), ...(patch.notes !== undefined ? { notes: patch.notes } : {}) });
+      else {
+        const change = { ...(patch.status ? { status: patch.status } : {}), ...(patch.notes !== undefined ? { notes: patch.notes } : {}) };
+        setP({ ...p, ...change });
+        patchCachedRow(p.id, change);
+      }
       if (ok) notify(ok);
     } catch (e) {
       notify(`Hata: ${e instanceof Error ? e.message : 'Kaydedilemedi.'}`);
