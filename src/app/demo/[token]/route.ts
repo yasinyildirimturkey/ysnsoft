@@ -1,6 +1,23 @@
 import { createHash } from 'node:crypto';
 import { clientKey, getAdminSession, isOwnDevice } from '@/lib/admin-auth';
-import { readWebscoutDraft, recordDemoView } from '@/lib/webscout';
+import { draftBusinessId, readWebscoutDraft, recordDemoView, runWebscout } from '@/lib/webscout';
+import { notify } from '@/lib/notifications';
+
+/** Demonun sahibi işletmeyi bulup ekibe bildirim gönderir. Aynı demo 2 saat içinde tekrar açılırsa tek bildirimde sayılır. */
+async function notifyDemoOpened(token: string) {
+  const id = draftBusinessId(token);
+  let name = 'Bir demo';
+  let city = '';
+  if (id) {
+    const res = await runWebscout(['query', '--id', String(id), '--kind', 'all', '--limit', '1']) as { rows?: { name: string; city: string }[] };
+    name = res.rows?.[0]?.name ?? name;
+    city = res.rows?.[0]?.city ?? '';
+  }
+  await notify(
+    { kind: 'demo_view', title: 'Demo açıldı', body: `${name}${city ? ` · ${city}` : ''} — şimdi arayın ya da uğrayın`, url: id ? `/admin/adaylar/${id}` : '/admin?m=prospects', key: `demo:${token}` },
+    { mergeMinutes: 120 },
+  );
+}
 
 /**
  * Müşteri adayına gösterilen şablon taslağı (Seviye 3) — /demo/<gizli belirteç>.
@@ -53,6 +70,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     return notice('Dieser Entwurf ist abgelaufen', 'Der Gestaltungsvorschlag war nur für begrenzte Zeit abrufbar. Sprechen Sie uns gern an, wir stellen ihn erneut bereit.', 410);
   }
   if (draft.state !== 'ok') return notice('Seite nicht gefunden', 'Unter dieser Adresse gibt es keinen Entwurf.', 404);
-  if (countable(request, token)) recordDemoView(token);
+  if (countable(request, token)) {
+    recordDemoView(token);
+    // Ekibe anında haber: "Demo açıldı" (zil + telefona bildirim). Sayfayı bekletmez; hata sessizce geçer.
+    void notifyDemoOpened(token).catch(() => {});
+  }
   return new Response(new Uint8Array(draft.data), { headers: { ...HEADERS, 'Content-Type': draft.type } });
 }

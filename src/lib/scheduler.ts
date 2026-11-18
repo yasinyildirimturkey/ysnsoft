@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadUsers } from '@/lib/admin-users';
 import { escapeHtml as esc, mailLayout, sendMail } from '@/lib/mailer';
+import { notify } from '@/lib/notifications';
 import { can } from '@/lib/roles';
 import { runWebscout, webscoutAvailability } from '@/lib/webscout';
 
@@ -83,6 +84,10 @@ ${items ? `<ul style="padding-left:18px;margin:0 0 12px">${items}</ul>` : ''}
 ${money && (money.open.n || money.won.n) ? `<p style="margin:0 0 12px">Açık teklifler: <b>${eur(money.open.setup + 12 * money.open.monthly)}</b> (${money.open.n}) · Kazanılan: <b>${eur(money.won.setup + 12 * money.won.monthly)}</b> (${money.won.n}) — ilk yıl değeri</p>` : ''}
 <p style="margin:16px 0 0"><a href="${SITE}/admin/saha" style="display:inline-block;background:#0071e3;color:#fff;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:600">Saha listesini aç</a></p>`);
   const res = await sendMail({ to, subject: `Bugün: ${rem.today_planned} ziyaret, ${rem.total} hatırlatma`, html, kind: 'morning-summary' });
+  // Zamanlanmış özet telefona da düşer (elle "şimdi gönder" yalnız e-posta)
+  if (!opts.to) {
+    await notify({ kind: 'morning', title: 'Günaydın', body: `Bugün ${rem.today_planned} ziyaret, ${rem.total} hatırlatma`, url: '/admin/saha', key: `morning:${new Date().toISOString().slice(0, 10)}` }).catch(() => {});
+  }
   return { ...res, recipients: to.length };
 }
 

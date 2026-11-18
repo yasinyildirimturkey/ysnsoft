@@ -115,6 +115,17 @@ export function recordDemoView(token: string): void {
   } catch { /* sayaç yazılamazsa sayfa yine sunulur */ }
 }
 
+/** Taslağın ait olduğu işletme (meta.json'daki businessId). */
+export function draftBusinessId(token: string): number | null {
+  if (!DRAFT_TOKEN_RE.test(token)) return null;
+  try {
+    const meta = JSON.parse(fs.readFileSync(path.join(TOOL_DIR, 'data', 'drafts', token, 'meta.json'), 'utf8')) as { businessId?: number };
+    return Number.isInteger(meta.businessId) && meta.businessId! > 0 ? meta.businessId! : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Saha fotoğrafları ────────────────────────────────────────
 // Ziyarette çekilen (izinli) fotoğraflar: tools/webscout/data/uploads/<işletme id>/.
 // Taslak üretilirken önce bunlar kullanılır; ilk fotoğraf açılış (kapak) görseli olur.
