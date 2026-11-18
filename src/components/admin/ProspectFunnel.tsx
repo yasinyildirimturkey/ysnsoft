@@ -10,6 +10,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarX, ChevronDown, Eye, FileClock, Hourglass, Phone, TrendingUp } from 'lucide-react';
 import { isoDay, localDayOf } from '@/lib/visit-plan';
+import PricingEditor from './PricingEditor';
 
 interface Stage { key: string; label: string; n: number; rate: number | null }
 interface Week { week: string; first_day: string; visits: number; met: number; won: number }
@@ -23,13 +24,17 @@ interface Reminder {
   count?: number;
   days?: number | null;
 }
+interface Money { n: number; setup: number; monthly: number }
+
 interface Funnel {
   stages: Stage[];
   side: { lost: number; dnc: number; drafts: number; viewed: number; shown: number };
+  money?: { open: Money; won: Money };
   weeks: Week[];
   reminders: { today: string; today_planned: number; items: Reminder[]; total: number };
 }
 
+const eur = (n: number) => `${n.toLocaleString('de-DE')} €`;
 const fmtDay = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.`;
 /** SQL (UTC, "YYYY-MM-DD HH:MM:SS") ya da ISO zaman → yerel gün */
 const dayOf = (v: string) => (v.includes('T') ? isoDay(new Date(v)) : v.length > 10 ? localDayOf(v) : v);
@@ -88,6 +93,7 @@ export default function ProspectFunnel({ query, stamp, onOpen }: { query: string
   const [data, setData] = useState<Funnel | null>(null);
   const [error, setError] = useState('');
   const [all, setAll] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -116,13 +122,14 @@ export default function ProspectFunnel({ query, stamp, onOpen }: { query: string
 
   return (
     <div className="grid lg:grid-cols-[1.35fr_1fr] gap-4">
+      {pricingOpen && <PricingEditor onClose={() => setPricingOpen(false)} />}
       {/* Huni */}
       <section className="apple-card p-5 bg-white border border-black/[0.07]" aria-labelledby="funnel-h">
         <div className="flex items-center justify-between gap-2">
           <h3 id="funnel-h" className="text-sm font-semibold text-[#1D1D1F] flex items-center gap-1.5">
             <TrendingUp className="w-4 h-4" aria-hidden="true" /> Satış hunisi
           </h3>
-          <span className="text-[11px] text-[#6E6E73]">Seçili bölge ve türler</span>
+          <span className="flex items-center gap-3 text-[11px] text-[#6E6E73]">Seçili bölge ve türler <button type="button" onClick={() => setPricingOpen(true)} className="font-semibold text-[#0071E3] hover:underline">Paketler ve fiyatlar</button></span>
         </div>
         <ol className="mt-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
           {data.stages.map((s, i) => (
@@ -140,6 +147,17 @@ export default function ProspectFunnel({ query, stamp, onOpen }: { query: string
           sahada gösterildi <b className="text-[#1D1D1F] tabular">{data.side.shown}</b> · kaybedildi <b className="text-[#1D1D1F] tabular">{data.side.lost}</b>
           {data.side.dnc > 0 && <> · iletişime geçme <b className="text-[#1D1D1F] tabular">{data.side.dnc}</b></>}
         </p>
+        {data.money && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {([['Açık teklifler', data.money.open, 'bg-amber-50 border-amber-200'], ['Kazanılan', data.money.won, 'bg-emerald-50 border-emerald-200']] as const).map(([label, m, cls]) => (
+              <div key={label} className={`rounded-xl border p-3 ${cls}`}>
+                <span className="text-[11px] text-[#6E6E73]">{label} ({m.n})</span>
+                <span className="block text-lg font-semibold text-[#1D1D1F] tabular">{eur(m.setup + 12 * m.monthly)}</span>
+                <span className="text-[11px] text-[#6E6E73] tabular">{eur(m.setup)} kurulum + {eur(m.monthly)}/ay · ilk yıl</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-4">
           <span className="text-[11px] text-[#6E6E73]">Son 8 haftada saha ziyareti: <b className="text-[#1D1D1F] tabular">{weekTotal}</b></span>

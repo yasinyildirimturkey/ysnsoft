@@ -23,7 +23,14 @@ export interface OfferProspect {
   findings: { code: string; de: string; verified?: string }[];
   /** Seviye 3 şablon taslağı varsa gizli demo adresinin belirteci: teklife QR kod olarak basılır. */
   draft_token?: string | null;
+  /** Aday sayfasında kaydedilen teklif (varsa teklife fiyat kutusu olarak basılır) */
+  offer_package?: string | null;
+  offer_setup?: number | null;
+  offer_monthly?: number | null;
 }
+
+interface OfferPricing { vatNote: string; packages: { key: string; name: string; setup: number; monthly: number; features: string[] }[] }
+const eur = (n: number) => `${n.toLocaleString('de-DE')} €`;
 
 /** QR kodu tek bir SVG yolu olarak çizer (yazıcıda keskin çıkar; dış istek ya da görsel dosyası yok). */
 export function QrCode({ value, size, label = 'QR-Code zum Entwurf', level = 'M' }: { value: string; size: number; label?: string; level?: 'L' | 'M' }) {
@@ -102,7 +109,7 @@ function loadSender(): Sender {
   }
 }
 
-export default function ProspectOffer({ prospect, onClose }: { prospect: OfferProspect; onClose: () => void }) {
+export default function ProspectOffer({ prospect, pricing = null, onClose }: { prospect: OfferProspect; pricing?: OfferPricing | null; onClose: () => void }) {
   const [sender, setSender] = useState<Sender>(EMPTY_SENDER);
   const [mounted, setMounted] = useState(false);
 
@@ -154,6 +161,7 @@ export default function ProspectOffer({ prospect, onClose }: { prospect: OfferPr
     ? new Date(prospect.scanned_at.replace(' ', 'T') + 'Z').toLocaleDateString('de-DE')
     : null;
   const ready = sender.brand.trim() !== '' && sender.phone.trim() !== '';
+  const offerPkg = pricing?.packages.find((x) => x.key === prospect.offer_package) ?? null;
   const brand = sender.brand.trim() || '[Markenname]';
 
   const fields: { key: keyof Sender; label: string; placeholder: string }[] = [
@@ -283,7 +291,21 @@ export default function ProspectOffer({ prospect, onClose }: { prospect: OfferPr
           <ul className="space-y-1.5 list-disc pl-5">
             {OFFER_POINTS.map((p) => <li key={p}>{p}</li>)}
           </ul>
-          {sender.priceNote.trim() && <p className="mt-3 font-semibold">{sender.priceNote.trim()}</p>}
+          {offerPkg && prospect.offer_setup !== null && prospect.offer_setup !== undefined ? (
+            <div className="mt-5 p-4 rounded-xl bg-[#F5F5F7] print:bg-white print:border print:border-black/[0.2] print:break-inside-avoid">
+              <div className="flex items-baseline justify-between gap-4">
+                <div className="font-bold">Ihr Angebot: Paket „{offerPkg.name}“</div>
+                <div className="text-right shrink-0">
+                  <div className="font-bold tabular">{eur(prospect.offer_setup)} <span className="font-normal text-[#515154]">einmalig</span></div>
+                  <div className="font-bold tabular">{eur(prospect.offer_monthly ?? 0)} <span className="font-normal text-[#515154]">monatlich</span></div>
+                </div>
+              </div>
+              {offerPkg.features.length > 0 && (
+                <ul className="mt-2 space-y-1 list-disc pl-5">{offerPkg.features.map((f) => <li key={f}>{f}</li>)}</ul>
+              )}
+              <p className="mt-2 text-[11px] text-[#515154]">{pricing?.vatNote} Das Angebot ist 30 Tage gültig.</p>
+            </div>
+          ) : sender.priceNote.trim() && <p className="mt-3 font-semibold">{sender.priceNote.trim()}</p>}
 
           {demoUrl && (
             <div className="mt-6 p-4 rounded-xl border-2 border-[#1D1D1F] flex items-center gap-5 print:break-inside-avoid">

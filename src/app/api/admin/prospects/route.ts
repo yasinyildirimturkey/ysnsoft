@@ -23,7 +23,7 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 const PLACE_RE = /^[\p{L}\p{N}][\p{L}\p{N} .,'()/-]{1,79}$/u;
 const KEY_RE = /^[a-z_]{2,30}$/;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-const VISIT_OUTCOMES = ['talked', 'demo_shown', 'offer_requested', 'come_back', 'closed', 'not_interested', 'won'];
+const VISIT_OUTCOMES = ['talked', 'demo_shown', 'offer_requested', 'come_back', 'closed', 'not_interested', 'won', 'demo_sent'];
 const b64 = (v: string) => Buffer.from(v, 'utf8').toString('base64');
 
 function fail(error: string, status = 400) {
@@ -123,6 +123,20 @@ export async function GET(request: Request) {
     }
 
     // Satış hunisi (seçili bölge) + hatırlatmalar (tüm şehirler)
+    // Bölgedeki iyi örnekler (aynı şehir + sektör/meslek, sitesi en iyi puanlı)
+    if (view === 'examples') {
+      const id = Number(searchParams.get('id'));
+      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      const res = await runWebscout(['examples', '--id', String(id)]);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
+    // Teklif paketleri ve fiyatlar
+    if (view === 'pricing') {
+      const res = await runWebscout(['pricing']);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
     if (view === 'funnel') {
       const args = regionArgs(searchParams, false);
       if (typeof args === 'string') return fail(args);
@@ -313,6 +327,15 @@ export async function POST(request: Request) {
     }
 
     // Durum / not / elle bulunan site adresi güncelle
+    // Paket/fiyat ayarlarını kaydet
+    if (body.action === 'pricing') {
+      if (!body.pricing || typeof body.pricing !== 'object') return fail('Geçersiz fiyat ayarı.');
+      const json = JSON.stringify(body.pricing);
+      if (json.length > 20_000) return fail('Fiyat ayarı çok büyük.');
+      const res = await runWebscout(['pricing-set', '--b64', b64(json)]);
+      return NextResponse.json({ success: true, ...res }, { headers: NO_STORE });
+    }
+
     if (body.action === 'update') {
       const id = Number(body.id);
       if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
@@ -325,6 +348,18 @@ export async function POST(request: Request) {
       if (typeof body.notes === 'string') {
         const b64 = Buffer.from(body.notes.slice(0, 4000), 'utf8').toString('base64');
         args.push('--notes-b64', ...(b64 ? [b64] : [])); // değersiz bayrak = notu temizle
+      }
+      // Teklif: { package, setup, monthly } tam euro; null = teklifi sil
+      if (body.offer !== undefined) {
+        const o = body.offer as { package?: unknown; setup?: unknown; monthly?: unknown } | null;
+        if (o === null) args.push('--offer-b64');
+        else {
+          const offer = { package: String(o.package ?? ''), setup: Number(o.setup), monthly: Number(o.monthly) };
+          if (!/^[a-z0-9_-]{1,30}$/.test(offer.package) || ![offer.setup, offer.monthly].every((v) => Number.isInteger(v) && v >= 0 && v <= 1_000_000)) {
+            return fail('Geçersiz teklif.');
+          }
+          args.push('--offer-b64', b64(JSON.stringify(offer)));
+        }
       }
       if (typeof body.website === 'string') {
         const b64 = Buffer.from(body.website.trim().slice(0, 300), 'utf8').toString('base64');

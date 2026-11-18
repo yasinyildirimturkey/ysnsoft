@@ -51,7 +51,18 @@ export interface Prospect {
   site_mismatch?: { host: string; owner: string | null } | null;
   /** Demonun eksik/tahmini kısımları (örnek foto, öneri metin, logo, saat…): sahada tamamlanacaklar */
   draft_quality?: DraftQuality | null;
+  /** Verilen teklif (tam euro); kazanılınca anlaşma değeri */
+  offer_package?: string | null;
+  offer_setup?: number | null;
+  offer_monthly?: number | null;
+  offer_at?: string | null;
 }
+
+export interface PricingPackage { key: string; name: string; setup: number; monthly: number; features: string[] }
+export interface Pricing { vatNote: string; packages: PricingPackage[] }
+
+/** 1190 → "1.190 €" */
+export const euro = (n: number | null | undefined) => `${(n ?? 0).toLocaleString('de-DE')} €`;
 
 export interface Job {
   state: 'running' | 'done' | 'error';

@@ -175,6 +175,7 @@ export const VISIT_OUTCOME_LABEL: Record<string, string> = {
   closed: 'Kapalıydı',
   not_interested: 'İlgilenmedi',
   won: 'Anlaştık',
+  demo_sent: 'Demo WhatsApp ile gönderildi',
 };
 /** Bu sonuçlarda bir sonraki ziyaret tarihi istenir */
 export const NEEDS_NEXT = new Set(['come_back', 'closed']);
