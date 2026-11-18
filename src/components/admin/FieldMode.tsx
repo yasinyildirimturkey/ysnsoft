@@ -10,6 +10,7 @@ import Link from 'next/link';
 import DraftChecklist, { type DraftQuality } from './DraftChecklist';
 import { markFromField, prospectHref } from './prospect-shared';
 import WhatsAppDemo from './WhatsAppDemo';
+import NotificationBell from './NotificationBell';
 import {
   ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
 } from 'lucide-react';
@@ -233,6 +234,7 @@ export default function FieldMode() {
             className="text-sm border border-black/[0.12] rounded-lg px-2 py-1.5 bg-white"
             aria-label="Gün"
           />
+          <NotificationBell />
           <button type="button" onClick={() => load(date)} className="p-2 rounded-full hover:bg-black/[0.05]" aria-label="Yenile">
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>

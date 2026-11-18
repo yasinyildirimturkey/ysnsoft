@@ -29,7 +29,8 @@ if (Test-Path data) {
   # faturalar, site listesi, yonetici hesaplari (sifre ozetleri) ve islem kaydi
   # yerel kopyalarla ezilmesin. (Yoksa sunucu varsayılanları üretir.)
   # mail-log.jsonl ve scheduler\ (e-posta kaydi, zamanlanmis islerin "bugun yapildi" isaretleri) da sunucuya ozeldir.
-  robocopy data _deploy\www\data /E /XD scheduler /XF leads.json appointments.json invoices.json sites.json geo-settings.json admin-users.json admin-audit.log mail-log.jsonl *.tmp /NFL /NDL /NJH /NJS /NP | Out-Null
+  # push-vapid.json (bildirim anahtari) ASLA ezilmemeli: ezilirse telefonlardaki tum bildirim abonelikleri gecersiz olur.
+  robocopy data _deploy\www\data /E /XD scheduler /XF leads.json appointments.json invoices.json sites.json geo-settings.json admin-users.json admin-audit.log mail-log.jsonl push-vapid.json push-subs.json notifications.json notif-seen.json last-crash.json *.tmp /NFL /NDL /NJH /NJS /NP | Out-Null
 }
 if (Test-Path scripts) {
   robocopy scripts _deploy\www\scripts /E /NFL /NDL /NJH /NJS /NP | Out-Null

@@ -26,6 +26,7 @@ import {
 import { PRODUCTS, Product } from '@/data/products';
 import ProspectsPanel from '@/components/admin/ProspectsPanel';
 import SystemMailPanel from '@/components/admin/SystemMailPanel';
+import NotificationBell from '@/components/admin/NotificationBell';
 import UsersPanel from '@/components/admin/UsersPanel';
 import { ROLE_INFO, can, isAdminRole } from '@/lib/roles';
 import { 
@@ -768,6 +769,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <NotificationBell />
             <span className="text-xs font-medium text-[#515154] bg-white border border-black/[0.08] px-3 py-1.5 rounded-full">
               {isAdminRole(activeUserRole) ? ROLE_INFO[activeUserRole].label : activeUserRole}
             </span>
