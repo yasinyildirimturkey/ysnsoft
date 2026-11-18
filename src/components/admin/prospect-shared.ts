@@ -107,6 +107,23 @@ export const PROSPECT_LIST_HREF = '/admin?m=prospects';
 export const LIST_STATE_KEY = 'prospects:list-state';
 export const LIST_IDS_KEY = 'prospects:list-ids';
 export const LIST_SCROLL_KEY = 'prospects:list-scroll';
+// Listenin son satırları: aday sayfası bunları anında gösterir, sunucudan günceli gelince değiştirir
+const LIST_ROWS_KEY = 'prospects:list-rows';
+
+export function cacheListRows(rows: Prospect[]) {
+  try { sessionStorage.setItem(LIST_ROWS_KEY, JSON.stringify(rows)); } catch {
+    // Kota dolduysa (çok büyük liste) eski önbelleği bırakma: yanlış/eksik veri göstermesin
+    try { sessionStorage.removeItem(LIST_ROWS_KEY); } catch { /* yok say */ }
+  }
+}
+export function cachedRow(id: number): Prospect | null {
+  return readSession<Prospect[]>(LIST_ROWS_KEY)?.find((r) => r.id === id) ?? null;
+}
+/** Aday sayfasında yapılan değişiklik (durum, not) listeye dönülünce de görünsün. */
+export function patchCachedRow(id: number, patch: Partial<Prospect>) {
+  const rows = readSession<Prospect[]>(LIST_ROWS_KEY);
+  if (rows?.some((r) => r.id === id)) cacheListRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+}
 
 export function readSession<T>(key: string): T | null {
   try {
