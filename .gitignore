@@ -51,3 +51,5 @@ next-env.d.ts
 # live data (inbound leads contain personal data; site list is edited on the server)
 /data/leads.json
 /data/sites.json
+/data/mail-log.jsonl
+/data/scheduler/

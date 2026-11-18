@@ -28,7 +28,8 @@ if (Test-Path data) {
   # Canlı veritabanı dosyaları pakete girmez: sunucudaki gerçek talepler, randevular,
   # faturalar, site listesi, yonetici hesaplari (sifre ozetleri) ve islem kaydi
   # yerel kopyalarla ezilmesin. (Yoksa sunucu varsayılanları üretir.)
-  robocopy data _deploy\www\data /E /XF leads.json appointments.json invoices.json sites.json geo-settings.json admin-users.json admin-audit.log *.tmp /NFL /NDL /NJH /NJS /NP | Out-Null
+  # mail-log.jsonl ve scheduler\ (e-posta kaydi, zamanlanmis islerin "bugun yapildi" isaretleri) da sunucuya ozeldir.
+  robocopy data _deploy\www\data /E /XD scheduler /XF leads.json appointments.json invoices.json sites.json geo-settings.json admin-users.json admin-audit.log mail-log.jsonl *.tmp /NFL /NDL /NJH /NJS /NP | Out-Null
 }
 if (Test-Path scripts) {
   robocopy scripts _deploy\www\scripts /E /NFL /NDL /NJH /NJS /NP | Out-Null
