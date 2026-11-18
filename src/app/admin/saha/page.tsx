@@ -4,6 +4,10 @@ import FieldMode from '@/components/admin/FieldMode';
 export const metadata: Metadata = {
   title: 'Saha listesi',
   robots: { index: false, follow: false },
+  // Telefona uygulama gibi kurulur ("Ana ekrana ekle"); simge ve tam ekran açılış
+  manifest: '/saha.webmanifest',
+  appleWebApp: { capable: true, title: 'Saha', statusBarStyle: 'default' },
+  icons: { apple: '/saha-apple-180.png' },
 };
 
 /**

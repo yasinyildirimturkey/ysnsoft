@@ -7,7 +7,7 @@ import {
 } from './osm.js';
 import { scanSite } from './scan.js';
 import { writeReports, summary } from './report.js';
-import { funnelReport, goodExamples, queryProspects, STATUS_LABELS } from './prospects.js';
+import { funnelReport, goodExamples, queryProspects, reminders, STATUS_LABELS } from './prospects.js';
 import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
 import { siteMismatch } from './sitematch.js';
@@ -802,7 +802,7 @@ const { pos, opt } = parseArgs(process.argv.slice(2));
 const cmd = pos[0];
 if (!cmd || opt.help) { console.log(HELP); process.exit(cmd ? 0 : 1); }
 
-const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'pricing', 'pricing-set', 'examples', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
+const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'pricing', 'pricing-set', 'examples', 'reminders', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
 try {
   const db = openDb();
   switch (cmd) {
@@ -833,6 +833,7 @@ try {
     case 'site-check': cmdSiteCheck(db); break;
     case 'pricing': printJson({ ok: true, pricing: readPricing() }); break;
     case 'examples': printJson({ ok: true, examples: goodExamples(db, Number(opt.id)) }); break;
+    case 'reminders': printJson({ ok: true, ...reminders(db) }); break;
     case 'pricing-set': printJson({ ok: true, pricing: writePricing(JSON.parse(Buffer.from(String(opt.b64 ?? ''), 'base64').toString('utf8'))) }); break;
     default: console.log(HELP); process.exit(1);
   }

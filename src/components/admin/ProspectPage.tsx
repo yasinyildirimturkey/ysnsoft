@@ -97,6 +97,10 @@ export default function ProspectPage() {
     return () => clearTimeout(t);
   }, [id, load]);
 
+  // Fotoğraf yüklenince demo yenileme: iş sürerken yüklendiyse iş bitince çalışır
+  const pendingRegen = useRef(false);
+  const regenRef = useRef<() => void>(() => {});
+
   // Çalışan iş (derin profil / taslak) bitince adayı yenile; yazılmakta olan not/adres korunur
   const jobRunning = job?.state === 'running';
   useEffect(() => {
@@ -109,6 +113,8 @@ export default function ProspectPage() {
           notify(res.job?.state === 'error' ? `Hata: ${res.job.message}` : (res.job?.message ?? 'Tamamlandı.'));
           load(true);
           setProfileRefresh((n) => n + 1);
+          // İş sürerken fotoğraf yüklendiyse demo şimdi yenilenir
+          if (pendingRegen.current) { pendingRegen.current = false; setTimeout(() => regenRef.current(), 400); }
         }
       } catch { /* geçici ağ hatası */ }
     }, 2500);
@@ -197,6 +203,16 @@ export default function ProspectPage() {
     } catch (e) {
       notify(`Hata: ${e instanceof Error ? e.message : 'Başlatılamadı.'}`);
     }
+  };
+
+  // Saha fotoğrafı yüklenince (ya da kapak değişince) demo kendiliğinden yeniden üretilir
+  useEffect(() => {
+    regenRef.current = () => { startJob({ action: 'draft', id }, 'draft', 'Fotoğraflarla demo yenileniyor…'); };
+  });
+  const regenAfterPhotos = () => {
+    if (!p?.draft_token) { notify('Fotoğraflar eklendi. Demo için “Taslak oluştur”a basın.'); return; }
+    if (jobRunning) { pendingRegen.current = true; notify('Fotoğraflar eklendi; çalışan iş bitince demo yenilenecek.'); return; }
+    regenRef.current();
   };
 
   const copyDraftLink = async (token: string) => {
@@ -326,7 +342,7 @@ export default function ProspectPage() {
                   ) : (
                     <p className="text-[11px] text-[#6E6E73] mt-1 leading-relaxed">İşletmenin adı, adresi, saatleri, logosu ve görselleriyle telefon ve masaüstü uyumlu örnek site (yaklaşık 1 dk).</p>
                   )}
-                  <ProspectPhotos key={p.id} id={p.id} />
+                  <ProspectPhotos key={p.id} id={p.id} onUploaded={regenAfterPhotos} />
                 </section>
               </aside>
 

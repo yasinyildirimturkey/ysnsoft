@@ -131,6 +131,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
     }
 
+    // Bugünün yapılacakları (tüm şehirler): saha listesinin üstündeki sabah özeti
+    if (view === 'reminders') {
+      const res = await runWebscout(['reminders']);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
     // Teklif paketleri ve fiyatlar
     if (view === 'pricing') {
       const res = await runWebscout(['pricing']);
