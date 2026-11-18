@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/admin-auth';
 import { getStoredSites, saveSite, deleteSite, SiteItem } from '@/lib/server-db';
+import { publicHttpsUrl } from '@/lib/public-host';
 
 export async function GET() {
-  const sites = getStoredSites();
+  // Herkese açık yanıt: eski kayıtlardaki ölçülmemiş "stats" (500+ büro, %99.98 uptime…) gönderilmez
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const sites = getStoredSites().map(({ stats, ...rest }) => rest);
   return NextResponse.json({
     success: true,
     count: sites.length,
@@ -17,24 +20,28 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    if (!body.name || !body.domain) {
+    const host = typeof body.domain === 'string' ? publicHttpsUrl(body.domain)?.hostname : undefined;
+    const name = typeof body.name === 'string' ? body.name.trim().slice(0, 120) : '';
+    if (!name || !host) {
       return NextResponse.json(
-        { success: false, error: 'Proje adı ve alan adı (domain) zorunludur.' },
+        { success: false, error: 'Proje adı ve geçerli bir alan adı (domain) zorunludur.' },
         { status: 400 }
       );
     }
+    const text = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 
     const site: SiteItem = {
-      id: body.id || body.domain.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase(),
-      name: body.name,
-      tagline: body.tagline || '',
-      category: body.category || 'Web & SaaS',
-      domain: body.domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''),
-      liveUrl: body.liveUrl || `https://${body.domain}`,
-      status: body.status || 'active',
-      stats: body.stats || { uptime: '%99.9' },
-      features: Array.isArray(body.features) ? body.features : [],
-      description: body.description || '',
+      id: host.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase(),
+      name,
+      tagline: text(body.tagline, 200),
+      category: text(body.category, 60) || 'Web & SaaS',
+      domain: host,
+      liveUrl: (typeof body.liveUrl === 'string' && body.liveUrl.trim() && publicHttpsUrl(body.liveUrl)?.href) || `https://${host}`,
+      status: ['active', 'in-progress', 'planned'].includes(body.status) ? body.status : 'active',
+      // Eskiden ölçülmeyen "%99.9 uptime" varsayılanı yazılıyordu
+      stats: {},
+      features: Array.isArray(body.features) ? body.features.filter((f: unknown) => typeof f === 'string').slice(0, 12).map((f: string) => f.slice(0, 80)) : [],
+      description: text(body.description, 600),
       bridgeEnabled: body.bridgeEnabled ?? true
     };
 
