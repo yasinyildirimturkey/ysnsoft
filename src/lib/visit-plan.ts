@@ -115,7 +115,13 @@ export function openNow(s: PlanInput, day: number, minute: number): boolean | nu
  * Zamanı hesaba katan açgözlü sıralama: her adımda (yol + bekleme) en az olan, o gün açık durağa gidilir.
  * Kapalı ve güne sığmayan duraklar sona, işaretli olarak eklenir.
  */
-export function planDay<T extends PlanInput>(stops: T[], isoDate: string, startMin: number): PlannedStop<T>[] {
+export function planDay<T extends PlanInput>(
+  stops: T[],
+  isoDate: string,
+  startMin: number,
+  /** Başlangıç konumu (sahada "bulunduğum yerden"); verilmezse ilk durağa yol süresi sayılmaz */
+  from?: { lat: number; lon: number } | null,
+): PlannedStop<T>[] {
   const day = weekdayOf(isoDate);
   const info = new Map(stops.map((s) => [s.id, dayWindows(s, day)]));
   const rest = stops.filter((s) => info.get(s.id)!.state !== 'closed');
@@ -123,20 +129,22 @@ export function planDay<T extends PlanInput>(stops: T[], isoDate: string, startM
   const out: PlannedStop<T>[] = [];
   const late: T[] = [];
   let t = startMin;
-  let pos: T | null = null;
+  let pos: { lat: number; lon: number } | null = from ?? null;
 
   while (rest.length) {
-    let pick = -1, pickStart = 0, pickCost = Infinity;
+    let pick = -1, pickStart = 0, pickCost = Infinity, pickTravel = Infinity;
     for (let i = 0; i < rest.length; i++) {
       const s = rest[i];
       const w = info.get(s.id)!;
-      const arrive = pos ? t + travelMin(pos, s) : t;
+      const travel = pos ? travelMin(pos, s) : 0;
+      const arrive = t + travel;
       // Uygun aralık: varıştan sonra ziyareti sığdıran ilk aralık
       const win = w.windows.find(([, e]) => Math.max(arrive, 0) + VISIT_MIN <= e);
       if (!win) continue;
       const start = Math.max(arrive, win[0]);
       const cost = (start - t) + (w.state === 'outside' ? 20 : 0);
-      if (cost < pickCost) { pick = i; pickStart = start; pickCost = cost; }
+      // Eşitlikte (ör. hepsi aynı saatte açılıyor, beklerken yol fark etmiyor) yakın olan seçilir
+      if (cost < pickCost || (cost === pickCost && travel < pickTravel)) { pick = i; pickStart = start; pickCost = cost; pickTravel = travel; }
     }
     if (pick < 0) { late.push(...rest.splice(0)); break; }
     const s = rest.splice(pick, 1)[0];
@@ -145,8 +153,25 @@ export function planDay<T extends PlanInput>(stops: T[], isoDate: string, startM
     t = pickStart + VISIT_MIN;
     pos = s;
   }
-  for (const s of late) out.push({ stop: s, eta: null, windows: info.get(s.id)!.windows, state: 'late' });
-  for (const s of closed) out.push({ stop: s, eta: null, windows: [], state: 'closed' });
+  // Güne sığmayan ve kapalı duraklar da rastgele değil, en yakın komşu sırasıyla dizilir
+  // (gün bitmişse ya da saatler bilinmiyorsa bile en kısa yol sırası çıkar)
+  const byDistance = (list: T[]) => {
+    const left = list.slice();
+    const sorted: T[] = [];
+    while (left.length) {
+      let best = 0;
+      if (pos) {
+        let bestKm = Infinity;
+        left.forEach((s, i) => { const d = km(pos!, s); if (d < bestKm) { bestKm = d; best = i; } });
+      }
+      const s = left.splice(best, 1)[0];
+      sorted.push(s);
+      pos = s;
+    }
+    return sorted;
+  };
+  for (const s of byDistance(late)) out.push({ stop: s, eta: null, windows: info.get(s.id)!.windows, state: 'late' });
+  for (const s of byDistance(closed)) out.push({ stop: s, eta: null, windows: [], state: 'closed' });
   return out;
 }
 
