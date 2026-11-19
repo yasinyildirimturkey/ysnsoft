@@ -115,6 +115,12 @@ export function recordDemoView(token: string): void {
   } catch { /* sayaç yazılamazsa sayfa yine sunulur */ }
 }
 
+/** Demonun açılma sayacı (yoksa null). */
+export function readDemoViews(token: string): DemoViews | null {
+  if (!DRAFT_TOKEN_RE.test(token)) return null;
+  try { return JSON.parse(fs.readFileSync(path.join(VIEWS_DIR, `${token}.json`), 'utf8')) as DemoViews; } catch { return null; }
+}
+
 /** Taslağın ait olduğu işletme (meta.json'daki businessId). */
 export function draftBusinessId(token: string): number | null {
   if (!DRAFT_TOKEN_RE.test(token)) return null;

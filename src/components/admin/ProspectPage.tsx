@@ -336,6 +336,11 @@ export default function ProspectPage() {
                         </a>
                         <button type="button" onClick={() => copyDraftLink(p.draft_token!)} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">Bağlantıyı kopyala</button>
                         <WhatsAppDemo id={p.id} name={p.name} phone={p.phone} token={p.draft_token} onLogged={() => { setVisitsKey((k) => k + 1); load(true); notify('Gönderim ziyaret geçmişine kaydedildi.'); }} />
+                        {p.status === 'won' && (
+                          <a href={`/api/admin/prospects?view=export&id=${p.id}`} download
+                            title="Taslak işaretleri çıkarılmış site + Impressum/Datenschutz taslağı + yayın kontrol listesi"
+                            className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">Yayın paketi (zip)</a>
+                        )}
                       </div>
                       {p.draft_quality && <DraftChecklist quality={p.draft_quality} />}
                     </>

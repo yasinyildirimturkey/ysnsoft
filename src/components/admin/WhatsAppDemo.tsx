@@ -28,8 +28,9 @@ function senderName(): string {
   } catch { return ''; }
 }
 
-export default function WhatsAppDemo({ id, name, phone, token, onLogged, compact = false }: {
-  id: number; name: string; phone: string | null; token: string; onLogged?: () => void; compact?: boolean;
+export default function WhatsAppDemo({ id, name, phone, token, onLogged, compact = false, label }: {
+  /** token yoksa: yalnız "görüşme için teşekkürler" mesajı (demo linki yok, ziyaret geçmişine yazılmaz) */
+  id: number; name: string; phone: string | null; token: string | null; onLogged?: () => void; compact?: boolean; label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [num, setNum] = useState(phone ?? '');
@@ -39,12 +40,18 @@ export default function WhatsAppDemo({ id, name, phone, token, onLogged, compact
   const [error, setError] = useState('');
 
   const start = () => {
-    const url = `${window.location.origin}/demo/${token}`;
     const who = senderName();
-    setText(
-      `Guten Tag,\n\nvielen Dank für das nette Gespräch! Wie besprochen hier Ihr unverbindlicher Website-Entwurf für ${name}:\n${url}\n\n` +
-      `Schauen Sie gern in Ruhe auf dem Handy rein. Bei Fragen erreichen Sie mich direkt unter dieser Nummer.\n\nViele Grüße${who ? `\n${who}` : ''}`,
-    );
+    if (token) {
+      const url = `${window.location.origin}/demo/${token}`;
+      setText(
+        `Guten Tag,\n\nvielen Dank für das nette Gespräch! Wie besprochen hier Ihr unverbindlicher Website-Entwurf für ${name}:\n${url}\n\n` +
+        `Schauen Sie gern in Ruhe auf dem Handy rein. Bei Fragen erreichen Sie mich direkt unter dieser Nummer.\n\nViele Grüße${who ? `\n${who}` : ''}`,
+      );
+    } else {
+      setText(
+        `Guten Tag,\n\nvielen Dank für das nette Gespräch heute bei ${name}! Wenn Sie Fragen zu einer neuen Website haben, erreichen Sie mich direkt unter dieser Nummer.\n\nViele Grüße${who ? `\n${who}` : ''}`,
+      );
+    }
     setNum(phone ?? '');
     setConsent(false);
     setError('');
@@ -58,6 +65,8 @@ export default function WhatsAppDemo({ id, name, phone, token, onLogged, compact
     setError('');
     // Önce WhatsApp'ı aç (tıklamanın içinde açılmazsa telefon tarayıcısı engelleyebilir), sonra kaydet
     window.open(`https://wa.me/${wa}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    // Demo linki yoksa (yalnız teşekkür) ziyaret geçmişine "demo gönderildi" yazılmaz
+    if (!token) { setBusy(false); setOpen(false); return; }
     try {
       await api('/api/admin/prospects', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -78,14 +87,14 @@ export default function WhatsAppDemo({ id, name, phone, token, onLogged, compact
         className={compact
           ? 'flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#25D366]/10 text-[#128C7E] text-xs font-semibold'
           : 'px-3 py-1.5 rounded-full bg-[#25D366] text-white text-xs font-semibold flex items-center gap-1.5 hover:brightness-95'}>
-        <MessageCircle className="w-4 h-4" aria-hidden="true" /> {compact ? 'WhatsApp' : 'WhatsApp ile gönder'}
+        <MessageCircle className="w-4 h-4" aria-hidden="true" /> {label ?? (compact ? 'WhatsApp' : 'WhatsApp ile gönder')}
       </button>
       {open && (
-        <div role="dialog" aria-modal="true" aria-label="Demoyu WhatsApp ile gönder" onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+        <div role="dialog" aria-modal="true" aria-label={token ? 'Demoyu WhatsApp ile gönder' : 'Teşekkür mesajı gönder'} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-3 bg-black/40">
           <div className="w-full max-w-md bg-white rounded-2xl p-5 shadow-2xl text-xs space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-semibold text-[#1D1D1F]">Demoyu WhatsApp ile gönder</h3>
+              <h3 className="text-sm font-semibold text-[#1D1D1F]">{token ? 'Demoyu WhatsApp ile gönder' : 'Teşekkür mesajı gönder'}</h3>
               <button type="button" onClick={() => setOpen(false)} aria-label="Kapat" className="p-1 text-[#6E6E73]"><X className="w-4 h-4" /></button>
             </div>
             <label className="block text-[#6E6E73]">Numara (görüşmede verilen cep telefonu)
@@ -98,7 +107,7 @@ export default function WhatsAppDemo({ id, name, phone, token, onLogged, compact
             </label>
             <label className="flex items-start gap-2 text-[#1D1D1F] p-2.5 rounded-lg bg-amber-50 border border-amber-200">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
-              <span>İşletmeyle görüştüm; numarayı bize kendisi verdi ve demonun WhatsApp ile gönderilmesini kabul etti.</span>
+              <span>İşletmeyle görüştüm; numarayı bize kendisi verdi ve {token ? 'demonun' : 'mesajın'} WhatsApp ile gönderilmesini kabul etti.</span>
             </label>
             {error && <p role="alert" className="text-red-700">{error}</p>}
             <div className="flex justify-end gap-2">

@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { recordWonInvoice } from '@/lib/won-invoice';
 import { NextResponse } from 'next/server';
 import { getAdminSession, requireRole } from '@/lib/admin-auth';
@@ -74,6 +76,27 @@ export async function GET(request: Request) {
   const view = searchParams.get('view') ?? 'list';
 
   try {
+    // Kazanılan demodan yayın paketi (zip): taslak işaretleri çıkarılmış site + Impressum/Datenschutz taslağı + kontrol listesi
+    if (view === 'export') {
+      const denied = requireRole(request, 'prospects', 'write');
+      if (denied) return denied;
+      const id = Number(searchParams.get('id'));
+      if (!Number.isInteger(id) || id <= 0) return fail('Geçersiz kayıt.');
+      const res = await runWebscout<{ file: string; name: string }>(['export-site', '--id', String(id)], 120_000);
+      // Yalnız WebScout'un exports klasöründeki dosya sunulur
+      const exportsDir = path.join(/* turbopackIgnore: true */ process.cwd(), 'tools', 'webscout', 'data', 'exports');
+      const file = path.resolve(res.file);
+      if (!file.startsWith(exportsDir + path.sep)) return fail('Paket bulunamadı.', 500);
+      const data = await readFile(file);
+      return new Response(new Uint8Array(data), {
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename="${res.name.replace(/[^\w.-]/g, '_')}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+
     if (view === 'meta') {
       const meta = await runWebscout(['meta']);
       return NextResponse.json({ success: true, available: true, ...meta }, { headers: NO_STORE });
@@ -135,6 +158,15 @@ export async function GET(request: Request) {
     // Bugünün yapılacakları (tüm şehirler): saha listesinin üstündeki sabah özeti
     if (view === 'reminders') {
       const res = await runWebscout(['reminders']);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
+    // Bir gün için plan önerisi (yakın, iyi puanlı, o gün açık adaylar; önce sıcak demolar)
+    if (view === 'suggest') {
+      const day = searchParams.get('date') ?? '';
+      if (!DAY_RE.test(day)) return fail('Geçersiz tarih.');
+      const city = searchParams.get('city');
+      const res = await runWebscout(['suggest-day', '--date', day, ...(city && city.length <= 80 && !city.startsWith('--') ? ['--city', city] : [])]);
       return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
     }
 
