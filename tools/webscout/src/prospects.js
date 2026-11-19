@@ -347,6 +347,9 @@ export function goodExamples(db, id, limit = 3) {
  * Şehir verilmezse son 14 günde en çok ziyaret yapılan şehir (yoksa en çok adayı olan şehir) seçilir.
  * Önce demosunu açan (sıcak) adaylar, sonra en yüksek puanlıdan başlayıp yakın ve puanı yüksek olanlar eklenir (≤ 5 km).
  */
+// Otomatik öneriye girmeyen kurumsal yerler (kantin, Mensa, dernek lokali, hastane kafeteryası…): listelerde görünmeye devam eder
+const INSTITUTION_RE = /(^|[\s(,-])(mensa|kantine|cafeteria|schulmensa)($|[\s),-])|casino des|landtag|landeskriminalamt|ministerium|polizei|krankenhaus|klinikum|bürgerhaus|vereinsheim|clubhaus|kleing(ä|a)rt(e|ne)n?r?verein|(^|\s)e\.\s?v\.?($|\s)/i;
+
 export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
   const day = (new Date(`${date}T12:00:00`).getDay() + 6) % 7;
   const R = 6371;
@@ -371,6 +374,7 @@ export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
       WHERE b.city = @city AND b.status = 'new' AND b.visit_date IS NULL AND b.lat IS NOT NULL AND b.brand IS NULL
         AND ${KIND_SQL} IN ('no_site','redesign')`, { city, minScore })
     .filter(openThatDay)
+    .filter((r) => !INSTITUTION_RE.test(r.name))
     .map((r) => ({ ...r, score: r.kind === 'no_site' ? Math.max(r.score ?? 0, 60) : (r.score ?? 0) }));
   // Sıcak adaylar (demosunu son görüşmeden sonra açanlar), aynı şehirde ve konumu biliniyorsa önce
   const hotIds = new Set(reminders(db).items.filter((it) => it.type === 'hot_demo' && it.city === city).map((it) => it.id));
