@@ -553,7 +553,8 @@ export default function AdminDashboardPage() {
   };
 
   // Financial statistics
-  const totalInvoiced = invoices.reduce((acc, inv) => acc + inv.totalAmount, 0);
+  // Kayıtlar ₺ ya da € olabilir (kazanılan Alman müşteriler €): toplamlar para birimine göre ayrı gösterilir
+  const totalInvoiced = invoices;
 
   // Genel Bakış grafikleri GERÇEK taleplerden hesaplanır (eskiden sabit yazılmış örnek rakamlardı)
   const MONTHS_TR = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -579,11 +580,20 @@ export default function AdminDashboardPage() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
       .map(([name, n], i) => ({ name, count: n, pct: Math.round((n / Math.max(1, leads.length)) * 100), color: colors[i] }));
   })();
-  const paidInvoices = invoices.filter(inv => inv.status === 'Ödendi').reduce((acc, inv) => acc + inv.totalAmount, 0);
-  const pendingInvoices = invoices.filter(inv => inv.status === 'Beklemede').reduce((acc, inv) => acc + inv.totalAmount, 0);
+  const paidInvoices = invoices.filter(inv => inv.status === 'Ödendi');
+  const pendingInvoices = invoices.filter(inv => inv.status === 'Beklemede');
 
   const formatTRY = (val: number) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(val);
+  };
+  const formatMoney = (val: number, currency: InvoiceRecord['currency'] = 'TRY') =>
+    new Intl.NumberFormat(currency === 'EUR' ? 'de-DE' : 'tr-TR', { style: 'currency', currency: currency ?? 'TRY', maximumFractionDigits: currency === 'EUR' ? 2 : 0 }).format(val);
+  /** Toplam: para birimine göre ayrı (ör. "₺12.000 + 1.416,10 €"); kayıt yoksa ₺0 */
+  const sumMoney = (list: InvoiceRecord[]) => {
+    const by = new Map<string, number>();
+    for (const i of list) by.set(i.currency ?? 'TRY', (by.get(i.currency ?? 'TRY') ?? 0) + i.totalAmount);
+    if (!by.size) return formatTRY(0);
+    return [...by.entries()].map(([c, v]) => formatMoney(v, c as InvoiceRecord['currency'])).join(' + ');
   };
 
   type MenuId = typeof activeMenu;
@@ -830,7 +840,7 @@ export default function AdminDashboardPage() {
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
                 <span className="text-xs text-[#6E6E73] font-medium">Kayıtlı Fatura Toplamı</span>
                 <div className="flex items-baseline justify-between mt-2">
-                  <span className="text-2xl font-bold text-[#10B981]">{formatTRY(totalInvoiced)}</span>
+                  <span className="text-2xl font-bold text-[#10B981]">{sumMoney(totalInvoiced)}</span>
                   <span className="text-xs font-semibold text-[#6E6E73] bg-black/[0.04] px-2 py-0.5 rounded-full">
                     {invoices.length} kayıt
                   </span>
@@ -1272,7 +1282,7 @@ export default function AdminDashboardPage() {
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
                 <span className="text-xs text-[#6E6E73] font-medium">Toplam Tahsil Edilen</span>
                 <div className="flex items-baseline justify-between mt-2">
-                  <span className="text-2xl font-bold text-[#10B981]">{formatTRY(paidInvoices)}</span>
+                  <span className="text-2xl font-bold text-[#10B981]">{sumMoney(paidInvoices)}</span>
                   <span className="text-xs font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full">
                     Ödendi
                   </span>
@@ -1282,7 +1292,7 @@ export default function AdminDashboardPage() {
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
                 <span className="text-xs text-[#6E6E73] font-medium">Bekleyen Tahsilatlar</span>
                 <div className="flex items-baseline justify-between mt-2">
-                  <span className="text-2xl font-bold text-[#F59E0B]">{formatTRY(pendingInvoices)}</span>
+                  <span className="text-2xl font-bold text-[#F59E0B]">{sumMoney(pendingInvoices)}</span>
                   <span className="text-xs font-semibold text-[#F59E0B] bg-[#F59E0B]/10 px-2 py-0.5 rounded-full">
                     Beklemede
                   </span>
@@ -1292,7 +1302,7 @@ export default function AdminDashboardPage() {
               <div className="apple-card p-5 bg-white border border-black/[0.07]">
                 <span className="text-xs text-[#6E6E73] font-medium">Toplam Kayıt (KDV dahil)</span>
                 <div className="flex items-baseline justify-between mt-2">
-                  <span className="text-2xl font-bold text-[#0071E3]">{formatTRY(totalInvoiced)}</span>
+                  <span className="text-2xl font-bold text-[#0071E3]">{sumMoney(totalInvoiced)}</span>
                   <span className="text-xs font-semibold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded-full">
                     {invoices.length} kayıt
                   </span>
@@ -1349,9 +1359,9 @@ export default function AdminDashboardPage() {
                           {inv.taxNumber && <span className="text-[#6E6E73] text-[11px]">VN: {inv.taxNumber}</span>}
                         </td>
                         <td className="p-3.5 font-medium text-[#0071E3]">{inv.product}</td>
-                        <td className="p-3.5 text-[#515154]">{formatTRY(inv.amount)}</td>
-                        <td className="p-3.5 text-[#6E6E73]">%{inv.taxRate} · {formatTRY(inv.totalAmount - inv.amount)}</td>
-                        <td className="p-3.5 font-bold text-[#1D1D1F]">{formatTRY(inv.totalAmount)}</td>
+                        <td className="p-3.5 text-[#515154]">{formatMoney(inv.amount, inv.currency)}</td>
+                        <td className="p-3.5 text-[#6E6E73]">%{inv.taxRate} · {formatMoney(inv.totalAmount - inv.amount, inv.currency)}</td>
+                        <td className="p-3.5 font-bold text-[#1D1D1F]">{formatMoney(inv.totalAmount, inv.currency)}</td>
                         <td className="p-3.5 text-[#515154]">{inv.paymentType}</td>
                         <td className="p-3.5">
                           <select
