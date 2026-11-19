@@ -9,7 +9,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarX, ChevronDown, Eye, FileClock, Hourglass, Phone, TrendingUp } from 'lucide-react';
-import { isoDay, localDayOf } from '@/lib/visit-plan';
+import { CATEGORY_LABEL, isoDay, localDayOf } from '@/lib/visit-plan';
 import PricingEditor from './PricingEditor';
 
 interface Stage { key: string; label: string; n: number; rate: number | null }
@@ -25,11 +25,16 @@ interface Reminder {
   days?: number | null;
 }
 interface Money { n: number; setup: number; monthly: number }
+interface WinRates {
+  sectors: { category: string; met: number; offers: number; won: number; rate: number | null }[];
+  packages: { package: string; offered: number; won: number; rate: number | null }[];
+}
 
 interface Funnel {
   stages: Stage[];
   side: { lost: number; dnc: number; drafts: number; viewed: number; shown: number };
   money?: { open: Money; won: Money };
+  winRates?: WinRates;
   weeks: Week[];
   reminders: { today: string; today_planned: number; items: Reminder[]; total: number };
 }
@@ -156,6 +161,29 @@ export default function ProspectFunnel({ query, stamp, onOpen }: { query: string
                 <span className="text-[11px] text-[#6E6E73] tabular">{eur(m.setup)} kurulum + {eur(m.monthly)}/ay · ilk yıl</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {data.winRates && (data.winRates.sectors.length > 0 || data.winRates.packages.length > 0) && (
+          <div className="mt-4">
+            <span className="text-[11px] text-[#6E6E73]">Kazanma oranı — görüşülenlerden kaçı &ldquo;Anlaştık&rdquo; oldu (sahada nereye gidileceğine karar verirken)</span>
+            <table className="mt-1.5 w-full text-xs">
+              <thead className="text-[#6E6E73] text-left"><tr><th className="font-medium py-1">Sektör</th><th className="font-medium text-right">Görüşülen</th><th className="font-medium text-right">Teklif</th><th className="font-medium text-right">Kazanılan</th><th className="font-medium text-right">Oran</th></tr></thead>
+              <tbody className="divide-y divide-black/[0.05] tabular">
+                {data.winRates.sectors.map((e) => (
+                  <tr key={e.category}>
+                    <td className="py-1">{CATEGORY_LABEL[e.category] ?? e.category}</td>
+                    <td className="text-right">{e.met}</td><td className="text-right">{e.offers}</td><td className="text-right font-semibold">{e.won}</td>
+                    <td className="text-right">{e.met < 3 ? <span className="text-[#6E6E73]" title="3 görüşmeden az: oran anlamlı değil">—</span> : `%${e.rate}`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {data.winRates.packages.length > 0 && (
+              <p className="mt-2 text-[11px] text-[#6E6E73]">
+                Paket: {data.winRates.packages.map((p) => `${p.package} ${p.won}/${p.offered}${p.offered >= 3 ? ` (%${p.rate})` : ''}`).join(' · ')}
+              </p>
+            )}
           </div>
         )}
 

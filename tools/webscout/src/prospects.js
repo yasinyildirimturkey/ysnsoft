@@ -190,7 +190,7 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
   const region = regionWhere({ country, city, areaId, categories });
   const metList = MET_OUTCOMES.map((o) => `'${o}'`).join(',');
   // Kapsam: teklif verilebilir adaylar + üzerinde çalışılmış (durumu değişmiş ya da ziyaret kaydı olan) her işletme
-  const rows = all(db, `SELECT b.id, b.status, b.visit_date, b.offer_setup, b.offer_monthly, ${KIND_SQL} AS kind,
+  const rows = all(db, `SELECT b.id, b.status, b.visit_date, b.offer_setup, b.offer_monthly, b.offer_package, b.category, ${KIND_SQL} AS kind,
         EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome IN (${metList})) AS met,
         EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome = 'offer_requested') AS asked,
         EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome = 'demo_shown') AS demo_shown,
@@ -203,6 +203,9 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
   let lost = 0, dnc = 0, drafts = 0, viewed = 0, shown = 0;
   // Ciro: açık teklifler (henüz kazanılmamış/kaybedilmemiş) ve kazanılanlar; ilk yıl değeri = kurulum + 12 × aylık
   const money = { open: { n: 0, setup: 0, monthly: 0 }, won: { n: 0, setup: 0, monthly: 0 } };
+  // Kazanma oranı: sektöre göre (görüşülenlerden kaçı kazanıldı) ve pakete göre (teklif verilenlerden kaçı kazanıldı)
+  const sector = new Map();
+  const pkg = new Map();
   for (const r of rows) {
     let s = 0;
     if (r.status === 'won') s = 4;
@@ -214,6 +217,21 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
     for (let i = 0; i <= s; i++) reach[i]++;
     if (r.token) { drafts++; if (demoViews(r.token)) viewed++; }
     if (r.demo_shown) shown++;
+    const met = r.met || ['visited', 'offer_sent', 'won', 'lost'].includes(r.status);
+    if (met) {
+      const k = r.category || 'diger';
+      const e = sector.get(k) ?? { category: k, met: 0, offers: 0, won: 0 };
+      e.met++;
+      if (r.offer_setup != null || r.status === 'offer_sent') e.offers++;
+      if (r.status === 'won') e.won++;
+      sector.set(k, e);
+    }
+    if (r.offer_package) {
+      const e = pkg.get(r.offer_package) ?? { package: r.offer_package, offered: 0, won: 0 };
+      e.offered++;
+      if (r.status === 'won') e.won++;
+      pkg.set(r.offer_package, e);
+    }
     if (r.offer_setup !== null && r.offer_setup !== undefined) {
       const m = r.status === 'won' ? money.won : ['lost', 'do_not_contact'].includes(r.status) ? null : money.open;
       if (m) { m.n++; m.setup += r.offer_setup; m.monthly += r.offer_monthly ?? 0; }
@@ -228,7 +246,12 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
       WHERE ${region.where.join(' AND ')} AND v.at >= datetime('now', '-56 days')
       GROUP BY 1 ORDER BY 1`, region.params);
 
-  return { stages, side: { lost, dnc, drafts, viewed, shown }, money, weeks, reminders: reminders(db) };
+  const rate = (a, b) => (b ? Math.round((a / b) * 100) : null);
+  const winRates = {
+    sectors: [...sector.values()].map((e) => ({ ...e, rate: rate(e.won, e.met) })).sort((a, b) => b.met - a.met),
+    packages: [...pkg.values()].map((e) => ({ ...e, rate: rate(e.won, e.offered) })).sort((a, b) => b.offered - a.offered),
+  };
+  return { stages, side: { lost, dnc, drafts, viewed, shown }, money, winRates, weeks, reminders: reminders(db) };
 }
 
 /** Bugün yapılması gerekenler (tüm şehirler): kaçan ziyaret, sıcak demo, bekleyen teklif, sessiz kalan aday. */
@@ -317,4 +340,58 @@ export function goodExamples(db, id, limit = 3) {
     .sort((a, b) => a.score - b.score || dist(a) - dist(b))
     .slice(0, limit)
     .map((r) => ({ id: r.id, name: r.name, suburb: r.suburb, url: r.final_url, score: r.score, sameTrade: same.length > 0, km: dist(r) === 9 ? null : Math.round(dist(r) * 111 * 10) / 10 }));
+}
+
+/**
+ * Yarının planı önerisi: o gün kapalı olmayan, henüz gidilmemiş, iyi puanlı ve birbirine yakın N aday.
+ * Şehir verilmezse son 14 günde en çok ziyaret yapılan şehir (yoksa en çok adayı olan şehir) seçilir.
+ * Önce demosunu açan (sıcak) adaylar, sonra en yüksek puanlıdan başlayıp yakın ve puanı yüksek olanlar eklenir (≤ 5 km).
+ */
+export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
+  const day = (new Date(`${date}T12:00:00`).getDay() + 6) % 7;
+  const R = 6371;
+  const km = (a, b) => {
+    const dLat = ((b.lat - a.lat) * Math.PI) / 180, dLon = ((b.lon - a.lon) * Math.PI) / 180;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  };
+  if (!city) {
+    city = all(db, `SELECT b.city, COUNT(*) AS n FROM visits v JOIN businesses b ON b.id = v.business_id
+      WHERE v.at >= datetime('now', '-14 days') GROUP BY 1 ORDER BY 2 DESC LIMIT 1`, {})[0]?.city
+      ?? all(db, `SELECT b.city, COUNT(*) AS n ${FROM_SQL} WHERE b.status = 'new' AND b.lat IS NOT NULL AND ${KIND_SQL} IN ('no_site','redesign')
+        GROUP BY 1 ORDER BY 2 DESC LIMIT 1`, { minScore })[0]?.city;
+  }
+  if (!city) return { date, city: null, stops: [] };
+  const openThatDay = (r) => {
+    const week = osmWeek(r.opening_hours);
+    return !week || (week[day] ?? []).length > 0;
+  };
+  const cands = all(db, `SELECT b.id, b.name, b.category, b.lat, b.lon, b.opening_hours, ${SCORE_SQL} AS score, ${KIND_SQL} AS kind
+      ${FROM_SQL}
+      WHERE b.city = @city AND b.status = 'new' AND b.visit_date IS NULL AND b.lat IS NOT NULL AND b.brand IS NULL
+        AND ${KIND_SQL} IN ('no_site','redesign')`, { city, minScore })
+    .filter(openThatDay)
+    .map((r) => ({ ...r, score: r.kind === 'no_site' ? Math.max(r.score ?? 0, 60) : (r.score ?? 0) }));
+  // Sıcak adaylar (demosunu son görüşmeden sonra açanlar), aynı şehirde ve konumu biliniyorsa önce
+  const hotIds = new Set(reminders(db).items.filter((it) => it.type === 'hot_demo' && it.city === city).map((it) => it.id));
+  const hot = hotIds.size
+    ? all(db, `SELECT id, name, category, lat, lon, opening_hours FROM businesses WHERE id IN (${[...hotIds].join(',')}) AND lat IS NOT NULL AND visit_date IS NULL`, {})
+      .filter(openThatDay).map((r) => ({ ...r, score: 100, kind: 'hot' }))
+    : [];
+  const chosen = [];
+  const pool = [...hot, ...cands.sort((a, b) => b.score - a.score)];
+  if (!pool.length) return { date, city, stops: [] };
+  chosen.push(pool.shift());
+  while (chosen.length < n && pool.length) {
+    let best = -1, bestCost = Infinity;
+    pool.forEach((c, i) => {
+      const d = Math.min(...chosen.map((x) => km(x, c)));
+      if (d > 5) return;
+      const cost = d - c.score / 40 - (c.kind === 'hot' ? 5 : 0);
+      if (cost < bestCost) { bestCost = cost; best = i; }
+    });
+    if (best < 0) break;
+    chosen.push(pool.splice(best, 1)[0]);
+  }
+  return { date, city, stops: chosen.map((c) => ({ id: c.id, name: c.name, category: c.category, kind: c.kind, score: Math.round(c.score) })) };
 }

@@ -7,7 +7,8 @@ import {
 } from './osm.js';
 import { scanSite } from './scan.js';
 import { writeReports, summary } from './report.js';
-import { funnelReport, goodExamples, queryProspects, reminders, STATUS_LABELS } from './prospects.js';
+import { exportSite } from './export.js';
+import { funnelReport, goodExamples, queryProspects, reminders, STATUS_LABELS, suggestDay } from './prospects.js';
 import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
 import { siteMismatch } from './sitematch.js';
@@ -834,6 +835,19 @@ try {
     case 'pricing': printJson({ ok: true, pricing: readPricing() }); break;
     case 'examples': printJson({ ok: true, examples: goodExamples(db, Number(opt.id)) }); break;
     case 'reminders': printJson({ ok: true, ...reminders(db) }); break;
+    case 'export-site': {
+      const id = Number(opt.id);
+      if (!Number.isInteger(id) || id <= 0) throw new Error('Geçersiz kayıt');
+      printJson({ ok: true, ...exportSite(db, id) });
+      break;
+    }
+    case 'suggest-day': {
+      const date = String(opt.date ?? '');
+      if (!DAY_RE.test(date)) throw new Error('Geçersiz tarih');
+      const n = Math.max(3, Math.min(12, Number(opt.n) || 8));
+      printJson({ ok: true, ...suggestDay(db, { date, n, city: typeof opt.city === 'string' ? opt.city : undefined }) });
+      break;
+    }
     case 'pricing-set': printJson({ ok: true, pricing: writePricing(JSON.parse(Buffer.from(String(opt.b64 ?? ''), 'base64').toString('utf8'))) }); break;
     default: console.log(HELP); process.exit(1);
   }

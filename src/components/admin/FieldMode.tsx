@@ -41,6 +41,28 @@ interface FieldRow {
   demo_views?: number;
   demo_last_view?: string | null;
   draft_quality?: DraftQuality | null;
+  kind?: string | null;
+  findings?: { code: string; points: number; tr?: string; verified?: string }[] | null;
+  offer_package?: string | null;
+}
+
+// Hukuki sonuç doğurabilecek bulgular sahada "kesin" söylenmez: yalnız "kontrol edilmeli" diye geçer
+const LEGAL_CODES = new Set(['no_impressum', 'no_datenschutz', 'google_fonts_extern', 'tracking_ohne_consent']);
+
+/** Kapı önünde 30 saniyelik özet: aday verisinden, yapay zekâ kullanmadan (ücretsiz, internetsiz çalışır). */
+function briefOf(r: FieldRow): string[] {
+  const out: string[] = [];
+  if (r.kind === 'no_site') out.push('Kendi sitesi yok (yalnız Google/sosyal medya) → yeni site teklifi.');
+  const issues = (r.findings ?? [])
+    .filter((f) => f.verified !== 'refuted' && f.tr)
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 3);
+  for (const f of issues) out.push(LEGAL_CODES.has(f.code) ? `${f.tr} — kontrol edilmeli (hukuki değerlendirme değil).` : `${f.tr}.`);
+  if (r.demo_views) out.push(`Demoyu ${r.demo_views} kez açtı — ilgili; demoyu birlikte açın.`);
+  else if (r.draft_token) out.push('Demo hazır — telefondan gösterin.');
+  if (r.offer_package) out.push(`Teklif verildi: ${r.offer_package} paketi.`);
+  if (r.last_visit) out.push(`Son görüşme: ${VISIT_OUTCOME_LABEL[r.last_visit.outcome] ?? r.last_visit.outcome}${r.last_visit.note ? ` — "${r.last_visit.note.slice(0, 80)}"` : ''}.`);
+  return out.slice(0, 5);
 }
 
 const OUTCOME_STYLE: Record<string, string> = {
@@ -75,7 +97,7 @@ function fmtDay(iso: string) {
 // Bağlantı yokken girilen ziyaret sonuçları kuyruğa alınır, internet gelince sırayla gönderilir.
 interface CachedDay { at: string; rows: FieldRow[] }
 interface QueuedVisit { id: number; name: string; body: Record<string, unknown>; at: string }
-interface TodayReminder { id: number; name: string; city: string; type: string }
+interface TodayReminder { id: number; name: string; city: string; type: string; phone?: string | null; count?: number; at?: string | null }
 interface TodaySummary { today: string; today_planned: number; items: TodayReminder[]; total: number }
 
 const DAY_KEY = (d: string) => `saha:day:${d}`;
@@ -161,6 +183,8 @@ export default function FieldMode() {
   const [queued, setQueued] = useState(0);
   const [today, setToday] = useState<TodaySummary | null>(null);
   const [order, setOrder] = useState<LocalOrder | null>(null);
+  const [suggestion, setSuggestion] = useState<{ city: string | null; stops: { id: number; name: string; kind: string; score: number }[] } | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
   const [locating, setLocating] = useState(false);
   const [routeMsg, setRouteMsg] = useState('');
 
@@ -168,6 +192,7 @@ export default function FieldMode() {
     if (!d) return;
     setLoading(true);
     setError('');
+    setSuggestion(null);
     try {
       const res = await fetch(`/api/admin/prospects?view=day&date=${d}`, { cache: 'no-store' });
       if (res.status === 401 || res.status === 403) throw new Error('Oturum kapanmış. Panele yeniden giriş yapın.');
@@ -246,6 +271,58 @@ export default function FieldMode() {
     })}`
     : '';
 
+  // Planı olmayan gün için öneri (akşam bildirimi de buraya getirir): onaylanınca o günün planı olarak kaydedilir
+  const fetchSuggestion = async () => {
+    setSuggesting(true);
+    setRouteMsg('');
+    try {
+      const res = await fetch(`/api/admin/prospects?view=suggest&date=${date}`, { cache: 'no-store' });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || 'Öneri alınamadı');
+      setSuggestion({ city: j.city ?? null, stops: j.stops ?? [] });
+    } catch (e) {
+      setRouteMsg(e instanceof TypeError ? 'İnternet yok; öneri alınamadı.' : e instanceof Error ? e.message : 'Öneri alınamadı');
+    } finally {
+      setSuggesting(false);
+    }
+  };
+  const approveSuggestion = async () => {
+    if (!suggestion?.stops.length) return;
+    setSuggesting(true);
+    try {
+      const res = await fetch('/api/admin/prospects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'plan', date, ids: suggestion.stops.map((s) => s.id) }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j.success === false) throw new Error(j.error || 'Plan kaydedilemedi');
+      setSuggestion(null);
+      await load(date);
+      setRouteMsg('Plan kaydedildi. Sahada "Bulunduğum yerden sırala" ile sırayı güncelleyebilirsiniz.');
+    } catch (e) {
+      setRouteMsg(e instanceof Error ? e.message : 'Plan kaydedilemedi');
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  // Demosunu son görüşmeden sonra açan adaylar (en sıcak): listenin başında, tek dokunuşla bugünün planına eklenir
+  const hot = (today?.items ?? []).filter((it) => it.type === 'hot_demo').slice(0, 5);
+  const [adding, setAdding] = useState<number | null>(null);
+  const addToToday = async (id: number) => {
+    setAdding(id);
+    setRouteMsg('');
+    try {
+      const ids = [...list.filter((r) => r.visit_date === date).map((r) => r.id), id];
+      const res = await fetch('/api/admin/prospects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'plan', date, ids }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j.success === false) throw new Error(j.error || 'Eklenemedi');
+      await load(date);
+      setRouteMsg('Aday bugünün planına eklendi; sırayı "Bulunduğum yerden sırala" ile güncelleyebilirsiniz.');
+    } catch (e) {
+      setRouteMsg(e instanceof TypeError ? 'İnternet yok; aday eklenemedi.' : e instanceof Error ? e.message : 'Eklenemedi');
+    } finally {
+      setAdding(null);
+    }
+  };
+
   /** Kalan durakları telefonun konumundan, şimdiki saatten ve açılış saatlerinden başlayarak yeniden dizer. */
   const reorderFromHere = async () => {
     setRouteMsg('');
@@ -312,6 +389,29 @@ export default function FieldMode() {
           </p>
         )}
 
+        {isToday && hot.length > 0 && (
+          <section aria-label="Sıcak adaylar" className="p-4 rounded-2xl bg-blue-600 text-white shadow-sm">
+            <h2 className="text-sm font-bold">🔥 Demosunu açanlar — bugün uğrayın ya da arayın</h2>
+            <ul className="mt-2 space-y-2">
+              {hot.map((it) => {
+                const planned = list.some((r) => r.id === it.id && r.visit_date === date);
+                return (
+                  <li key={it.id} className="flex items-center gap-2 text-sm">
+                    <div className="min-w-0 flex-1">
+                      <Link href={prospectHref(it.id)} onClick={markFromField} className="font-semibold underline-offset-2 hover:underline truncate block">{it.name}</Link>
+                      <span className="text-[11px] text-blue-100">{it.city}{it.count ? ` · ${it.count}× açıldı` : ''}{it.at ? ` · son ${new Date(it.at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}</span>
+                    </div>
+                    {it.phone && <a href={telHref(it.phone)} className="px-2.5 py-1.5 rounded-lg bg-white/15 text-xs font-semibold shrink-0">Ara</a>}
+                    {planned
+                      ? <span className="text-[11px] text-blue-100 shrink-0">Planda</span>
+                      : <button type="button" onClick={() => void addToToday(it.id)} disabled={adding === it.id} className="px-2.5 py-1.5 rounded-lg bg-white text-blue-700 text-xs font-semibold shrink-0 disabled:opacity-60">{adding === it.id ? '…' : 'Bugüne ekle'}</button>}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
         {isToday && today && (today.today_planned > 0 || today.total > 0) && (
           <section aria-label="Bugün" className="p-4 rounded-2xl bg-white shadow-sm">
             <h2 className="text-sm font-bold">Günaydın — bugün</h2>
@@ -366,10 +466,35 @@ export default function FieldMode() {
         {routeMsg && <p role="status" className="text-xs text-[#515154] bg-white rounded-xl px-3 py-2">{routeMsg}</p>}
 
         {rows && list.length === 0 && !loading && (
-          <div className="p-6 rounded-2xl bg-white text-center text-sm text-[#6E6E73] leading-relaxed">
+          <div className="p-5 rounded-2xl bg-white text-sm text-[#515154] leading-relaxed">
             <MapPin className="w-6 h-6 mx-auto mb-2 text-[#0071E3]" aria-hidden="true" />
-            Bu güne planlanmış ziyaret yok. Panelde <b>Müşteri Adayları → Harita</b>&apos;da rotayı kurup
-            <b> “Bu güne ziyaret planı olarak kaydet”</b> deyin.
+            {!suggestion ? (
+              <div className="text-center">
+                <p>Bu güne planlanmış ziyaret yok.</p>
+                <button type="button" onClick={() => void fetchSuggestion()} disabled={suggesting} className="mt-3 px-4 py-2.5 rounded-xl bg-[#0071E3] text-white font-semibold disabled:opacity-60">
+                  {suggesting ? 'Hazırlanıyor…' : 'Bu gün için plan öner'}
+                </button>
+                <p className="mt-2 text-[11px] text-[#6E6E73]">Yakın, puanı yüksek ve o gün açık adaylar; önce demosunu açanlar. Ya da panelde Harita&apos;dan rotayı kendiniz kurun.</p>
+              </div>
+            ) : suggestion.stops.length === 0 ? (
+              <p className="text-center">Bu gün için uygun aday bulunamadı.</p>
+            ) : (
+              <div>
+                <p className="font-semibold text-[#1D1D1F]">Öneri: {suggestion.city} · {suggestion.stops.length} durak</p>
+                <ol className="mt-2 space-y-1 list-decimal pl-5 text-[13px]">
+                  {suggestion.stops.map((s) => (
+                    <li key={s.id}>
+                      <Link href={prospectHref(s.id)} onClick={markFromField} className="hover:underline">{s.name}</Link>
+                      <span className="text-[11px] text-[#6E6E73]"> · {s.kind === 'hot' ? 'demosunu açtı' : s.kind === 'no_site' ? 'sitesi yok' : `site puanı ${s.score}`}</span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" onClick={() => void approveSuggestion()} disabled={suggesting} className="flex-1 px-4 py-2.5 rounded-xl bg-[#0071E3] text-white font-semibold disabled:opacity-60">Bu planı onayla</button>
+                  <button type="button" onClick={() => setSuggestion(null)} className="px-4 py-2.5 rounded-xl border border-black/[0.1] font-medium">Vazgeç</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -411,8 +536,11 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [open, setOpen] = useState(!done);
+  // Görüşme olduysa kayıttan hemen sonra teşekkür mesajı önerilir (izinli, kendi telefonundan; soğuk mesaj değil)
+  const [thanks, setThanks] = useState(false);
 
   const info = dayWindows({ ...r, lat: 0, lon: 0 }, day);
+  const brief = briefOf(r);
   const isOpen = nowMin !== null ? openNow({ ...r, lat: 0, lon: 0 }, day, nowMin) : null;
   const postponed = r.visit_date !== date; // tekrar gel ile başka güne alınmış
 
@@ -437,6 +565,7 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
       const j = await res.json().catch(() => ({}));
       if (!res.ok || j.success === false) throw new Error(j.error || 'Kaydedilemedi');
       setOutcome(''); setNote(''); setNext(''); setOpen(false);
+      if (['talked', 'demo_shown', 'offer_requested', 'won'].includes(outcome)) setThanks(true);
       onSaved();
     } catch (e) {
       if (e instanceof TypeError) {
@@ -463,6 +592,14 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
             <p className={`mt-1 inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md ${eta === null ? 'bg-amber-100 text-amber-900' : 'bg-blue-50 text-[#0071E3]'}`}>
               {eta === null ? 'Bugünkü saatlere sığmıyor' : `Tahmini varış ~${fmtMin(eta)}`}
             </p>
+          )}
+          {!done && brief.length > 0 && (
+            <details className="mt-2 group" open={n === 1}>
+              <summary className="text-[11px] font-semibold text-[#0071E3] cursor-pointer select-none">30 sn özet — ne söyleyeyim?</summary>
+              <ul className="mt-1 space-y-0.5 text-xs text-[#1D1D1F] list-disc pl-4">
+                {brief.map((b, i) => <li key={i}>{b}</li>)}
+              </ul>
+            </details>
           )}
 
           <p className="mt-1.5 text-xs flex items-start gap-1.5">
@@ -515,6 +652,16 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
         ) : <span className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#F5F5F7] text-[#6E6E73]"><ExternalLink className="w-4 h-4" aria-hidden="true" /> Demo yok</span>}
         {r.draft_token && <WhatsAppDemo compact id={r.id} name={r.name} phone={r.phone} token={r.draft_token} onLogged={onSaved} />}
       </div>
+
+      {thanks && (
+        <div className="mx-4 mb-3 p-3 rounded-xl bg-[#25D366]/10 flex items-center justify-between gap-2 text-xs">
+          <span className="text-[#128C7E] font-medium">Görüşme kaydedildi. Numarasını verdiyse bir teşekkür mesajı bırakın.</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <WhatsAppDemo id={r.id} name={r.name} phone={r.phone} token={r.draft_token} onLogged={onSaved} label={r.draft_token ? 'Teşekkür + demo' : 'Teşekkür et'} />
+            <button type="button" onClick={() => setThanks(false)} aria-label="Kapat" className="text-[#6E6E73] px-1">✕</button>
+          </div>
+        </div>
+      )}
 
       {!open ? (
         <button type="button" onClick={() => setOpen(true)} className="w-full py-3 border-t border-black/[0.06] text-xs font-semibold text-[#0071E3]">

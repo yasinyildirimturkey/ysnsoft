@@ -4,7 +4,7 @@
  * Resmi fatura değildir; yalnız tahsilat takibi içindir.
  */
 import { notify } from '@/lib/notifications';
-import { getRealInvoices, nextInvoiceNo, saveInvoice, type InvoiceItem } from '@/lib/server-db';
+import { getRealInvoices, nextInvoiceNo, saveInvoice, updateInvoiceStatus, type InvoiceItem } from '@/lib/server-db';
 import { runWebscout } from '@/lib/webscout';
 
 interface ProspectRow { id: number; name: string; city?: string | null; offer_package?: string | null; offer_setup?: number | null; offer_monthly?: number | null }
@@ -96,4 +96,28 @@ export async function createMonthlyRecords(day: string): Promise<{ created: numb
     await notify({ kind: 'monthly', title: 'Aylık bakım kayıtları', body: `${period} için ${created} bakım kaydı açıldı.`, url: '/admin?m=muhasebe' }).catch(() => {});
   }
   return { created, customers: setups.length };
+}
+
+/**
+ * Vade kontrolü: vadesi (dueDate) bugünden önce olan "beklemede" kayıtlar "Vadesi Geçti" yapılır; zile bildirim düşer.
+ * Kayıt "Ödendi" ya da "İptal" ise dokunulmaz. Zamanlayıcı her gün çağırır.
+ */
+export async function markOverdue(day: string): Promise<{ overdue: number; newlyOverdue: number }> {
+  const late = getRealInvoices().filter((i) => i.status === 'pending' && i.dueDate && i.dueDate < day);
+  for (const i of late) updateInvoiceStatus(i.id, 'overdue');
+  const overdue = getRealInvoices().filter((i) => i.status === 'overdue').length;
+  if (late.length) {
+    const names = late.slice(0, 3).map((i) => i.client).join(', ');
+    await notify({ kind: 'overdue', title: 'Vadesi geçen tahsilat', body: `${late.length} kaydın vadesi geçti: ${names}${late.length > 3 ? '…' : ''}`, url: '/admin?m=muhasebe' }).catch(() => {});
+  }
+  return { overdue, newlyOverdue: late.length };
+}
+
+/** Sabah özeti için: vadesi geçen kayıtların sayısı ve para birimine göre toplamı. */
+export function overdueSummary(): { n: number; text: string } {
+  const list = getRealInvoices().filter((i) => i.status === 'overdue');
+  const by = new Map<string, number>();
+  for (const i of list) by.set(i.currency ?? 'TRY', (by.get(i.currency ?? 'TRY') ?? 0) + i.totalAmount);
+  const text = [...by.entries()].map(([c, v]) => `${v.toLocaleString('de-DE', { minimumFractionDigits: c === 'EUR' ? 2 : 0, maximumFractionDigits: 2 })} ${c === 'EUR' ? '€' : '₺'}`).join(' + ');
+  return { n: list.length, text };
 }

@@ -11,7 +11,7 @@ import path from 'node:path';
 import { loadUsers } from '@/lib/admin-users';
 import { escapeHtml as esc, mailLayout, sendMail } from '@/lib/mailer';
 import { notify } from '@/lib/notifications';
-import { createMonthlyRecords } from '@/lib/won-invoice';
+import { createMonthlyRecords, markOverdue, overdueSummary } from '@/lib/won-invoice';
 import { can } from '@/lib/roles';
 import { runWebscout, webscoutAvailability } from '@/lib/webscout';
 
@@ -72,7 +72,8 @@ export async function sendMorningSummary(opts: { to?: string[]; force?: boolean 
   if (!webscoutAvailability().available) return { skipped: 'webscout yok' };
   const rem = await runWebscout(['reminders']) as { today_planned: number; items: Reminder[]; total: number };
   const funnel = await runWebscout(['funnel']) as { money?: { open: { n: number; setup: number; monthly: number }; won: { n: number; setup: number; monthly: number } } };
-  if (!opts.force && !rem.today_planned && !rem.total) return { skipped: 'bugün iş yok' };
+  const due = overdueSummary();
+  if (!opts.force && !rem.today_planned && !rem.total && !due.n) return { skipped: 'bugün iş yok' };
 
   const to = opts.to ?? (process.env.MORNING_SUMMARY_TO?.split(',').map((s) => s.trim()).filter(Boolean)
     ?? loadUsers().filter((u) => u.status === 'active' && can(u.role, 'prospects', 'write')).map((u) => u.email));
@@ -83,6 +84,7 @@ export async function sendMorningSummary(opts: { to?: string[]; force?: boolean 
 <p style="margin:0 0 12px">Bugün <b>${rem.today_planned}</b> planlı ziyaret var${rem.total ? `, <b>${rem.total}</b> hatırlatma bekliyor` : ''}.</p>
 ${items ? `<ul style="padding-left:18px;margin:0 0 12px">${items}</ul>` : ''}
 ${money && (money.open.n || money.won.n) ? `<p style="margin:0 0 12px">Açık teklifler: <b>${eur(money.open.setup + 12 * money.open.monthly)}</b> (${money.open.n}) · Kazanılan: <b>${eur(money.won.setup + 12 * money.won.monthly)}</b> (${money.won.n}) — ilk yıl değeri</p>` : ''}
+${due.n ? `<p style="margin:0 0 12px;color:#b91c1c">Vadesi geçen tahsilat: <b>${due.n}</b> kayıt (${esc(due.text)}) — <a href="${SITE}/admin?m=muhasebe" style="color:#b91c1c">Muhasebe</a></p>` : ''}
 <p style="margin:16px 0 0"><a href="${SITE}/admin/saha" style="display:inline-block;background:#0071e3;color:#fff;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:600">Saha listesini aç</a></p>`);
   const res = await sendMail({ to, subject: `Bugün: ${rem.today_planned} ziyaret, ${rem.total} hatırlatma`, html, kind: 'morning-summary' });
   // Zamanlanmış özet telefona da düşer (elle "şimdi gönder" yalnız e-posta)
@@ -105,12 +107,34 @@ async function backupWebscout(day: string) {
   return { ok, file: path.basename(target), size: ok ? fs.statSync(target).size : 0, kept: Math.min(files.length, 14) };
 }
 
+/**
+ * Akşam: yarın için plan yoksa (hafta içi + cumartesi) yakın ve iyi puanlı duraklardan bir plan ÖNERİSİ hazırlanır ve
+ * telefona bildirim gider. Plan otomatik kaydedilmez; saha ekranında "Bu planı onayla" ile kaydedilir.
+ */
+async function suggestTomorrow(day: string) {
+  if (!webscoutAvailability().available) return { skipped: 'webscout yok' };
+  const t = new Date(`${day}T12:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + 1);
+  if (t.getUTCDay() === 0) return { skipped: 'yarın pazar' };
+  const tomorrow = t.toISOString().slice(0, 10);
+  const planned = await runWebscout(['query', '--visit-day', tomorrow, '--kind', 'all', '--limit', '60']) as { rows?: { visit_date: string | null }[] };
+  if ((planned.rows ?? []).some((r) => r.visit_date === tomorrow)) return { skipped: 'yarın planlı' };
+  const s = await runWebscout(['suggest-day', '--date', tomorrow]) as { city?: string | null; stops?: { id: number }[] };
+  const n = s.stops?.length ?? 0;
+  if (!n) return { skipped: 'öneri yok' };
+  await notify({ kind: 'plan', title: 'Yarın için plan önerisi', body: `${s.city}: ${n} yakın durak hazır — açıp onaylayın`, url: `/admin/saha?date=${tomorrow}`, key: `plan:${tomorrow}` }).catch(() => {});
+  return { tomorrow, city: s.city, stops: n };
+}
+
 interface Job { name: string; at: number; run: (day: string) => Promise<Record<string, unknown>> }
 const JOBS: Job[] = [
   { name: 'sabah-ozeti', at: 7 * 60 + 15, run: () => sendMorningSummary() },
   { name: 'gece-yedek', at: 3 * 60, run: (day) => backupWebscout(day) },
   // Kazanılan müşterilerin aylık bakım kaydı (ayda bir; her gün kontrol edilir, kaçmaz)
   { name: 'aylik-bakim', at: 6 * 60, run: (day) => createMonthlyRecords(day) },
+  // Vadesi geçen tahsilatlar (sabah özetinden önce çalışır ki özet güncel olsun)
+  { name: 'vade-kontrol', at: 6 * 60 + 5, run: (day) => markOverdue(day) },
+  { name: 'yarin-plan', at: 18 * 60, run: (day) => suggestTomorrow(day) },
 ];
 
 let running = false;

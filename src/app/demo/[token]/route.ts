@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { clientKey, getAdminSession, isOwnDevice } from '@/lib/admin-auth';
-import { draftBusinessId, readWebscoutDraft, recordDemoView, runWebscout } from '@/lib/webscout';
+import { draftBusinessId, readDemoViews, readWebscoutDraft, recordDemoView, runWebscout } from '@/lib/webscout';
 import { notify } from '@/lib/notifications';
 
 /** Demonun sahibi işletmeyi bulup ekibe bildirim gönderir. Aynı demo 2 saat içinde tekrar açılırsa tek bildirimde sayılır. */
@@ -13,8 +13,11 @@ async function notifyDemoOpened(token: string) {
     name = res.rows?.[0]?.name ?? name;
     city = res.rows?.[0]?.city ?? '';
   }
+  // Tekrar açılış = ilgi sürüyor: bildirim bunu söyler (saha ekranında da "Demosunu açanlar" başta görünür)
+  const count = readDemoViews(token)?.count ?? 1;
+  const title = count >= 2 ? `Demo ${count}. kez açıldı 🔥` : 'Demo açıldı';
   await notify(
-    { kind: 'demo_view', title: 'Demo açıldı', body: `${name}${city ? ` · ${city}` : ''} — şimdi arayın ya da uğrayın`, url: id ? `/admin/adaylar/${id}` : '/admin?m=prospects', key: `demo:${token}` },
+    { kind: 'demo_view', title, body: `${name}${city ? ` · ${city}` : ''} — ${count >= 2 ? 'ilgi sürüyor, bugün arayın ya da uğrayın' : 'şimdi arayın ya da uğrayın'}`, url: id ? `/admin/adaylar/${id}` : '/admin?m=prospects', key: `demo:${token}` },
     { mergeMinutes: 120 },
   );
 }
