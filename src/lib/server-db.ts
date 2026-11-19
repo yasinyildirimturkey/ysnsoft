@@ -113,6 +113,10 @@ export interface InvoiceItem {
   dueDate: string;
   paymentType: 'Havale / EFT' | 'Sanal POS' | 'Çek' | 'Nakit';
   createdAt: string;
+  /** Para birimi; eski kayıtlarda yok = TRY */
+  currency?: 'TRY' | 'EUR';
+  /** Kazanılan adaydan otomatik açıldıysa WebScout işletme id (aynı aday için ikinci kayıt açılmaz) */
+  prospectId?: number;
 }
 
 export interface GeoSettingsItem {

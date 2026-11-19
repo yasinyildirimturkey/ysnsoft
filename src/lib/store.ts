@@ -48,6 +48,7 @@ export interface InvoiceRecord {
   issueDate: string;
   dueDate: string;
   paymentType: 'Havale / EFT' | 'Sanal POS' | 'Çek' | 'Nakit';
+  currency?: 'TRY' | 'EUR';
 }
 
 export interface SmtpSettings {

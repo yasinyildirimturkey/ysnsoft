@@ -1,3 +1,4 @@
+import { recordWonInvoice } from '@/lib/won-invoice';
 import { NextResponse } from 'next/server';
 import { getAdminSession, requireRole } from '@/lib/admin-auth';
 import {
@@ -317,8 +318,10 @@ export async function POST(request: Request) {
       }
       const who = getAdminSession(request);
       if (who) args.push('--user-b64', b64(String(who.name || who.email).slice(0, 120)));
-      const res = await runWebscout(args);
-      return NextResponse.json({ success: true, ...res }, { headers: NO_STORE });
+      const res = await runWebscout<{ status?: string }>(args);
+      // Sahada "Anlaştık": Muhasebe'de beklemede tahsilat kaydı (teklif tutarıyla; aynı aday için bir kez)
+      const invoice = body.outcome === 'won' || res.status === 'won' ? await recordWonInvoice(id) : undefined;
+      return NextResponse.json({ success: true, ...res, ...(invoice ? { invoice } : {}) }, { headers: NO_STORE });
     }
 
     // Rotayı bir güne ziyaret planı olarak kaydet (telefondaki saha listesi bunu okur)
@@ -372,7 +375,9 @@ export async function POST(request: Request) {
         args.push('--website-b64', ...(b64 ? [b64] : []));
       }
       await runWebscout(args);
-      return NextResponse.json({ success: true }, { headers: NO_STORE });
+      // Kazanıldı: Muhasebe'de beklemede tahsilat kaydı (teklif tutarıyla; aynı aday için bir kez)
+      const invoice = body.status === 'won' ? await recordWonInvoice(id) : undefined;
+      return NextResponse.json({ success: true, ...(invoice ? { invoice } : {}) }, { headers: NO_STORE });
     }
 
     return fail('Bilinmeyen işlem.');

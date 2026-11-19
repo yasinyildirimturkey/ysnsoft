@@ -71,7 +71,7 @@ export async function submitAppointment(apt: { name: string; company: string; em
 
 interface ServerInvoice {
   id: string; invoiceNo: string; client: string; taxNumber: string; product: string; amount: number; taxRate: number; totalAmount: number;
-  status: 'paid' | 'pending' | 'overdue' | 'cancelled'; issueDate: string; dueDate: string; paymentType: InvoiceRecord['paymentType']; createdAt: string;
+  status: 'paid' | 'pending' | 'overdue' | 'cancelled'; issueDate: string; dueDate: string; paymentType: InvoiceRecord['paymentType']; createdAt: string; currency?: 'TRY' | 'EUR';
 }
 const INV_STATUS: Record<ServerInvoice['status'], InvoiceRecord['status']> = { paid: 'Ödendi', pending: 'Beklemede', overdue: 'Vadesi Geçti', cancelled: 'İptal' };
 const INV_STATUS_REV = Object.fromEntries(Object.entries(INV_STATUS).map(([k, v]) => [v, k])) as Record<InvoiceRecord['status'], ServerInvoice['status']>;
@@ -79,7 +79,7 @@ const trDate = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(
 
 const toRecord = (i: ServerInvoice): InvoiceRecord => ({
   id: i.id, invoiceNo: i.invoiceNo, client: i.client, taxNumber: i.taxNumber, product: i.product, amount: i.amount, taxRate: i.taxRate,
-  totalAmount: i.totalAmount, status: INV_STATUS[i.status] ?? 'Beklemede', issueDate: trDate(i.issueDate), dueDate: trDate(i.dueDate), paymentType: i.paymentType,
+  totalAmount: i.totalAmount, status: INV_STATUS[i.status] ?? 'Beklemede', issueDate: trDate(i.issueDate), dueDate: trDate(i.dueDate), paymentType: i.paymentType, currency: i.currency ?? 'TRY',
 });
 
 export async function fetchInvoices(): Promise<InvoiceRecord[]> {
