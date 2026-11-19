@@ -11,6 +11,7 @@ import path from 'node:path';
 import { loadUsers } from '@/lib/admin-users';
 import { escapeHtml as esc, mailLayout, sendMail } from '@/lib/mailer';
 import { notify } from '@/lib/notifications';
+import { createMonthlyRecords } from '@/lib/won-invoice';
 import { can } from '@/lib/roles';
 import { runWebscout, webscoutAvailability } from '@/lib/webscout';
 
@@ -108,6 +109,8 @@ interface Job { name: string; at: number; run: (day: string) => Promise<Record<s
 const JOBS: Job[] = [
   { name: 'sabah-ozeti', at: 7 * 60 + 15, run: () => sendMorningSummary() },
   { name: 'gece-yedek', at: 3 * 60, run: (day) => backupWebscout(day) },
+  // Kazanılan müşterilerin aylık bakım kaydı (ayda bir; her gün kontrol edilir, kaçmaz)
+  { name: 'aylik-bakim', at: 6 * 60, run: (day) => createMonthlyRecords(day) },
 ];
 
 let running = false;
