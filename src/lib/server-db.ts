@@ -117,6 +117,12 @@ export interface InvoiceItem {
   currency?: 'TRY' | 'EUR';
   /** Kazanılan adaydan otomatik açıldıysa WebScout işletme id (aynı aday için ikinci kayıt açılmaz) */
   prospectId?: number;
+  /** setup = kazanıldığında açılan kurulum kaydı, monthly = aylık bakım kaydı */
+  kind?: 'setup' | 'monthly';
+  /** Aylık kayıtta dönem (YYYY-AA) */
+  period?: string;
+  /** Kurulum kaydında: aylık bakım bedeli (KDV hariç) */
+  monthly?: number;
 }
 
 export interface GeoSettingsItem {
