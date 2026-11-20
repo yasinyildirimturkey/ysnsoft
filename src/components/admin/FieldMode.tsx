@@ -11,12 +11,13 @@ import DraftChecklist, { type DraftQuality } from './DraftChecklist';
 import { markFromField, prospectHref } from './prospect-shared';
 import WhatsAppDemo from './WhatsAppDemo';
 import NotificationBell from './NotificationBell';
+import VoiceNote from './VoiceNote';
 import {
   ArrowLeft, CheckCircle2, Clock, ExternalLink, Loader2, LocateFixed, MapPin, Navigation, Phone, PlayCircle, RefreshCw,
 } from 'lucide-react';
 import {
   CATEGORY_LABEL, DAY_NAMES, dayWindows, fmtMin, fmtRanges, isoDay, localDayOf, NEEDS_NEXT, openNow, planDay, STATE_LABEL,
-  VISIT_OUTCOME_LABEL, weekdayOf, type Week,
+  LOSS_REASON_LABEL, VISIT_OUTCOME_LABEL, weekdayOf, type Week,
 } from '@/lib/visit-plan';
 
 interface LastVisit { outcome: string; at: string; note: string; next_at: string | null }
@@ -44,6 +45,7 @@ interface FieldRow {
   kind?: string | null;
   findings?: { code: string; points: number; tr?: string; verified?: string }[] | null;
   offer_package?: string | null;
+  example?: { name: string; suburb?: string | null; url: string; km?: number | null; sameTrade?: boolean } | null;
 }
 
 // Hukuki sonuç doğurabilecek bulgular sahada "kesin" söylenmez: yalnız "kontrol edilmeli" diye geçer
@@ -533,6 +535,7 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
   const [outcome, setOutcome] = useState('');
   const [note, setNote] = useState('');
   const [next, setNext] = useState('');
+  const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [open, setOpen] = useState(!done);
@@ -555,7 +558,7 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
     if (NEEDS_NEXT.has(outcome) && !next) { setErr('Bir sonraki ziyaret tarihini seçin.'); return; }
     setSaving(true);
     setErr('');
-    const body = { action: 'visit', id: r.id, outcome, note, ...(next && NEEDS_NEXT.has(outcome) ? { next } : {}) };
+    const body = { action: 'visit', id: r.id, outcome, note, ...(next && NEEDS_NEXT.has(outcome) ? { next } : {}), ...(outcome === 'not_interested' && reason ? { reason } : {}) };
     try {
       const res = await fetch('/api/admin/prospects', {
         method: 'POST',
@@ -564,7 +567,7 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || j.success === false) throw new Error(j.error || 'Kaydedilemedi');
-      setOutcome(''); setNote(''); setNext(''); setOpen(false);
+      setOutcome(''); setNote(''); setNext(''); setReason(''); setOpen(false);
       if (['talked', 'demo_shown', 'offer_requested', 'won'].includes(outcome)) setThanks(true);
       onSaved();
     } catch (e) {
@@ -593,11 +596,19 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
               {eta === null ? 'Bugünkü saatlere sığmıyor' : `Tahmini varış ~${fmtMin(eta)}`}
             </p>
           )}
-          {!done && brief.length > 0 && (
+          {!done && (brief.length > 0 || r.example) && (
             <details className="mt-2 group" open={n === 1}>
               <summary className="text-[11px] font-semibold text-[#0071E3] cursor-pointer select-none">30 sn özet — ne söyleyeyim?</summary>
               <ul className="mt-1 space-y-0.5 text-xs text-[#1D1D1F] list-disc pl-4">
                 {brief.map((b, i) => <li key={i}>{b}</li>)}
+                {r.example && (
+                  <li>
+                    Rakip/örnek göster:{' '}
+                    <a href={r.example.url} target="_blank" rel="noopener noreferrer" className="text-[#0071E3] underline">{r.example.name}</a>
+                    {r.example.suburb ? ` (${r.example.suburb}${r.example.km != null ? `, ${r.example.km} km` : ''})` : r.example.km != null ? ` (${r.example.km} km)` : ''}
+                    {' '}— {r.example.sameTrade ? 'aynı meslekten' : 'aynı sektörden'}, sitesi iyi durumda.
+                  </li>
+                )}
               </ul>
             </details>
           )}
@@ -685,6 +696,19 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
           </div>
           {outcome && (
             <>
+              {outcome === 'not_interested' && (
+                <fieldset className="text-sm">
+                  <legend className="text-xs text-[#6E6E73] mb-1">Neden? (fiyatlama mı anlatım mı sorun, zamanla görülür)</legend>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(LOSS_REASON_LABEL).filter(([k]) => k !== 'unknown').map(([k, label]) => (
+                      <button key={k} type="button" onClick={() => setReason(reason === k ? '' : k)}
+                        className={`px-2.5 py-1 rounded-full text-xs border ${reason === k ? 'bg-red-600 text-white border-red-600' : 'bg-white border-black/[0.12]'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               {NEEDS_NEXT.has(outcome) && (
                 <label className="flex items-center justify-between gap-2 text-sm">
                   <span>Tekrar ziyaret</span>
@@ -699,6 +723,7 @@ function StopCard({ row: r, n, date, day, nowMin, eta, done, onSaved, onQueued }
                 placeholder="Not (ör. sahibi Perşembe öğleden önce burada, fiyat sordu)"
                 className="w-full text-sm border border-black/[0.12] rounded-xl p-2.5"
               />
+              <VoiceNote onText={(t) => setNote((cur) => (cur ? `${cur} ${t}` : t).slice(0, 2000))} />
               {err && <p role="alert" className="text-xs text-red-600">{err}</p>}
               <button
                 type="button"

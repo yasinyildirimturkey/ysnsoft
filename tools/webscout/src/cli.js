@@ -8,7 +8,7 @@ import {
 import { scanSite } from './scan.js';
 import { writeReports, summary } from './report.js';
 import { exportSite } from './export.js';
-import { funnelReport, goodExamples, queryProspects, reminders, STATUS_LABELS, suggestDay } from './prospects.js';
+import { funnelReport, goodExamples, queryProspects, reminders, STATUS_LABELS, suggestDay, weeklyReport } from './prospects.js';
 import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
 import { siteMismatch } from './sitematch.js';
@@ -656,6 +656,9 @@ function cmdProspectSet(db, opt) {
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const b64text = (v, max) => (v === undefined || v === true ? '' : Buffer.from(String(v), 'base64').toString('utf8').trim().slice(0, max));
 
+// Kayıp nedenleri (panel ve saha aynı anahtarları kullanır)
+const LOSS_REASONS = ['price', 'has_site', 'no_time', 'no_trust', 'not_decider', 'no_need', 'other'];
+
 function cmdVisitAdd(db, opt) {
   const id = Number(opt.id);
   const biz = db.prepare('SELECT id, status FROM businesses WHERE id=?').get(id);
@@ -664,8 +667,9 @@ function cmdVisitAdd(db, opt) {
   if (!Object.hasOwn(VISIT_OUTCOMES, outcome)) throw new Error('Geçersiz ziyaret sonucu');
   const next = str(opt.next) ?? null;
   if (next && !DAY_RE.test(next)) throw new Error('Geçersiz tarih');
-  db.prepare('INSERT INTO visits (business_id, outcome, note, next_at, by_user) VALUES (?,?,?,?,?)')
-    .run(id, outcome, b64text(opt['note-b64'], 2000), next, b64text(opt['user-b64'], 120) || null);
+  const reason = typeof opt.reason === 'string' && LOSS_REASONS.includes(opt.reason) ? opt.reason : null;
+  db.prepare('INSERT INTO visits (business_id, outcome, note, next_at, by_user, reason) VALUES (?,?,?,?,?,?)')
+    .run(id, outcome, b64text(opt['note-b64'], 2000), next, b64text(opt['user-b64'], 120) || null, reason);
   // "Kazanıldı"/"iletişime geçme" geri alınmaz; WhatsApp ile demo gönderimi teklif aşamasını da geri almaz
   const keep = ['won', 'do_not_contact'].includes(biz.status) || (outcome === 'demo_sent' && biz.status === 'offer_sent');
   const status = keep ? biz.status : VISIT_OUTCOMES[outcome];
@@ -841,6 +845,7 @@ try {
       printJson({ ok: true, ...exportSite(db, id) });
       break;
     }
+    case 'weekly': printJson({ ok: true, ...weeklyReport(db) }); break;
     case 'suggest-day': {
       const date = String(opt.date ?? '');
       if (!DAY_RE.test(date)) throw new Error('Geçersiz tarih');

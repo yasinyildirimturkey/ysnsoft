@@ -344,6 +344,8 @@ export async function POST(request: Request) {
       const args = ['visit-add', '--id', String(id), '--outcome', String(body.outcome)];
       const note = typeof body.note === 'string' ? body.note.trim().slice(0, 2000) : '';
       if (note) args.push('--note-b64', b64(note));
+      // "İlgilenmedi" nedeni (izin listesi WebScout'ta da denetlenir)
+      if (body.outcome === 'not_interested' && typeof body.reason === 'string' && /^[a-z_]{2,20}$/.test(body.reason)) args.push('--reason', body.reason);
       if (body.next) {
         if (typeof body.next !== 'string' || !DAY_RE.test(body.next)) return fail('Geçersiz tarih.');
         args.push('--next', body.next);

@@ -161,6 +161,8 @@ export function openDb(path = process.env.WEBSCOUT_DB || join(DATA_DIR, 'webscou
   // Durumun son değiştiği an (satış hunisi hatırlatmaları: "teklif verildi, 7 gündür ses yok").
   // Tetikleyici her yoldan (panel, saha kaydı, plan, CLI) gelen değişikliği yakalar.
   addColumn(db, 'businesses', 'status_at', 'TEXT');
+  // "İlgilenmedi" ziyaretinde neden (fiyat, zaten var, zaman yok…): fiyatlama mı anlatım mı sorun, veriyle görülür
+  addColumn(db, 'visits', 'reason', 'TEXT');
   // Verilen teklif: paket anahtarı, tek seferlik kurulum ve aylık ücret (tam euro), teklif tarihi. Kazanılınca anlaşma değeri olur.
   addColumn(db, 'businesses', 'offer_package', 'TEXT');
   addColumn(db, 'businesses', 'offer_setup', 'INTEGER');

@@ -126,6 +126,47 @@ async function suggestTomorrow(day: string) {
   return { tomorrow, city: s.city, stops: n };
 }
 
+interface Weekly {
+  visits: { visits: number; met: number; closed: number; demos: number };
+  offers: { n: number; setup: number; monthly: number };
+  won: { id: number; name: string; city: string; offer_setup: number | null; offer_monthly: number | null }[];
+  reasons: { reason: string; n: number }[];
+  byCity: { city: string; visits: number }[];
+  hot: { id: number; name: string; city: string; count?: number }[];
+  openReminders: number;
+}
+const LOSS_TR: Record<string, string> = {
+  price: 'fiyat', has_site: 'zaten sitesi var', no_time: 'zamanı yok', no_trust: 'güvenmedi', not_decider: 'karar veren yoktu',
+  no_need: 'ihtiyaç görmüyor', other: 'diğer', unknown: 'neden girilmedi',
+};
+
+/** Pazartesi sabahı: geçen haftanın özeti (saha, teklif, kazanılan, kayıp nedenleri, tahsilat, bu haftanın sıcak adayları). */
+export async function sendWeeklyReport(day: string, opts: { force?: boolean; to?: string[] } = {}) {
+  if (!opts.force && new Date(`${day}T12:00:00Z`).getUTCDay() !== 1) return { skipped: 'pazartesi değil' };
+  if (!webscoutAvailability().available) return { skipped: 'webscout yok' };
+  const w = await runWebscout<Weekly>(['weekly']);
+  const due = overdueSummary();
+  const eur = (n: number) => `${n.toLocaleString('de-DE')} €`;
+  const rate = w.visits.visits ? Math.round((w.visits.met / w.visits.visits) * 100) : 0;
+  const row = (k: string, v: string) => `<tr><td style="padding:4px 12px 4px 0;color:#6e6e73">${k}</td><td style="padding:4px 0"><b>${v}</b></td></tr>`;
+  const html = mailLayout('Haftalık rapor', `
+<table style="border-collapse:collapse;margin:0 0 12px">
+${row('Saha ziyareti', `${w.visits.visits} (görüşülen ${w.visits.met}, %${rate}; kapalı ${w.visits.closed})`)}
+${row('Demo gösterildi', String(w.visits.demos))}
+${row('Verilen teklif', w.offers.n ? `${w.offers.n} · ${eur(w.offers.setup)} kurulum + ${eur(w.offers.monthly)}/ay` : '0')}
+${row('Kazanılan', w.won.length ? w.won.map((x) => esc(x.name)).join(', ') : '0')}
+${row('Tahsilat', due.n ? `<span style="color:#b91c1c">${due.n} kayıt vadesi geçti (${esc(due.text)})</span>` : 'vadesi geçen yok')}
+${w.byCity.length ? row('Şehirler', esc(w.byCity.map((c) => `${c.city} ${c.visits}`).join(' · '))) : ''}
+${w.reasons.length ? row('İlgilenmedi nedenleri', esc(w.reasons.map((r) => `${LOSS_TR[r.reason] ?? r.reason} ${r.n}`).join(' · '))) : ''}
+</table>
+${w.hot.length ? `<p style="margin:0 0 6px"><b>Bu hafta önce bunlar</b> (demosunu açtılar):</p><ul style="padding-left:18px;margin:0 0 12px">${w.hot.map((h) => `<li><a href="${SITE}/admin/adaylar/${h.id}" style="color:#0071e3">${esc(h.name)}</a> <span style="color:#6e6e73">${esc(h.city)}</span></li>`).join('')}</ul>` : ''}
+<p style="margin:0;color:#6e6e73">Açık hatırlatma: ${w.openReminders}. Ayrıntı: <a href="${SITE}/admin?m=prospects" style="color:#0071e3">Satış hunisi</a></p>`);
+  const to = opts.to ?? (process.env.MORNING_SUMMARY_TO?.split(',').map((s) => s.trim()).filter(Boolean)
+    ?? loadUsers().filter((u) => u.status === 'active' && can(u.role, 'prospects', 'write')).map((u) => u.email));
+  const res = await sendMail({ to, subject: `Haftalık rapor: ${w.visits.visits} ziyaret, ${w.won.length} kazanılan`, html, kind: 'weekly-report' });
+  return { ...res, recipients: to.length };
+}
+
 interface Job { name: string; at: number; run: (day: string) => Promise<Record<string, unknown>> }
 const JOBS: Job[] = [
   { name: 'sabah-ozeti', at: 7 * 60 + 15, run: () => sendMorningSummary() },
@@ -135,6 +176,8 @@ const JOBS: Job[] = [
   // Vadesi geçen tahsilatlar (sabah özetinden önce çalışır ki özet güncel olsun)
   { name: 'vade-kontrol', at: 6 * 60 + 5, run: (day) => markOverdue(day) },
   { name: 'yarin-plan', at: 18 * 60, run: (day) => suggestTomorrow(day) },
+  // Pazartesi 07:30 haftalık patron raporu (diğer günler "pazartesi değil" diye atlanır)
+  { name: 'haftalik-rapor', at: 7 * 60 + 30, run: (day) => sendWeeklyReport(day) },
 ];
 
 let running = false;
