@@ -11,7 +11,12 @@ import { runWebscout } from '@/lib/webscout';
  * Talep sözleşme değildir; ekibe bildirim gider, sipariş onayı ayrıca yapılır. Aday otomatik "kazanıldı" yapılmaz.
  * Talepler data/offer-requests.json'a yazılır (deploy paketi ezmez).
  */
-interface Pricing { vatNote: string; packages: { key: string; name: string; setup: number; monthly: number; features: string[] }[] }
+interface Pricing {
+  vatNote: string;
+  packages: { key: string; name: string; setup: number; monthly: number; features: string[] }[];
+  addons?: { key: string; name: string; setup: number; monthly: number; desc: string }[];
+  sectors?: { key: string; name: string; features: string[] }[];
+}
 const FILE = path.join(/* turbopackIgnore: true */ process.cwd(), 'data', 'offer-requests.json');
 const eur = (n: number) => `${n.toLocaleString('de-DE')} €`;
 const clip = (v: string | null, n: number) => (v ?? '').trim().slice(0, n);
@@ -25,6 +30,11 @@ async function view(token: string, done = false, error = '') {
   }
   const pr = (await runWebscout<{ pricing: Pricing }>(['pricing'])).pricing;
   const pkg = pr.packages.find((p) => p.key === biz.offer_package);
+  let addonKeys: string[] = [];
+  try { addonKeys = JSON.parse(biz.offer_addons || '[]'); } catch { /* yok */ }
+  const addons = (pr.addons ?? []).filter((a) => addonKeys.includes(a.key));
+  const sector = (pr.sectors ?? []).find((s) => s.key === biz.category);
+  const priceOf = (a: { setup: number; monthly: number }) => [a.setup ? `${eur(a.setup)} einmalig` : '', a.monthly ? `${eur(a.monthly)} / Monat` : ''].filter(Boolean).join(' + ');
   const c = contact();
   const body = `
 <div class="card">
@@ -38,7 +48,10 @@ async function view(token: string, done = false, error = '') {
     <div><div class="price">${eur(biz.offer_setup)}</div><div class="mut">einmalig</div></div>
     ${biz.offer_monthly ? `<div><div class="price">${eur(biz.offer_monthly)}</div><div class="mut">pro Monat</div></div>` : ''}
   </div>
+  ${addons.length ? `<p class="mut" style="margin-top:6px">Gesamtpreis inkl. Zusatzmodule</p>` : ''}
   ${pkg?.features?.length ? `<ul style="margin:12px 0 0;padding-left:18px">${pkg.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+  ${sector?.features?.length ? `<p style="margin:12px 0 0"><b>Speziell für ${esc(sector.name)}</b></p><ul style="margin:6px 0 0;padding-left:18px">${sector.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+  ${addons.length ? `<p style="margin:12px 0 0"><b>Zusatzmodule</b></p><ul style="margin:6px 0 0;padding-left:18px">${addons.map((a) => `<li>${esc(a.name)}${priceOf(a) ? ` <span class="mut">(${esc(priceOf(a))})</span>` : ''}${a.desc ? `<br><span class="mut">${esc(a.desc)}</span>` : ''}</li>`).join('')}</ul>` : ''}
   <p class="mut" style="margin-top:10px">${esc(pr.vatNote)}</p>
   ${demoOpen ? `<p><a class="btn2" href="/demo/${esc(token)}">Entwurf ansehen</a></p>` : ''}
 </div>
@@ -74,7 +87,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   if (!name || !contactInfo || f.get('ok') !== '1') return view(token, false, 'Bitte Name und Kontakt angeben und das Häkchen setzen.');
   const entry = {
     at: new Date().toISOString(), prospectId: found.biz.id, business: found.biz.name, name, contact: contactInfo,
-    message: clip(f.get('message'), 1500), offer: { package: found.biz.offer_package, setup: found.biz.offer_setup, monthly: found.biz.offer_monthly },
+    message: clip(f.get('message'), 1500), offer: { package: found.biz.offer_package, setup: found.biz.offer_setup, monthly: found.biz.offer_monthly, addons: found.biz.offer_addons ?? null },
   };
   try {
     let list: unknown[] = [];

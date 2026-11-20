@@ -394,10 +394,11 @@ export async function POST(request: Request) {
       }
       // Teklif: { package, setup, monthly } tam euro; null = teklifi sil
       if (body.offer !== undefined) {
-        const o = body.offer as { package?: unknown; setup?: unknown; monthly?: unknown } | null;
+        const o = body.offer as { package?: unknown; setup?: unknown; monthly?: unknown; addons?: unknown } | null;
         if (o === null) args.push('--offer-b64');
         else {
-          const offer = { package: String(o.package ?? ''), setup: Number(o.setup), monthly: Number(o.monthly) };
+          const addons = Array.isArray(o.addons) ? o.addons.filter((k): k is string => typeof k === 'string' && /^[a-z0-9_-]{1,30}$/.test(k)).slice(0, 10) : [];
+          const offer = { package: String(o.package ?? ''), setup: Number(o.setup), monthly: Number(o.monthly), addons };
           if (!/^[a-z0-9_-]{1,30}$/.test(offer.package) || ![offer.setup, offer.monthly].every((v) => Number.isInteger(v) && v >= 0 && v <= 1_000_000)) {
             return fail('Geçersiz teklif.');
           }

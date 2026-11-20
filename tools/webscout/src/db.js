@@ -168,6 +168,7 @@ export function openDb(path = process.env.WEBSCOUT_DB || join(DATA_DIR, 'webscou
   addColumn(db, 'businesses', 'offer_setup', 'INTEGER');
   addColumn(db, 'businesses', 'offer_monthly', 'INTEGER');
   addColumn(db, 'businesses', 'offer_at', 'TEXT');
+  addColumn(db, 'businesses', 'offer_addons', 'TEXT'); // JSON: seçilen ek modül anahtarları (tutarlar offer_setup/monthly içinde)
   db.exec(`CREATE TRIGGER IF NOT EXISTS trg_business_status_at AFTER UPDATE OF status ON businesses
     WHEN NEW.status IS NOT OLD.status
     BEGIN UPDATE businesses SET status_at = datetime('now') WHERE id = NEW.id; END;`);

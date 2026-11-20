@@ -22,7 +22,7 @@ export interface Finding { code: string; points: number; de?: string; tr?: strin
 export interface PublicBiz {
   id: number; name: string; city: string; address?: string | null; phone?: string | null; status: string; kind?: string | null;
   findings?: Finding[] | null; final_url?: string | null; website?: string | null;
-  offer_package?: string | null; offer_setup?: number | null; offer_monthly?: number | null;
+  offer_package?: string | null; offer_setup?: number | null; offer_monthly?: number | null; offer_addons?: string | null; category?: string | null;
   draft_token?: string | null;
 }
 

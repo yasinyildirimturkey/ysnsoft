@@ -56,10 +56,17 @@ export interface Prospect {
   offer_setup?: number | null;
   offer_monthly?: number | null;
   offer_at?: string | null;
+  /** Seçilen ek modül anahtarları (JSON dizi metni); tutarlar offer_setup/monthly içinde */
+  offer_addons?: string | null;
 }
 
 export interface PricingPackage { key: string; name: string; setup: number; monthly: number; features: string[] }
-export interface Pricing { vatNote: string; packages: PricingPackage[] }
+export interface PricingAddon { key: string; name: string; setup: number; monthly: number; desc: string }
+export interface PricingSector { key: string; name: string; package: string; addons: string[]; features: string[] }
+export interface Pricing { vatNote: string; packages: PricingPackage[]; addons: PricingAddon[]; sectors: PricingSector[] }
+
+/** Kayıtlı ek modül anahtarları */
+export const offerAddons = (p: { offer_addons?: string | null }): string[] => { try { const a = JSON.parse(p.offer_addons || "[]"); return Array.isArray(a) ? a.map(String) : []; } catch { return []; } };
 
 /** 1190 → "1.190 €" */
 export const euro = (n: number | null | undefined) => `${(n ?? 0).toLocaleString('de-DE')} €`;
