@@ -15,6 +15,7 @@ import {
   AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Globe, LayoutTemplate, MapPin, Phone, Printer,
 } from 'lucide-react';
 import DraftChecklist from './DraftChecklist';
+import CustomerLinks from './CustomerLinks';
 import OfferBox, { usePricing } from './OfferBox';
 import WhatsAppDemo from './WhatsAppDemo';
 import GoodExamples from './GoodExamples';
@@ -342,6 +343,7 @@ export default function ProspectPage() {
                             className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">Yayın paketi (zip)</a>
                         )}
                       </div>
+                      <CustomerLinks token={p.draft_token} name={p.name} status={p.status} hasOffer={p.offer_setup != null} notify={notify} />
                       {p.draft_quality && <DraftChecklist quality={p.draft_quality} />}
                     </>
                   ) : (
