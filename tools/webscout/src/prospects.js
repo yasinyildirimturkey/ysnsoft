@@ -159,6 +159,8 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
       const row = { ...r, findings: items, tech: findings.info?.tech ?? null, last_visit: lastVisit, week: osmWeek(r.opening_hours),
         appointment: byAppointment(r.opening_hours), demo_views: views?.count ?? 0, demo_last_view: views?.last ?? null, site_mismatch: mismatch, draft_quality: draftQuality };
       delete row.verification; // ham JSON panele gitmesin; bilgi bulguların içinde
+      // Saha günü listesinde: görüşmede gösterilecek, aynı şehir/meslekten en iyi siteli örnek (rakip karşılaştırması)
+      if (visitDay && r.visit_date === visitDay) row.example = goodExamples(db, r.id, 1)[0] ?? null;
       return row;
   });
   // "Demo açıldı": en son açılan üstte
@@ -246,12 +248,27 @@ export function funnelReport(db, { country, city, areaId, categories, minScore =
       WHERE ${region.where.join(' AND ')} AND v.at >= datetime('now', '-56 days')
       GROUP BY 1 ORDER BY 1`, region.params);
 
+  // Kayıp nedenleri (son 180 gün, bölge süzgeciyle)
+  const lossReasons = all(db, `SELECT COALESCE(v.reason, 'unknown') AS reason, COUNT(*) AS n
+      FROM visits v JOIN businesses b ON b.id = v.business_id
+      WHERE ${region.where.join(' AND ')} AND v.outcome = 'not_interested' AND v.at >= datetime('now', '-180 days')
+      GROUP BY 1 ORDER BY 2 DESC`, region.params);
+  // Zamanlama: hangi gün/saat dilimindeki ziyaretler görüşmeye ve anlaşmaya dönüyor (son 180 gün)
+  const timing = all(db, `SELECT CAST(strftime('%w', v.at, 'localtime') AS INTEGER) AS dow,
+        CASE WHEN CAST(strftime('%H', v.at, 'localtime') AS INTEGER) < 11 THEN 'sabah'
+             WHEN CAST(strftime('%H', v.at, 'localtime') AS INTEGER) < 14 THEN 'öğle'
+             WHEN CAST(strftime('%H', v.at, 'localtime') AS INTEGER) < 17 THEN 'öğleden sonra'
+             ELSE 'akşam' END AS slot,
+        COUNT(*) AS visits, SUM(v.outcome IN (${metList})) AS met, SUM(v.outcome = 'won') AS won, SUM(v.outcome = 'closed') AS closed
+      FROM visits v JOIN businesses b ON b.id = v.business_id
+      WHERE ${region.where.join(' AND ')} AND v.at >= datetime('now', '-180 days')
+      GROUP BY 1, 2`, region.params);
   const rate = (a, b) => (b ? Math.round((a / b) * 100) : null);
   const winRates = {
     sectors: [...sector.values()].map((e) => ({ ...e, rate: rate(e.won, e.met) })).sort((a, b) => b.met - a.met),
     packages: [...pkg.values()].map((e) => ({ ...e, rate: rate(e.won, e.offered) })).sort((a, b) => b.offered - a.offered),
   };
-  return { stages, side: { lost, dnc, drafts, viewed, shown }, money, winRates, weeks, reminders: reminders(db) };
+  return { stages, side: { lost, dnc, drafts, viewed, shown }, money, winRates, lossReasons, timing, weeks, reminders: reminders(db) };
 }
 
 /** Bugün yapılması gerekenler (tüm şehirler): kaçan ziyaret, sıcak demo, bekleyen teklif, sessiz kalan aday. */
@@ -398,4 +415,22 @@ export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
     chosen.push(pool.splice(best, 1)[0]);
   }
   return { date, city, stops: chosen.map((c) => ({ id: c.id, name: c.name, category: c.category, kind: c.kind, score: Math.round(c.score) })) };
+}
+
+/** Haftalık patron raporu: son 7 günün saha hareketi, teklifler, kazanılanlar, kayıp nedenleri ve sıcak adaylar. */
+export function weeklyReport(db) {
+  const metList = MET_OUTCOMES.map((o) => `'${o}'`).join(',');
+  const v = all(db, `SELECT COUNT(*) AS visits, COALESCE(SUM(outcome IN (${metList})), 0) AS met,
+      COALESCE(SUM(outcome = 'closed'), 0) AS closed, COALESCE(SUM(outcome = 'demo_shown'), 0) AS demos
+      FROM visits WHERE at >= datetime('now', '-7 days')`, {})[0];
+  const offers = all(db, `SELECT COUNT(*) AS n, COALESCE(SUM(offer_setup), 0) AS setup, COALESCE(SUM(offer_monthly), 0) AS monthly
+      FROM businesses WHERE offer_at >= datetime('now', '-7 days')`, {})[0];
+  const won = all(db, `SELECT id, name, city, offer_setup, offer_monthly FROM businesses
+      WHERE status = 'won' AND status_at >= datetime('now', '-7 days') ORDER BY status_at DESC`, {});
+  const reasons = all(db, `SELECT COALESCE(reason, 'unknown') AS reason, COUNT(*) AS n FROM visits
+      WHERE outcome = 'not_interested' AND at >= datetime('now', '-7 days') GROUP BY 1 ORDER BY 2 DESC`, {});
+  const byCity = all(db, `SELECT b.city, COUNT(*) AS visits FROM visits v JOIN businesses b ON b.id = v.business_id
+      WHERE v.at >= datetime('now', '-7 days') GROUP BY 1 ORDER BY 2 DESC LIMIT 5`, {});
+  const rem = reminders(db);
+  return { visits: v, offers, won, reasons, byCity, hot: rem.items.filter((it) => it.type === 'hot_demo').slice(0, 5), openReminders: rem.total };
 }

@@ -202,6 +202,17 @@ export const VISIT_OUTCOME_LABEL: Record<string, string> = {
   won: 'Anlaştık',
   demo_sent: 'Demo WhatsApp ile gönderildi',
 };
+/** "İlgilenmedi" nedenleri (WebScout LOSS_REASONS ile aynı anahtarlar) */
+export const LOSS_REASON_LABEL: Record<string, string> = {
+  price: 'Fiyat yüksek',
+  has_site: 'Zaten sitesi var / yaptırıyor',
+  no_time: 'Şu an zamanı yok',
+  no_trust: 'Güvenmedi / tanımıyor',
+  not_decider: 'Karar veren yoktu',
+  no_need: 'İhtiyaç görmüyor',
+  other: 'Diğer',
+  unknown: 'Neden girilmedi',
+};
 /** Bu sonuçlarda bir sonraki ziyaret tarihi istenir */
 export const NEEDS_NEXT = new Set(['come_back', 'closed']);
 

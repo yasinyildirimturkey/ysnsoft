@@ -9,7 +9,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarX, ChevronDown, Eye, FileClock, Hourglass, Phone, TrendingUp } from 'lucide-react';
-import { CATEGORY_LABEL, isoDay, localDayOf } from '@/lib/visit-plan';
+import { CATEGORY_LABEL, isoDay, localDayOf, LOSS_REASON_LABEL } from '@/lib/visit-plan';
 import PricingEditor from './PricingEditor';
 
 interface Stage { key: string; label: string; n: number; rate: number | null }
@@ -35,6 +35,8 @@ interface Funnel {
   side: { lost: number; dnc: number; drafts: number; viewed: number; shown: number };
   money?: { open: Money; won: Money };
   winRates?: WinRates;
+  lossReasons?: { reason: string; n: number }[];
+  timing?: { dow: number; slot: string; visits: number; met: number; won: number; closed: number }[];
   weeks: Week[];
   reminders: { today: string; today_planned: number; items: Reminder[]; total: number };
 }
@@ -186,6 +188,46 @@ export default function ProspectFunnel({ query, stamp, onOpen }: { query: string
             )}
           </div>
         )}
+
+        {data.lossReasons && data.lossReasons.length > 0 && (
+          <div className="mt-4">
+            <span className="text-[11px] text-[#6E6E73]">&ldquo;İlgilenmedi&rdquo; nedenleri (son 6 ay)</span>
+            <div className="mt-1.5 space-y-1">
+              {data.lossReasons.map((l) => {
+                const max = Math.max(...data.lossReasons!.map((x) => x.n));
+                return (
+                  <div key={l.reason} className="flex items-center gap-2 text-xs">
+                    <span className="w-44 shrink-0 truncate">{LOSS_REASON_LABEL[l.reason] ?? l.reason}</span>
+                    <span className="h-2 rounded-full bg-red-400" style={{ width: `${Math.max(4, (l.n / max) * 100)}%` }} />
+                    <span className="tabular text-[#6E6E73]">{l.n}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {data.timing && data.timing.length > 0 && (() => {
+          // Zaman dilimine göre: kaç ziyaret, kaçında görüşülebildi, kaçında kapalıydı (gün toplamı)
+          const slots = ['sabah', 'öğle', 'öğleden sonra', 'akşam'];
+          const agg = slots.map((s) => data.timing!.filter((t) => t.slot === s).reduce((a, t) => ({ visits: a.visits + t.visits, met: a.met + t.met, won: a.won + t.won, closed: a.closed + t.closed }), { visits: 0, met: 0, won: 0, closed: 0 }));
+          const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+          const byDay = days.map((d, i) => ({ d, ...data.timing!.filter((t) => t.dow === i).reduce((a, t) => ({ visits: a.visits + t.visits, met: a.met + t.met }), { visits: 0, met: 0 }) })).filter((x) => x.visits);
+          return (
+            <div className="mt-4">
+              <span className="text-[11px] text-[#6E6E73]">Ne zaman gidilmeli? Görüşülebilen ziyaret oranı (son 6 ay)</span>
+              <table className="mt-1.5 w-full text-xs tabular">
+                <thead className="text-[#6E6E73] text-left"><tr><th className="font-medium py-1">Saat dilimi</th><th className="font-medium text-right">Ziyaret</th><th className="font-medium text-right">Görüşüldü</th><th className="font-medium text-right">Kapalıydı</th><th className="font-medium text-right">Anlaştık</th></tr></thead>
+                <tbody className="divide-y divide-black/[0.05]">
+                  {slots.map((s, i) => agg[i].visits > 0 && (
+                    <tr key={s}><td className="py-1">{s}</td><td className="text-right">{agg[i].visits}</td><td className="text-right">{agg[i].met} <span className="text-[#6E6E73]">(%{Math.round((agg[i].met / agg[i].visits) * 100)})</span></td><td className="text-right">{agg[i].closed}</td><td className="text-right font-semibold">{agg[i].won}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+              {byDay.length > 0 && <p className="mt-1 text-[11px] text-[#6E6E73]">Günlere göre görüşme oranı: {byDay.map((x) => `${x.d} %${Math.round((x.met / x.visits) * 100)} (${x.visits})`).join(' · ')}</p>}
+            </div>
+          );
+        })()}
 
         <div className="mt-4">
           <span className="text-[11px] text-[#6E6E73]">Son 8 haftada saha ziyareti: <b className="text-[#1D1D1F] tabular">{weekTotal}</b></span>
