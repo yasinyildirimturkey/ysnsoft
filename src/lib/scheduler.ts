@@ -12,6 +12,7 @@ import { loadUsers } from '@/lib/admin-users';
 import { escapeHtml as esc, mailLayout, sendMail } from '@/lib/mailer';
 import { notify } from '@/lib/notifications';
 import { createMonthlyRecords, markOverdue, overdueSummary } from '@/lib/won-invoice';
+import { createMonthlyReports } from '@/lib/customer-care';
 import { can } from '@/lib/roles';
 import { runWebscout, webscoutAvailability } from '@/lib/webscout';
 
@@ -178,6 +179,8 @@ const JOBS: Job[] = [
   { name: 'yarin-plan', at: 18 * 60, run: (day) => suggestTomorrow(day) },
   // Pazartesi 07:30 haftalık patron raporu (diğer günler "pazartesi değil" diye atlanır)
   { name: 'haftalik-rapor', at: 7 * 60 + 30, run: (day) => sendWeeklyReport(day) },
+  // Kazanılan müşterilerin geçen ay site raporu (ayda bir üretilir; her gün kontrol edilir)
+  { name: 'aylik-rapor', at: 8 * 60, run: (day) => createMonthlyReports(day) },
 ];
 
 let running = false;

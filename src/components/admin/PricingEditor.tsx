@@ -90,6 +90,24 @@ export default function PricingEditor({ onClose, onSaved }: { onClose: () => voi
               <button type="button" onClick={() => setDraft({ ...draft, packages: [...draft.packages, { key: `paket${draft.packages.length + 1}`, name: 'Neues Paket', setup: 0, monthly: 0, features: [] }] })}
                 className="mt-3 text-[#0071E3] font-semibold flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Paket ekle</button>
             )}
+            {draft.addons?.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[11px] font-semibold text-[#1D1D1F] mb-1.5">Ek modüller</p>
+                <div className="space-y-1.5">
+                  {draft.addons.map((a, i) => {
+                    const setA = (patch: Partial<typeof a>) => setDraft({ ...draft, addons: draft.addons.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+                    return (
+                      <div key={a.key} className="grid grid-cols-[1fr_80px_80px] gap-2 items-center">
+                        <input aria-label="Modül adı" value={a.name} onChange={(e) => setA({ name: e.target.value })} className={inputCls} title={a.desc} />
+                        <input aria-label={`${a.name} kurulum €`} inputMode="numeric" value={a.setup} onChange={(e) => setA({ setup: Number(e.target.value.replace(/[^\d]/g, '') || 0) })} className={`${inputCls} tabular`} />
+                        <input aria-label={`${a.name} aylık €`} inputMode="numeric" value={a.monthly} onChange={(e) => setA({ monthly: Number(e.target.value.replace(/[^\d]/g, '') || 0) })} className={`${inputCls} tabular`} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-[#6E6E73] mt-1">Sütunlar: ad · kurulum € · aylık €. Sektör paketleri bu modülleri kategoriye göre önerir.</p>
+              </div>
+            )}
             <label className="block mt-4 text-[11px] text-[#6E6E73]">Vergi notu (teklifin altına basılır)
               <input value={draft.vatNote} onChange={(e) => setDraft({ ...draft, vatNote: e.target.value })} className={`${inputCls} mt-1`} />
             </label>

@@ -15,6 +15,7 @@ import {
   AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Globe, LayoutTemplate, MapPin, Phone, Printer,
 } from 'lucide-react';
 import DraftChecklist from './DraftChecklist';
+import CustomerCare from './CustomerCare';
 import CustomerLinks from './CustomerLinks';
 import OfferBox, { usePricing } from './OfferBox';
 import WhatsAppDemo from './WhatsAppDemo';
@@ -24,7 +25,7 @@ import ProspectPhotos from './ProspectPhotos';
 import ProspectProfile from './ProspectProfile';
 import ProspectVisits from './ProspectVisits';
 import {
-  api, cachedRow, cameFromList, inputCls, patchCachedRow, KIND_META, LIST_IDS_KEY, markBackNavigation, PROSPECT_LIST_HREF, PROSPECT_STATUSES, prospectHref, readSession,
+  api, cachedRow, cameFromList, inputCls, patchCachedRow, KIND_META, LIST_IDS_KEY, markBackNavigation, offerAddons, PROSPECT_LIST_HREF, PROSPECT_STATUSES, prospectHref, readSession,
   type Job, type Prospect,
 } from './prospect-shared';
 
@@ -179,7 +180,7 @@ export default function ProspectPage() {
     }
   };
 
-  const saveOffer = async (offer: { package: string; setup: number; monthly: number } | null, markSent: boolean) => {
+  const saveOffer = async (offer: { package: string; setup: number; monthly: number; addons: string[] } | null, markSent: boolean) => {
     if (!p) return;
     try {
       await api('/api/admin/prospects', {
@@ -312,6 +313,7 @@ export default function ProspectPage() {
                 <section className={card} aria-labelledby="h-offer">
                   <h2 id="h-offer" className="text-sm font-semibold text-[#1D1D1F] mb-3">Teklif</h2>
                   <OfferBox key={`o${p.id}`} prospect={p} pricing={pricing} onSave={saveOffer} />
+                  {p.status === 'won' && <CustomerCare key={`c${p.id}`} id={p.id} token={p.draft_token ?? null} hasGbp={offerAddons(p).includes('gbp')} notify={notify} />}
                 </section>
 
                 <section className={card} aria-labelledby="h-draft">

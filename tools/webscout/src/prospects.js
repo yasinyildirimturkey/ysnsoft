@@ -113,7 +113,7 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   const rows = all(
     db,
       `SELECT b.id, b.name, b.category, b.country, b.city, b.address, b.postcode, b.suburb, b.website, b.phone,
-              b.status, b.notes, b.lat, b.lon, b.visit_date, b.visit_order, b.offer_package, b.offer_setup, b.offer_monthly, b.offer_at,
+              b.status, b.notes, b.lat, b.lon, b.visit_date, b.visit_order, b.offer_package, b.offer_setup, b.offer_monthly, b.offer_at, b.offer_addons,
               COALESCE(NULLIF(b.opening_hours, ''), json_extract(p.profile, '$.osm.tags.opening_hours')) AS opening_hours,
               (SELECT json_object('outcome', v.outcome, 'at', v.at, 'note', v.note, 'next_at', v.next_at)
                  FROM visits v WHERE v.business_id = b.id ORDER BY v.id DESC LIMIT 1) AS last_visit,

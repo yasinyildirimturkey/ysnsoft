@@ -55,6 +55,7 @@ next-env.d.ts
 /data/system-settings.json
 /data/testimonials.json
 /data/offer-requests.json
+/data/customer-care.json
 /data/sites.json
 /data/mail-log.jsonl
 /data/scheduler/

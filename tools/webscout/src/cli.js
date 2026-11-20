@@ -636,8 +636,11 @@ function cmdProspectSet(db, opt) {
         && [offer.setup, offer.monthly].every((v) => Number.isInteger(v) && v >= 0 && v <= 1_000_000);
       if (!ok) { printJson({ ok: false, error: 'Geçersiz teklif' }); process.exit(1); }
     }
-    db.prepare("UPDATE businesses SET offer_package=?, offer_setup=?, offer_monthly=?, offer_at=CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END WHERE id=?")
-      .run(offer?.package ?? null, offer?.setup ?? null, offer?.monthly ?? null, offer ? 1 : null, id);
+    // Ek modüller: yalnız fiyat listesinde olan anahtarlar saklanır (tutarlar zaten setup/monthly içinde)
+    const known = new Set(readPricing().addons.map((a) => a.key));
+    const addons = offer ? [...new Set([].concat(offer.addons ?? []).map(String).filter((k) => known.has(k)))].slice(0, 10) : [];
+    db.prepare("UPDATE businesses SET offer_package=?, offer_setup=?, offer_monthly=?, offer_addons=?, offer_at=CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END WHERE id=?")
+      .run(offer?.package ?? null, offer?.setup ?? null, offer?.monthly ?? null, addons.length ? JSON.stringify(addons) : null, offer ? 1 : null, id);
   }
   if (opt['website-b64'] !== undefined) {
     // Elle düzeltme: OSM'de olmayan site adresi sahada/Google'da bulunduysa
