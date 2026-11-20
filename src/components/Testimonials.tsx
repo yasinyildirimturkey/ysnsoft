@@ -1,86 +1,49 @@
 'use client';
 
-import React from 'react';
-import { CLIENT_TESTIMONIALS } from '@/data/products';
-import { Star, Quote, Award, TrendingUp, CheckCircle, Building } from 'lucide-react';
+/**
+ * Müşteri yorumları: YALNIZ müşterinin /feedback sayfasında kendisinin yazdığı, yayın iznini verdiği ve panelde
+ * onaylanan yorumlar. Eski sürümdeki uydurma yorumlar ve rakamlar (45+ proje, %99,8 memnuniyet…) kaldırıldı.
+ * Onaylı yorum yoksa bölüm hiç görünmez.
+ */
+import React, { useEffect, useState } from 'react';
+import { Quote, Star } from 'lucide-react';
+
+interface Item { id: string; business: string; city: string; name: string; role: string; rating: number; text: string }
 
 export default function Testimonials() {
+  const [items, setItems] = useState<Item[]>([]);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/testimonials').then((r) => r.json()).then((j) => { if (alive && j.success) setItems(j.data); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  if (!items.length) return null;
+
   return (
     <section id="testimonials" className="py-16 sm:py-24 bg-white border-b border-black/[0.06]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="section-eyebrow">
-            <Award className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Müşteri Başarı Hikayeleri</span>
-          </div>
-          <h2 className="section-title">
-            Gerçek şirketler, <br />
-            <span>ölçülebilir başarılar.</span>
-          </h2>
-          <p className="section-lead">
-            Yazılım çözümlerimizle dijital dönüşümünü tamamlayan ve operasyonlarını katlayan iş ortaklarımızın deneyimleri.
-          </p>
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <h2 className="section-title">Müşterilerimiz ne diyor?</h2>
+          <p className="section-lead">Müşterilerimizin kendi yazdığı ve yayınlanmasına izin verdiği yorumlar.</p>
         </div>
-
-        {/* Global Impact Numbers */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
-          <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
-            <span className="text-3xl sm:text-4xl font-semibold text-[#1D1D1F] tracking-tight">45+</span>
-            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">Teslim Edilen Proje</p>
-          </div>
-          <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
-            <span className="text-3xl sm:text-4xl font-semibold text-[#10B981] tracking-tight">%99.8</span>
-            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">Müşteri Memnuniyeti</p>
-          </div>
-          <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
-            <span className="text-3xl sm:text-4xl font-semibold text-[#0071E3] tracking-tight">10x</span>
-            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">Ortalama Verimlilik Artışı</p>
-          </div>
-          <div className="bg-[#F5F5F7] p-6 rounded-2xl border border-black/[0.04] text-center">
-            <span className="text-3xl sm:text-4xl font-semibold text-[#8B5CF6] tracking-tight">₺150M+</span>
-            <p className="text-xs sm:text-sm text-[#6E6E73] mt-1 font-medium">İşlenen Aylık Veri Hacmi</p>
-          </div>
-        </div>
-
-        {/* Testimonials Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {CLIENT_TESTIMONIALS.map((t, idx) => (
-            <div 
-              key={idx} 
-              className="apple-card p-6 sm:p-8 bg-white border border-black/[0.07] flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1 text-[#FFBD2E]">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current" />
-                    ))}
-                  </div>
-                  <span className="bg-[#10B981]/10 text-[#10B981] text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
-                    {t.result}
-                  </span>
+          {items.map((t) => (
+            <figure key={t.id} className="apple-card p-6 bg-white border border-black/[0.07] flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-0.5 text-[#FFBD2E]" aria-label={`${t.rating} / 5`}>
+                  {Array.from({ length: t.rating }).map((_, i) => <Star key={i} className="w-4 h-4 fill-current" aria-hidden="true" />)}
                 </div>
-
-                <p className="text-sm text-[#1D1D1F] leading-relaxed mb-6 font-normal">
-                  "{t.comment}"
-                </p>
+                <Quote className="w-5 h-5 text-black/10" aria-hidden="true" />
               </div>
-
-              <div className="pt-4 border-t border-black/[0.06] flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#F5F5F7] border border-black/[0.08] flex items-center justify-center font-bold text-[#1D1D1F] text-sm">
-                  {t.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-semibold text-[#1D1D1F]">{t.name}</h4>
-                  <p className="text-xs text-[#6E6E73]">{t.role} — {t.company}</p>
-                </div>
-              </div>
-            </div>
+              <blockquote className="text-[15px] text-[#1D1D1F] leading-relaxed whitespace-pre-wrap">{t.text}</blockquote>
+              <figcaption className="text-xs text-[#6E6E73] mt-auto">
+                {t.name && <b className="text-[#1D1D1F]">{t.name}{t.role ? `, ${t.role}` : ''}</b>}
+                {t.name && <br />}
+                {t.business} · {t.city}
+              </figcaption>
+            </figure>
           ))}
         </div>
-
       </div>
     </section>
   );

@@ -16,6 +16,7 @@ import { PRODUCTS, Product } from '@/data/products';
 import { addSite, createInvoice, fetchAppointments, fetchInvoices, fetchLeads, fetchSettings, fetchSites, removeSite, saveSettings, setAppointmentStatus, setInvoiceStatus, setLeadStatus } from '@/lib/crm-client';
 import ProspectsPanel from '@/components/admin/ProspectsPanel';
 import SystemMailPanel from '@/components/admin/SystemMailPanel';
+import TestimonialsPanel from '@/components/admin/TestimonialsPanel';
 import ProposalDocument from '@/components/admin/ProposalDocument';
 import NotificationBell from '@/components/admin/NotificationBell';
 import UsersPanel from '@/components/admin/UsersPanel';
@@ -2536,6 +2537,9 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
             {/* 2. E-posta (sunucu ayarı) ve zamanlanmış işler — gerçek test */}
             <SystemMailPanel />
+
+            {/* Müşteri yorumları: müşterinin kendi yazdığı ve izin verdiği yorumların onayı */}
+            <TestimonialsPanel notify={notify} />
 
           </div>
         )}
