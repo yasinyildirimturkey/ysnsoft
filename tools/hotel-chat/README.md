@@ -139,6 +139,64 @@ Dokümandan doğrulananlar:
 | Hız sınırı, kullanım koşulları | Belirtilmemiş | Elektra'ya sorun |
 | Promosyon kodu parametresi | İki dokümanda farklı (`promo-code` / `promocode`) | Kullanılmıyor |
 
+## Yönetim paneli
+
+`.env` içinde `ADMIN_TOKEN` (en az 16 karakter) tanımlıysa `http://SUNUCU/admin` açılır. Boşsa panel ve API'si hiç yoktur.
+
+- **Özet:** son 30 günün sohbet, müsaitlik sorgusu, verilen ve tıklanan rezervasyon linki, devir ve cevaplanamayan soru sayıları; ayın token kullanımı ve (fiyat girildiyse) tahmini maliyet.
+- **Sohbetler:** kayıtlar ve dökümleri (asistanın çağırdığı araçlarla birlikte).
+- **Devir talepleri:** rıza veren misafirlerin talepleri.
+- **Cevaplanamayan sorular:** asistanın bilgi bankasında bulamadığı konular. Bunları bilgi bankasına ekledikçe asistan iyileşir.
+- **Bilgi bankası:** ekrandan düzenleme. Kaydedince sonraki mesajdan itibaren geçerlidir; önceki hali `DATA_DIR/kb-backups` altına yedeklenir.
+
+Tek parola tüm otelleri görür; otel başına ayrı kullanıcı henüz yok. Paneli internete açarken HTTPS arkasında tutun.
+
+**Dönüşüm takibi:** asistanın verdiği rezervasyon linkleri ve web widget'ında bunlara yapılan tıklamalar sayılır.
+Tamamlanan rezervasyon sayısı ölçülmez; bunun için rezervasyon motorunda kaynak takibi gerekir (şablona `utm_source` gibi bir parametre ekleyebilirsiniz).
+
+## WhatsApp kanalı
+
+Meta'nın WhatsApp Business Cloud API'siyle çalışır. **Dokümana göre yazıldı ve imzalı sahte bildirimlerle test edildi; gerçek bir WhatsApp Business hesabıyla henüz denenmedi.**
+
+1. Meta for Developers'da bir uygulama ve WhatsApp Business numarası oluşturun.
+2. `.env`: `WHATSAPP_VERIFY_TOKEN` (kendiniz belirlersiniz), `WHATSAPP_APP_SECRET`, `WHATSAPP_API_VERSION` (Meta panelindeki güncel sürüm).
+3. Otelin `hotel.json` dosyasına ekleyin ve erişim anahtarını `WA_PATIKOY_TOKEN` olarak ortama koyun:
+   ```json
+   "whatsapp": { "phoneNumberId": "123456789012345", "secretsEnvPrefix": "WA_PATIKOY" }
+   ```
+4. Meta panelinde webhook adresi olarak `https://SUNUCU/webhooks/whatsapp` ve aynı doğrulama anahtarını girin; `messages` alanına abone olun.
+
+Davranış: her yeni sohbetin başında aydınlatma metni gönderilir. Konuşma aynı numarayla 24 saat sürer. Müsaitlik sonucu kart yerine metin olarak gider.
+İnsana devirde misafire "Onaylıyorum / Vazgeç" düğmeleri gönderilir; numarası ve profil adı ancak onaylarsa resepsiyona iletilir.
+Asistan yalnızca misafirin yazdığı mesaja cevap verir, kendiliğinden mesaj (şablon) göndermez. Yalnızca metin mesajları işlenir.
+
+## Otomatik kalite testi
+
+```bash
+npm run eval -- pati-koy          # otelin tüm soruları
+npm run eval -- pati-koy fiyat    # kimliğinde "fiyat" geçenler
+```
+
+`hotels/<otel-id>/eval.json` içindeki soruları **gerçek modelle** çalıştırır ve her cevabı denetler: doğru araç çağrıldı mı, cevapta olması ve olmaması gereken ifadeler,
+fiyat uydurma (para tutarı yasağı), PMS fiyatının aynen aktarılması, devir ve eksik bilgi kaydı. Başarısız olan varsa çıkış kodu 1'dir.
+
+Her çalıştırma API'ye istek atar, yani ücretlidir (örnek otelin 25 sorusu Haiku 5.5 ile birkaç sent). Bilgi bankası, sistem promptu ya da model değiştiğinde çalıştırın.
+Model her seferinde biraz farklı cevap verebildiği için tek bir geçiş garanti değildir; önemli değişikliklerde birkaç kez çalıştırın.
+
+## İşletme ayarları (hotel.json)
+
+| Alan | Ne yapar |
+|---|---|
+| `widget.quickReplies` | Açılışta gösterilen hazır soru düğmeleri (dil başına en fazla 4) |
+| `languages` | Arayüz dilleri. Widget metinleri `tr`, `en`, `de`, `ru` için hazır; asistan misafirin dilinde cevap verir |
+| `handoff.hours` | Ekibin dönüş yaptığı saatler. Dışındaysa asistan misafire hemen dönülmeyeceğini söyler |
+| `handoff.notifyWebhookEnv` | Devirde anlık bildirim: adı yazılan ortam değişkenindeki adrese `{"text": ...}` gönderilir (Slack, Teams, Google Chat). Bildirimde misafirin adı ve iletişimi yer almaz |
+| `monthlyTokenLimit` | Aylık token sınırı. Aşılırsa asistan yeni mesaj almaz, misafiri ekibe yönlendirir ve uyarı gider |
+| `whatsapp` | WhatsApp numarası bağlantısı |
+
+Müsaitlik çıkmayan sorgularda araç kendiliğinden 1–2 gün öncesini ve sonrasını dener ve bulduğu en fazla iki alternatifi fiyatıyla önerir.
+`OPS_ALERT_EMAIL` tanımlıysa PMS arızası, model hatası ve bütçe aşımında uyarı e-postası gider (aynı sorun için 15 dakikada bir).
+
 ## Mimari
 
 ```
@@ -147,12 +205,16 @@ src/
   app.ts               Fastify uygulaması, /widget.js, /health
   config/              ortam değişkenleri ve hotel.json şeması
   chat/                sohbet çekirdeği (araç döngüsü) ve sistem promptu
-  tools/               musaitlik_sorgula, rezervasyon_linki_uret, insana_devret
+  tools/               musaitlik_sorgula, rezervasyon_linki_uret, insana_devret, bilgi_eksigi_kaydet
   pms/                 PmsClient arayüzü, ElektraClient, sanal PMS (sample.ts), MockPmsClient
   llm/                 Claude istemcisi ve anahtarsız demo modeli
   channels/web/        HTTP + SSE adaptörü
-  handoff/             devir e-postası
-  store/               SQLite: oturumlar, mesajlar, devir kayıtları
+  channels/whatsapp/   WhatsApp Cloud API webhook'u
+  handoff/             devir e-postası ve anlık bildirim
+  admin/               yönetim paneli API'si
+  ops/                 uyarı e-postaları
+  eval/                otomatik kalite testi
+  store/               SQLite: oturumlar, mesajlar, devirler, olaylar, aylık kullanım
   guard/               hız sınırı
 widget/                gömülebilir widget kaynağı (public/widget.js olarak derlenir)
 hotels/<otel-id>/      hotel.json + bilgi-tabani.md (+ mock-pms.json)
@@ -163,9 +225,12 @@ HTTP uç noktaları:
 
 | Uç nokta | Açıklama |
 |---|---|
-| `POST /api/chat` | `{hotelId, sessionId?, message, language?}` → SSE: `session`, `text`, `tool`, `handoff_form`, `notice`, `done` |
+| `POST /api/chat` | `{hotelId, sessionId?, message, language?}` → SSE: `session`, `text`, `tool`, `offers`, `handoff_form`, `notice`, `done` |
 | `POST /api/handoff` | `{hotelId, sessionId, name, contact, note?, consent: true}` → resepsiyona e-posta |
+| `POST /api/link-click` | Rezervasyon linki tıklamasını sayar (yalnızca o oturumda üretilmiş link) |
 | `POST /api/session/delete` | Misafirin sohbet kaydını siler |
+| `GET /admin`, `/admin/api/*` | Yönetim paneli (`ADMIN_TOKEN` ile) |
+| `GET/POST /webhooks/whatsapp` | WhatsApp doğrulama ve bildirimleri |
 | `GET /api/hotels/:id/widget-config` | Widget'ın açılışta gösterdiği, gizli olmayan ayarlar |
 | `GET /widget.js`, `GET /health` | |
 
@@ -187,9 +252,8 @@ HTTP uç noktaları:
 
 ### Sonraki aşamalar için bırakılan kapılar
 
-- **WhatsApp:** sohbet çekirdeği (`runChatTurn`) HTTP'den bağımsızdır ve olay yayar; yeni kanal `src/channels/whatsapp/` altında bir adaptör olur. Oturumlar `channel` alanı taşır. Devir, formu olmayan kanallarda kanalın kendi rıza akışıyla yapılmalıdır.
 - **Konaklayan misafir talepleri:** Elektra Guests API'sinde görev, POS siparişi ve uyandırma servisi uç noktaları var. `PmsClient` arayüzüne yeni metot ve `tools/` altına yeni araç eklenir.
-- **Çoklu otel paneli:** oteller zaten klasör bazlıdır ve her kayıt `hotel_id` taşır; panel `hotels/` yerine veritabanından okuyan bir yükleyiciyle eklenebilir.
+- **Otel başına panel kullanıcıları:** panel şu an tek parolayla tüm otelleri gösterir; otel başına giriş ve yeni oteli ekrandan ekleme sonraki adımdır.
 
 ## Bilinen sınırlamalar
 

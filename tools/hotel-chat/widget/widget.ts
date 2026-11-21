@@ -14,6 +14,20 @@ interface WidgetConfig {
   privacyUrl: string;
   consentLabel: string;
   maxMessageChars: number;
+  quickReplies: string[];
+}
+
+interface OffersPayload {
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  rooms: Array<{
+    roomTypeId: string;
+    roomTypeName: string;
+    boardType: string | null;
+    availableRooms: number | null;
+    plans: Array<{ rateType: string | null; price: number; discountedPrice: number | null; currency: string; refundable: boolean | null }>;
+  }>;
 }
 
 const UI = {
@@ -39,6 +53,10 @@ const UI = {
     tooLong: "Mesajınız çok uzun.",
     network: "Bağlantı kurulamadı. Lütfen tekrar deneyin.",
     unavailable: "Sohbet şu anda kullanılamıyor.",
+    book: "Rezerve et",
+    bookMsg: "{room} ({plan}) için rezervasyon yapmak istiyorum.",
+    nights: "{n} gece",
+    roomsLeft: "Son {n} oda",
   },
   en: {
     open: "Open chat",
@@ -62,8 +80,67 @@ const UI = {
     tooLong: "Your message is too long.",
     network: "Could not connect. Please try again.",
     unavailable: "Chat is currently unavailable.",
+    book: "Book",
+    bookMsg: "I would like to book {room} ({plan}).",
+    nights: "{n} nights",
+    roomsLeft: "{n} left",
+  },
+  de: {
+    open: "Chat öffnen",
+    close: "Schließen",
+    placeholder: "Nachricht eingeben…",
+    send: "Senden",
+    privacyLink: "Datenschutzhinweis",
+    clear: "Chat löschen",
+    cleared: "Ihr Chatverlauf wurde gelöscht.",
+    checking: "Das Reservierungssystem wird abgefragt…",
+    preparing: "Wird vorbereitet…",
+    formTitle: "Rückruf vom Hotelteam",
+    name: "Ihr Name",
+    contact: "Telefon oder E-Mail",
+    note: "Anmerkung (optional)",
+    submit: "Senden",
+    cancel: "Abbrechen",
+    sent: "Ihre Anfrage wurde an das Hotelteam weitergeleitet. Es meldet sich in Kürze bei Ihnen.",
+    formError: "Die Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.",
+    rate: "Sie senden zu schnell Nachrichten. Bitte warten Sie einen Moment.",
+    tooLong: "Ihre Nachricht ist zu lang.",
+    network: "Keine Verbindung. Bitte versuchen Sie es erneut.",
+    unavailable: "Der Chat ist derzeit nicht verfügbar.",
+    book: "Buchen",
+    bookMsg: "Ich möchte {room} ({plan}) buchen.",
+    nights: "{n} Nächte",
+    roomsLeft: "Noch {n} frei",
+  },
+  ru: {
+    open: "Открыть чат",
+    close: "Закрыть",
+    placeholder: "Введите сообщение…",
+    send: "Отправить",
+    privacyLink: "Уведомление о конфиденциальности",
+    clear: "Удалить чат",
+    cleared: "История чата удалена.",
+    checking: "Проверяем систему бронирования…",
+    preparing: "Подготовка…",
+    formTitle: "Команда отеля свяжется с вами",
+    name: "Ваше имя",
+    contact: "Телефон или e-mail",
+    note: "Комментарий (необязательно)",
+    submit: "Отправить",
+    cancel: "Отмена",
+    sent: "Ваш запрос передан команде отеля. С вами свяжутся в ближайшее время.",
+    formError: "Не удалось отправить запрос. Пожалуйста, попробуйте позже.",
+    rate: "Вы отправляете сообщения слишком быстро. Пожалуйста, подождите.",
+    tooLong: "Сообщение слишком длинное.",
+    network: "Нет соединения. Пожалуйста, попробуйте ещё раз.",
+    unavailable: "Чат сейчас недоступен.",
+    book: "Забронировать",
+    bookMsg: "Хочу забронировать {room} ({plan}).",
+    nights: "Ночей: {n}",
+    roomsLeft: "Осталось: {n}",
   },
 };
+const strings = (lang: string): Strings => (UI as Record<string, Strings>)[lang] ?? UI.en;
 type Strings = (typeof UI)["tr"];
 
 const CSS = `
@@ -100,6 +177,20 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
 .card .consent{flex-direction:row;align-items:flex-start;gap:8px;font-size:12px}
 .card .row{display:flex;gap:8px;justify-content:flex-end}
 .err{color:#b00020;font-size:12px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick button{background:#fff;color:var(--c);border:1px solid var(--c);border-radius:16px;padding:5px 11px;font-size:13px;cursor:pointer}
+.quick button:hover{background:#f0f4f8}
+.offers{align-self:stretch;display:flex;flex-direction:column;gap:8px}
+.offers .stay{font-size:12px;color:#666}
+.room{border:1px solid #d5d8dc;border-radius:12px;padding:10px 12px;background:#fff}
+.room h4{margin:0 0 2px;font-size:14px}
+.room .meta{font-size:12px;color:#666;margin-bottom:6px}
+.plan{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #eceef1}
+.plan .info{flex:1;min-width:0}
+.plan .rate{font-size:12px;color:#444}
+.plan .price{font-weight:600}
+.plan s{font-weight:400;color:#888;font-size:12px;margin-right:4px}
+.plan .btn{min-height:32px;padding:0 12px;font-size:13px}
 @media (max-width:480px){.panel{right:12px;left:12px;width:auto;bottom:84px}.launcher{right:12px;bottom:12px}}
 `;
 
@@ -132,7 +223,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
 
   let sessionId = readSession();
   let config: WidgetConfig | null = null;
-  let t: Strings = browserLang === "tr" ? UI.tr : UI.en;
+  let t: Strings = strings(browserLang);
   let busy = false;
 
   const host = document.createElement("div");
@@ -209,6 +300,66 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
     scroll();
   };
 
+  // Dönüşüm takibi: asistanın verdiği bir linke tıklanınca sunucuya haber verilir.
+  log.addEventListener("click", (ev) => {
+    const a = (ev.target as HTMLElement).closest?.(".bot a") as HTMLAnchorElement | null;
+    if (!a || !sessionId) return;
+    void fetch(`${api}/api/link-click`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hotelId, sessionId, url: a.href }),
+      keepalive: true,
+    }).catch(() => undefined);
+  });
+
+  const money = (amount: number, currency: string) =>
+    `${new Intl.NumberFormat(config?.language ?? browserLang, { maximumFractionDigits: 0 }).format(amount)} ${currency}`;
+
+  /** Müsaitlik sonucunu oda kartları olarak gösterir; düğme, seçimi sohbete mesaj olarak yazar. */
+  const showOffers = (p: OffersPayload) => {
+    const wrap = el("div", "offers");
+    wrap.append(el("div", "stay", `${p.checkIn} → ${p.checkOut} · ${t.nights.replace("{n}", String(p.nights))}`));
+    for (const room of p.rooms) {
+      const card = el("div", "room");
+      card.append(el("h4", undefined, room.roomTypeName));
+      const left = room.availableRooms !== null && room.availableRooms <= 2 ? t.roomsLeft.replace("{n}", String(room.availableRooms)) : null;
+      const meta = [room.boardType, left].filter(Boolean).join(" · ");
+      if (meta) card.append(el("div", "meta", meta));
+      for (const plan of room.plans) {
+        const row = el("div", "plan");
+        const info = el("div", "info");
+        info.append(el("div", "rate", plan.rateType ?? ""));
+        const price = el("div", "price");
+        if (plan.discountedPrice !== null) price.append(el("s", undefined, money(plan.price, plan.currency)));
+        price.append(money(plan.discountedPrice ?? plan.price, plan.currency));
+        info.append(price);
+        const book = el("button", "btn", t.book);
+        book.type = "button";
+        book.addEventListener("click", () => {
+          void send(t.bookMsg.replace("{room}", room.roomTypeName).replace("{plan}", plan.rateType ?? ""));
+        });
+        row.append(info, book);
+        card.append(row);
+      }
+      wrap.append(card);
+    }
+    log.append(wrap);
+    scroll();
+  };
+
+  const showQuickReplies = () => {
+    if (!config?.quickReplies.length) return;
+    const wrap = el("div", "quick");
+    for (const q of config.quickReplies) {
+      const b = el("button", undefined, q);
+      b.type = "button";
+      b.addEventListener("click", () => void send(q));
+      wrap.append(b);
+    }
+    log.append(wrap);
+    scroll();
+  };
+
   const applyStrings = () => {
     launcher.setAttribute("aria-label", t.open);
     closeBtn.textContent = "✕";
@@ -230,7 +381,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
       addSys(t.unavailable);
       return false;
     }
-    t = config.language === "tr" ? UI.tr : UI.en;
+    t = strings(config.language);
     applyStrings();
     host.style.setProperty("--c", config.primaryColor);
     title.textContent = config.title;
@@ -244,6 +395,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
     link.rel = "noopener noreferrer";
     privacy.append(link);
     addMsg("bot", config.welcome);
+    showQuickReplies();
     return true;
   };
 
@@ -319,6 +471,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
   const send = async (text: string) => {
     if (busy || !config) return;
     setBusy(true);
+    log.querySelector(".quick")?.remove();
     addMsg("user", text);
     let bubble: HTMLElement | null = null;
     let answer = "";
@@ -330,6 +483,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
       status = null;
     };
     let wantForm = false;
+    let offers: OffersPayload | null = null;
 
     const onEvent = (event: string, data: Record<string, unknown>) => {
       if (event === "session" && typeof data.sessionId === "string") {
@@ -349,6 +503,8 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
         status = el("div", "status", data.name === "musaitlik_sorgula" ? t.checking : t.preparing);
         log.append(status);
         scroll();
+      } else if (event === "offers") {
+        offers = data.payload as OffersPayload;
       } else if (event === "handoff_form") {
         wantForm = true;
       } else if (event === "notice" && typeof data.message === "string") {
@@ -393,6 +549,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
       addSys(t.network);
     } finally {
       clearStatus();
+      if (offers) showOffers(offers);
       if (wantForm) showHandoffForm();
       setBusy(false);
       input.focus();
@@ -427,6 +584,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
       }
     }
     if (config) addMsg("bot", config.welcome);
+    showQuickReplies();
     addSys(t.cleared);
   });
   compose.addEventListener("submit", (ev) => {

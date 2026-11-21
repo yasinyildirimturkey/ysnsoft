@@ -13,9 +13,18 @@ export interface LlmRequest {
   tools: ToolDefinition[];
 }
 
+export interface LlmUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
 export interface LlmTurn {
   content: ContentBlock[];
   stopReason: string | null;
+  /** Sağlayıcı bildirdiyse bu çağrının token kullanımı. */
+  usage?: LlmUsage;
 }
 
 /** Sohbet çekirdeğinin modelden beklediği tek şey; testlerde sahte model takılabilir. */

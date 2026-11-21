@@ -12,8 +12,13 @@ function ctx(over: Partial<ToolContext> = {}): ToolContext {
     hotel: testHotel().config,
     pms: new MockPmsClient(),
     today: TODAY,
+    now: new Date("2027-03-01T09:00:00Z"),
     language: "tr",
+    channel: "web",
+    showsOfferCards: false,
     requestHandoff: vi.fn(),
+    showOffers: vi.fn(),
+    record: vi.fn(),
     log: vi.fn(),
     ...over,
   };

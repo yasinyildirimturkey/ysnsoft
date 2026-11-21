@@ -9,6 +9,7 @@ import { LIMITS, ScriptedLlm, testHotel, text, toolCall, toolResultsOf } from ".
 const hotel = testHotel();
 const NOW = new Date("2027-03-01T09:00:00Z");
 const stay = { giris_tarihi: "2027-03-10", cikis_tarihi: "2027-03-12", yetiskin_sayisi: 2, cocuk_yaslari: [] };
+const oneOffer = async () => new MockPmsClient().searchOffers({ checkIn: "2027-03-10", checkOut: "2027-03-12", adults: 2, childAges: [], currency: "TRY", language: "tr" });
 
 let store: Store;
 beforeEach(() => {
@@ -97,7 +98,7 @@ describe("runChatTurn", () => {
   });
 
   it("tur başına araç turu sınırını aşınca aracı çalıştırmaz, modele sınırı bildirir", async () => {
-    const pms = { searchOffers: vi.fn(async () => []) };
+    const pms = { searchOffers: vi.fn(oneOffer) };
     const llm = new ScriptedLlm([
       toolCall("musaitlik_sorgula", stay, "t1"),
       toolCall("musaitlik_sorgula", stay, "t2"),
@@ -124,7 +125,7 @@ describe("runChatTurn", () => {
   });
 
   it("konuşma başına araç çağrısı sınırını turlar arasında uygular", async () => {
-    const pms = { searchOffers: vi.fn(async () => []) };
+    const pms = { searchOffers: vi.fn(oneOffer) };
     const turnScript = () => [toolCall("musaitlik_sorgula", stay), text("yok")];
     const llm = new ScriptedLlm([...turnScript(), ...turnScript(), ...turnScript(), ...turnScript()]);
     const { deps, say } = setup(llm);
@@ -163,7 +164,7 @@ describe("runChatTurn", () => {
   });
 
   it("max_tokens ile kesilmiş araç çağrısını yürütmez", async () => {
-    const pms = { searchOffers: vi.fn(async () => []) };
+    const pms = { searchOffers: vi.fn(oneOffer) };
     const cut = { ...toolCall("musaitlik_sorgula", stay), stopReason: "max_tokens" };
     const { deps, say, events } = setup(new ScriptedLlm([cut]));
     deps.pmsFor = () => pms;

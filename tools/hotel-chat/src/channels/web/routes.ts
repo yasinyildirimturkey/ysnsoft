@@ -3,10 +3,10 @@ import { z } from "zod";
 import { runChatTurn, type ChatDeps, type ChatEvent } from "../../chat/engine.js";
 import { localized, type Hotel } from "../../config/hotel.js";
 import { DAY, MINUTE, type RateLimiter } from "../../guard/rate-limit.js";
-import { buildHandoffMail, type Mailer } from "../../handoff/mailer.js";
+import type { Mailer } from "../../handoff/mailer.js";
+import { completeHandoff } from "../../handoff/service.js";
 
 const CHANNEL = "web";
-const MAX_HANDOFFS_PER_SESSION = 2;
 
 export interface WebDeps extends ChatDeps {
   hotels: Map<string, Hotel>;
@@ -31,6 +31,7 @@ const HandoffBody = z.object({
   language: Lang,
 });
 const SessionBody = z.object({ hotelId: z.string().max(64), sessionId: z.string().uuid() });
+const ClickBody = SessionBody.extend({ url: z.string().url().max(2000) });
 
 function originAllowed(hotel: Hotel, origin: string | undefined): boolean {
   if (!origin) return true; // Tarayıcı dışı istemci; CORS koruması zaten geçerli değil, hız sınırı devrede.
@@ -93,6 +94,7 @@ export function registerWebChannel(app: FastifyInstance, deps: WebDeps): void {
         language: lang,
         title: localized(c.widget.title, lang, c.defaultLanguage),
         welcome: localized(c.widget.welcome, lang, c.defaultLanguage),
+        quickReplies: c.widget.quickReplies[lang] ?? c.widget.quickReplies[c.defaultLanguage] ?? [],
         primaryColor: c.widget.primaryColor,
         privacyNotice: localized(c.privacy.notice, lang, c.defaultLanguage),
         privacyUrl: c.privacy.noticeUrl,
@@ -116,10 +118,9 @@ export function registerWebChannel(app: FastifyInstance, deps: WebDeps): void {
     }
     if (!ipAllowed(req.ip)) return reply.code(429).send({ error: "rate_limited" });
 
-    // Bilinmeyen ya da başka otele ait oturum kimliği yok sayılır; yeni oturum açılır.
-    const session =
-      (body.sessionId && store.getSession(body.sessionId, hotel.config.id)) ||
-      store.createSession(hotel.config.id, CHANNEL);
+    // Bilinmeyen, başka otele ya da başka kanala ait oturum kimliği yok sayılır; yeni oturum açılır.
+    const existing = body.sessionId ? store.getSession(body.sessionId, hotel.config.id) : null;
+    const session = existing?.channel === CHANNEL ? existing : store.createSession(hotel.config.id, CHANNEL);
     if (!limiter.take(`s:m:${session.id}`, limits.sessionPerMinute, MINUTE)) {
       return reply.code(429).send({ error: "rate_limited" });
     }
@@ -148,6 +149,7 @@ export function registerWebChannel(app: FastifyInstance, deps: WebDeps): void {
       session,
       text: message,
       language,
+      showsOfferCards: true,
       emit: (e: ChatEvent) => send(e.type, e),
     });
     send("done", {});
@@ -166,27 +168,32 @@ export function registerWebChannel(app: FastifyInstance, deps: WebDeps): void {
     if (!ipAllowed(req.ip)) return reply.code(429).send({ error: "rate_limited" });
 
     const session = store.getSession(body.sessionId, hotel.config.id);
-    if (!session || session.turns === 0) return reply.code(404).send({ error: "unknown_session" });
-    if (store.countHandoffs(session.id) >= MAX_HANDOFFS_PER_SESSION) {
-      return reply.code(429).send({ error: "handoff_limit" });
+    if (!session || session.turns === 0 || session.channel !== CHANNEL) {
+      return reply.code(404).send({ error: "unknown_session" });
     }
-
-    const request = {
+    const outcome = await completeHandoff(deps, hotel, session, {
       name: body.name,
       contact: body.contact,
-      summary: session.pendingHandoff ?? "(Asistan özet oluşturmadı; misafir formu doğrudan gönderdi.)",
       note: body.note || null,
-      sessionId: session.id,
-      channel: session.channel,
-    };
-    try {
-      await deps.mailer.send(buildHandoffMail(hotel.config, request));
-    } catch (err) {
-      deps.log("handoff_mail_failed", { sessionId: session.id, error: err instanceof Error ? err.message : String(err) });
-      return reply.code(502).send({ error: "mail_failed" });
-    }
-    store.saveHandoff({ ...request, hotelId: hotel.config.id });
+    });
+    if (outcome === "limit") return reply.code(429).send({ error: "handoff_limit" });
+    if (outcome === "mail_failed") return reply.code(502).send({ error: "mail_failed" });
     return { ok: true };
+  });
+
+  // Dönüşüm takibi: misafir rezervasyon linkine tıkladığında widget haber verir.
+  // Yalnızca bu oturumda üretilmiş linkler sayılır.
+  app.post("/api/link-click", async (req, reply) => {
+    const parsed = ClickBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "bad_request" });
+    const hotel = resolveHotel(req, reply, parsed.data.hotelId);
+    if (!hotel) return;
+    if (!ipAllowed(req.ip)) return reply.code(429).send({ error: "rate_limited" });
+    const { sessionId, url } = parsed.data;
+    const session = store.getSession(sessionId, hotel.config.id);
+    if (!session || !store.linkBelongsToSession(sessionId, url)) return { counted: false };
+    store.recordEvent(hotel.config.id, sessionId, "link_clicked", { url });
+    return { counted: true };
   });
 
   // KVKK: misafir kendi sohbet kaydını silebilir.

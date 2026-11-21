@@ -58,7 +58,25 @@ export const HotelConfigSchema = z.object({
   handoff: z.object({
     email: z.string().email(),
     subjectPrefix: z.string().default("[Web sohbet]"),
+    /** Ekibin taleplere dönüş yaptığı saatler (otelin saat diliminde, SS:DD). Verilmezse her zaman açık sayılır. */
+    hours: z.object({ open: z.string().regex(/^[0-9]{2}:[0-9]{2}$/), close: z.string().regex(/^[0-9]{2}:[0-9]{2}$/) }).optional(),
+    /**
+     * Anlık bildirim için webhook adresini tutan ORTAM DEĞİŞKENİNİN adı (adres gizlidir, buraya yazılmaz).
+     * Adrese {"text": "..."} gövdeli POST atılır (Slack, Teams, Google Chat gelen webhook'larıyla uyumlu).
+     */
+    notifyWebhookEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
   }),
+
+  /** Aylık toplam token sınırı (girdi + çıktı). Aşılırsa asistan yeni mesaj almaz, misafiri ekibe yönlendirir. */
+  monthlyTokenLimit: z.number().int().positive().optional(),
+
+  /** WhatsApp Business (Cloud API) kanalı. Erişim anahtarı <secretsEnvPrefix>_TOKEN ortam değişkenindedir. */
+  whatsapp: z
+    .object({
+      phoneNumberId: z.string().regex(/^[0-9]+$/),
+      secretsEnvPrefix: z.string().regex(/^[A-Z][A-Z0-9_]*$/),
+    })
+    .optional(),
 
   privacy: z.object({
     noticeUrl: z.string().url(),
@@ -73,6 +91,8 @@ export const HotelConfigSchema = z.object({
     allowedOrigins: z.array(z.string()).min(1),
     title: Localized,
     welcome: Localized,
+    /** Açılışta gösterilen hazır soru düğmeleri: dil → soru listesi. */
+    quickReplies: z.record(z.string(), z.array(z.string().max(60)).max(4)).default({}),
     primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1f4e79"),
   }),
 });

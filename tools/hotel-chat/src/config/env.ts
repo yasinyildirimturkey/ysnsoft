@@ -31,6 +31,19 @@ const EnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().default("Otel Asistanı <no-reply@example.com>"),
+
+  /** Yönetim paneli parolası. Boşsa panel kapalıdır. */
+  ADMIN_TOKEN: z.string().min(16, "ADMIN_TOKEN en az 16 karakter olmalı").optional(),
+  /** Panelde tahmini maliyet göstermek için 1 milyon token başına USD fiyatlar. */
+  LLM_PRICE_INPUT_PER_MTOK: z.coerce.number().min(0).optional(),
+  LLM_PRICE_OUTPUT_PER_MTOK: z.coerce.number().min(0).optional(),
+  /** PMS arızası gibi sorunlarda uyarı e-postası gidecek adres. */
+  OPS_ALERT_EMAIL: z.string().email().optional(),
+
+  /** WhatsApp Cloud API. Üçü de tanımlıysa /webhooks/whatsapp açılır. */
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  WHATSAPP_API_VERSION: z.string().regex(/^v[0-9]+[.][0-9]+$/).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

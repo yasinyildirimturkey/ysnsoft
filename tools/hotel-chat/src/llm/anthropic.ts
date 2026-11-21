@@ -36,6 +36,16 @@ export class AnthropicLlm implements Llm {
     });
     stream.on("text", onText);
     const message = await stream.finalMessage();
-    return { content: message.content, stopReason: message.stop_reason };
+    const u = message.usage;
+    return {
+      content: message.content,
+      stopReason: message.stop_reason,
+      usage: {
+        inputTokens: u.input_tokens ?? 0,
+        outputTokens: u.output_tokens ?? 0,
+        cacheReadTokens: u.cache_read_input_tokens ?? 0,
+        cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
+      },
+    };
   }
 }
