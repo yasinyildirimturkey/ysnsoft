@@ -23,6 +23,8 @@ export default function CustomerLinks({ token, name, status, hasOffer, notify }:
       <button type="button" onClick={() => setCard(true)} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5">
         <QrIcon className="w-3.5 h-3.5" aria-hidden="true" /> QR kart (site kontrolü)
       </button>
+      <button type="button" onClick={() => copy('korrektur', 'Metin düzeltme')} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold"
+        title="Müşteri demodaki metinleri kendisi düzeltir; siz bakıp demoya uygularsınız">Metin düzeltme bağlantısı</button>
       {hasOffer && (
         <button type="button" onClick={() => copy('angebot', 'Teklif')} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold"
           title="Müşteri teklifi görür ve bağlayıcı olmadan kabul talebi bırakabilir">Teklif bağlantısı</button>
