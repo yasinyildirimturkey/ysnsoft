@@ -8,7 +8,7 @@ import {
 import { scanSite } from './scan.js';
 import { writeReports, summary } from './report.js';
 import { exportSite } from './export.js';
-import { funnelReport, goodExamples, queryProspects, reminders, STATUS_LABELS, suggestDay, weeklyReport } from './prospects.js';
+import { funnelReport, goodExamples, queryProspects, regionReport, reminders, STATUS_LABELS, suggestDay, weeklyReport } from './prospects.js';
 import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
 import { siteMismatch } from './sitematch.js';
@@ -596,6 +596,7 @@ function cmdQuery(db, opt) {
       status: str(opt.status),
       q: str(opt.q),
       visitDay: str(opt['visit-day']),
+      visitBy: b64text(opt['visit-by-b64'], 120) || undefined,
       id: opt.id ? Number(opt.id) : undefined,
       minScore: Number(opt['min-score'] ?? 40),
       limit: Math.max(1, Math.min(2000, Number(opt.limit ?? 500))),
@@ -679,7 +680,7 @@ function cmdVisitAdd(db, opt) {
   const status = keep ? biz.status : VISIT_OUTCOMES[outcome];
   db.prepare('UPDATE businesses SET status=? WHERE id=?').run(status, id);
   // Tekrar gelinecekse o güne planlanır; rotadaki sırası o günün planında belirlenir
-  if (next) db.prepare('UPDATE businesses SET visit_date=?, visit_order=NULL WHERE id=?').run(next, id);
+  if (next) db.prepare('UPDATE businesses SET visit_date=?, visit_order=NULL, visit_by=? WHERE id=?').run(next, b64text(opt['user-b64'], 120) || null, id);
   printJson({ ok: true, status });
 }
 
@@ -694,13 +695,16 @@ function cmdPlanVisits(db, opt) {
   if (!date || !DAY_RE.test(date)) throw new Error('Geçersiz tarih');
   const ids = String(opt.ids === true ? '' : opt.ids ?? '').split(',').filter(Boolean).map(Number);
   if (ids.some((n) => !Number.isInteger(n) || n <= 0) || ids.length > 30) throw new Error('Geçersiz aday listesi');
+  // Planı yapan satışçı: yalnız kendi (ve sahibi belli olmayan eski) planı yeniden kurulur, diğerininki korunur
+  const by = b64text(opt['by-b64'], 120) || null;
   db.exec('BEGIN');
   try {
     // O günün planı yeniden kurulur: listeden çıkarılanların günü boşaltılır
-    db.prepare('UPDATE businesses SET visit_date=NULL, visit_order=NULL WHERE visit_date=?').run(date);
-    const set = db.prepare(`UPDATE businesses SET visit_date=?, visit_order=?,
+    if (by) db.prepare('UPDATE businesses SET visit_date=NULL, visit_order=NULL, visit_by=NULL WHERE visit_date=? AND (visit_by IS NULL OR visit_by=?)').run(date, by);
+    else db.prepare('UPDATE businesses SET visit_date=NULL, visit_order=NULL WHERE visit_date=?').run(date);
+    const set = db.prepare(`UPDATE businesses SET visit_date=?, visit_order=?, visit_by=?,
       status=CASE WHEN status='new' THEN 'visit_planned' ELSE status END WHERE id=?`);
-    ids.forEach((id, i) => set.run(date, i + 1, id));
+    ids.forEach((id, i) => set.run(date, i + 1, by, id));
     db.exec('COMMIT');
   } catch (e) { db.exec('ROLLBACK'); throw e; }
   printJson({ ok: true, date, planned: ids.length });
@@ -811,7 +815,7 @@ const { pos, opt } = parseArgs(process.argv.slice(2));
 const cmd = pos[0];
 if (!cmd || opt.help) { console.log(HELP); process.exit(cmd ? 0 : 1); }
 
-const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'pricing', 'pricing-set', 'examples', 'reminders', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits', 'draft-translate', 'export-site']);
+const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'pricing', 'pricing-set', 'examples', 'reminders', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits', 'draft-translate', 'export-site', 'regions']);
 try {
   const db = openDb();
   switch (cmd) {
@@ -855,12 +859,17 @@ try {
       printJson({ ok: true, ...(await translateDraft(db, id)) });
       break;
     }
+    case 'regions': printJson({ ok: true, ...regionReport(db, { country: str(opt.country), city: str(opt.city), by: opt.by === 'category' ? 'category' : 'suburb' }) }); break;
     case 'weekly': printJson({ ok: true, ...weeklyReport(db) }); break;
     case 'suggest-day': {
       const date = String(opt.date ?? '');
       if (!DAY_RE.test(date)) throw new Error('Geçersiz tarih');
       const n = Math.max(3, Math.min(12, Number(opt.n) || 8));
-      printJson({ ok: true, ...suggestDay(db, { date, n, city: typeof opt.city === 'string' ? opt.city : undefined }) });
+      // Satışçı bölgesi: --cities-b64 (JSON dizi) ve --plz 47,40 (posta kodu başları)
+      let cities = [];
+      try { cities = JSON.parse(b64text(opt['cities-b64'], 2000) || '[]').map(String).slice(0, 20); } catch { /* yok */ }
+      const plz = String(typeof opt.plz === 'string' ? opt.plz : '').split(',').map((p) => p.trim()).filter((p) => /^\d{1,5}$/.test(p)).slice(0, 30);
+      printJson({ ok: true, ...suggestDay(db, { date, n, city: typeof opt.city === 'string' ? opt.city : undefined, cities, plz }) });
       break;
     }
     case 'pricing-set': printJson({ ok: true, pricing: writePricing(JSON.parse(Buffer.from(String(opt.b64 ?? ''), 'base64').toString('utf8'))) }); break;

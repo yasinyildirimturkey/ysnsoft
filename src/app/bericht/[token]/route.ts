@@ -17,9 +17,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
   const reports = reportsOf(biz.id);
   const want = new URL(request.url).searchParams.get('m') ?? '';
   const r = (PERIOD_RE.test(want) ? reports.find((x) => x.period === want) : null) ?? reports[0];
-  const c = contact();
+  const c = contact(found.brand);
   if (!r) {
-    return page(`Monatsbericht ${biz.name}`, `<div class="card"><p class="mut">Monatsbericht</p><h1>${esc(biz.name)}</h1><p>Der erste Bericht wird zu Beginn des nächsten Monats erstellt.</p></div>`);
+    return page(`Monatsbericht ${biz.name}`, `<div class="card"><p class="mut">Monatsbericht</p><h1>${esc(biz.name)}</h1><p>Der erste Bericht wird zu Beginn des nächsten Monats erstellt.</p></div>`, 200, found.brand);
   }
 
   const s = r.site;
@@ -53,5 +53,5 @@ ${others.length ? `<div class="card"><h2>Frühere Berichte</h2><div class="row">
     <a class="btn2" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(`Monatsbericht ${biz.name}`)}">E-Mail schreiben</a>
   </div>
 </div>`;
-  return page(`Monatsbericht ${biz.name}`, body);
+  return page(`Monatsbericht ${biz.name}`, body, 200, found.brand);
 }

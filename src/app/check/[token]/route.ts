@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
   const found = await bizForToken(token);
   if (!found) return notFound();
   const { biz, demoOpen } = found;
-  const c = contact();
+  const c = contact(found.brand);
 
   const items = (biz.findings ?? [])
     .filter((f: Finding) => f.verified !== 'refuted' && f.de)
@@ -53,5 +53,5 @@ ${demoOpen ? `<div class="card"><h2>Ihr kostenloser Entwurf</h2><p>Wir haben ein
   if (!getAdminSession(request) && !isOwnDevice(request)) {
     void notify({ kind: 'check_view', title: 'Site kontrolü açıldı', body: `${biz.name} · ${biz.city} — QR kartı okuttu`, url: `/admin/adaylar/${biz.id}`, key: `check:${token}` }, { mergeMinutes: 120 }).catch(() => {});
   }
-  return page(`Website-Check ${biz.name}`, body);
+  return page(`Website-Check ${biz.name}`, body, 200, found.brand);
 }

@@ -68,7 +68,7 @@ function regionWhere({ country, city, areaId, categories }) {
   return { where, params };
 }
 
-export function queryProspects(db, { country, city, areaId, categories, kind, status, q, visitDay, id, minScore = 40, limit = 500 } = {}) {
+export function queryProspects(db, { country, city, areaId, categories, kind, status, q, visitDay, visitBy, id, minScore = 40, limit = 500 } = {}) {
   const region = regionWhere({ country, city, areaId, categories });
 
   // Özet: bölge + kategori seçimine göre (tür/durum/arama süzgeçlerinden bağımsız)
@@ -100,7 +100,13 @@ export function queryProspects(db, { country, city, areaId, categories, kind, st
   if (status) { where.push('b.status = @status'); params.status = status; }
   else if (!visitDay && !id) where.push("b.status != 'do_not_contact'");
   // Saha listesi: o güne planlananlar + o gün ziyaret kaydı girilenler (ertelenen de listede kalır)
-  if (visitDay) {
+  if (visitDay && visitBy) {
+    // Satışçının kendi günü: kendi planı + kendi ziyaret kayıtları (sahibi belli olmayan eski kayıtlar herkese görünür)
+    where.push(`((b.visit_date = @visitDay AND (b.visit_by IS NULL OR b.visit_by = @visitBy))
+      OR EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND date(v.at, 'localtime') = @visitDay AND (v.by_user IS NULL OR v.by_user = @visitBy)))`);
+    params.visitDay = visitDay;
+    params.visitBy = visitBy;
+  } else if (visitDay) {
     where.push("(b.visit_date = @visitDay OR EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND date(v.at, 'localtime') = @visitDay))");
     params.visitDay = visitDay;
   }
@@ -187,6 +193,36 @@ const MET_OUTCOMES = ['talked', 'demo_shown', 'offer_requested', 'not_interested
 
 const localDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const daysSince = (sqlUtc, now = Date.now()) => (sqlUtc ? Math.floor((now - Date.parse(sqlUtc.replace(' ', 'T') + 'Z')) / 86400000) : null);
+
+/**
+ * Bölge raporu: şehir (city yoksa) ya da semt/sektör kırılımında aday havuzu ve sahadaki ilerleme.
+ * "Kalan" = sitesi yok ya da yenilenmeli olup henüz hiç dokunulmamış (durum yeni, ziyaret yok) işletmeler:
+ * yeni bölge seçerken ve satışçıya bölge verirken bakılacak sayı.
+ */
+export function regionReport(db, { country, city, by = 'suburb', minScore = 40 } = {}) {
+  const region = regionWhere({ country, city });
+  const key = !city ? 'b.city' : by === 'category' ? 'b.category' : "COALESCE(NULLIF(b.suburb, ''), 'PLZ ' || NULLIF(b.postcode, ''), '(bilinmiyor)')";
+  const metList = MET_OUTCOMES.map((o) => `'${o}'`).join(',');
+  const rows = all(db, `SELECT ${key} AS name, ${city ? '' : "MAX(b.country) AS country, "}
+        COUNT(*) AS total,
+        SUM(k.kind = 'no_site') AS no_site,
+        SUM(k.kind = 'redesign') AS redesign,
+        SUM(k.kind = 'unscanned') AS unscanned,
+        SUM(k.kind IN ('no_site','redesign') AND b.status = 'new' AND NOT EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id)) AS untouched,
+        SUM(EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id)) AS visited,
+        SUM(EXISTS (SELECT 1 FROM visits v WHERE v.business_id = b.id AND v.outcome IN (${metList}))) AS met,
+        SUM(b.offer_setup IS NOT NULL) AS offers,
+        SUM(b.status = 'won') AS won,
+        SUM(b.status = 'lost') AS lost,
+        SUM(CASE WHEN b.status = 'won' THEN COALESCE(b.offer_setup, 0) + 12 * COALESCE(b.offer_monthly, 0) ELSE 0 END) AS won_value
+      FROM (SELECT b.id, ${KIND_SQL} AS kind ${FROM_SQL} WHERE ${region.where.join(' AND ')}) k
+      JOIN businesses b ON b.id = k.id
+      WHERE k.kind != 'chain'
+      GROUP BY ${key}
+      ORDER BY untouched DESC, total DESC
+      LIMIT 200`, { ...region.params, minScore });
+  return { city: city ?? null, by: city ? by : 'city', rows: rows.map((r) => ({ ...r, conversion: r.met ? Math.round((100 * r.won) / r.met) : null })) };
+}
 
 export function funnelReport(db, { country, city, areaId, categories, minScore = 40 } = {}) {
   const region = regionWhere({ country, city, areaId, categories });
@@ -367,7 +403,11 @@ export function goodExamples(db, id, limit = 3) {
 // Otomatik öneriye girmeyen kurumsal yerler (kantin, Mensa, dernek lokali, hastane kafeteryası…): listelerde görünmeye devam eder
 const INSTITUTION_RE = /(^|[\s(,-])(mensa|kantine|cafeteria|schulmensa)($|[\s),-])|casino des|landtag|landeskriminalamt|ministerium|polizei|krankenhaus|klinikum|bürgerhaus|vereinsheim|clubhaus|kleing(ä|a)rt(e|ne)n?r?verein|(^|\s)e\.\s?v\.?($|\s)/i;
 
-export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
+export function suggestDay(db, { date, n = 8, city, cities = [], plz = [], minScore = 40 } = {}) {
+  // Satışçının bölgesi: şehir listesi ve/veya posta kodu başları (ör. 47 → 47xxx). Boşsa kısıt yok.
+  const plzSql = plz.length ? ` AND (${plz.map((_, i) => `b.postcode LIKE @plz${i}`).join(' OR ')})` : '';
+  const plzParams = Object.fromEntries(plz.map((p, i) => [`plz${i}`, `${p}%`]));
+  if (!city && cities.length === 1) city = cities[0];
   const day = (new Date(`${date}T12:00:00`).getDay() + 6) % 7;
   const R = 6371;
   const km = (a, b) => {
@@ -375,6 +415,11 @@ export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
     const h = Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(h));
   };
+  if (!city && cities.length > 1) {
+    city = all(db, `SELECT b.city, COUNT(*) AS n ${FROM_SQL} WHERE b.status = 'new' AND b.lat IS NOT NULL AND ${KIND_SQL} IN ('no_site','redesign')
+      AND b.city IN (${cities.map((_, i) => `@c${i}`).join(',')})${plzSql} GROUP BY 1 ORDER BY 2 DESC LIMIT 1`,
+      { minScore, ...plzParams, ...Object.fromEntries(cities.map((c, i) => [`c${i}`, c])) })[0]?.city;
+  }
   if (!city) {
     city = all(db, `SELECT b.city, COUNT(*) AS n FROM visits v JOIN businesses b ON b.id = v.business_id
       WHERE v.at >= datetime('now', '-14 days') GROUP BY 1 ORDER BY 2 DESC LIMIT 1`, {})[0]?.city
@@ -389,7 +434,7 @@ export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
   const cands = all(db, `SELECT b.id, b.name, b.category, b.lat, b.lon, b.opening_hours, ${SCORE_SQL} AS score, ${KIND_SQL} AS kind
       ${FROM_SQL}
       WHERE b.city = @city AND b.status = 'new' AND b.visit_date IS NULL AND b.lat IS NOT NULL AND b.brand IS NULL
-        AND ${KIND_SQL} IN ('no_site','redesign')`, { city, minScore })
+        AND ${KIND_SQL} IN ('no_site','redesign')${plzSql}`, { city, minScore, ...plzParams })
     .filter(openThatDay)
     .filter((r) => !INSTITUTION_RE.test(r.name))
     .map((r) => ({ ...r, score: r.kind === 'no_site' ? Math.max(r.score ?? 0, 60) : (r.score ?? 0) }));
@@ -400,7 +445,8 @@ export function suggestDay(db, { date, n = 8, city, minScore = 40 } = {}) {
       .filter(openThatDay).map((r) => ({ ...r, score: 100, kind: 'hot' }))
     : [];
   const chosen = [];
-  const pool = [...hot, ...cands.sort((a, b) => b.score - a.score)];
+  const hotSet = new Set(hot.map((h) => h.id));
+  const pool = [...hot, ...cands.filter((c) => !hotSet.has(c.id)).sort((a, b) => b.score - a.score)];
   if (!pool.length) return { date, city, stops: [] };
   chosen.push(pool.shift());
   while (chosen.length < n && pool.length) {

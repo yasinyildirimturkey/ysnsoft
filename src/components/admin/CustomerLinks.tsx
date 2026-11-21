@@ -8,10 +8,18 @@ import React, { useState } from 'react';
 import { Printer, QrCode as QrIcon, X } from 'lucide-react';
 import { QrCode } from './ProspectOffer';
 
-export default function CustomerLinks({ token, name, status, hasOffer, notify }: {
-  token: string; name: string; status: string; hasOffer: boolean; notify: (m: string) => void;
+export default function CustomerLinks({ id, token, name, status, hasOffer, notify }: {
+  id: number; token: string; name: string; status: string; hasOffer: boolean; notify: (m: string) => void;
 }) {
   const [card, setCard] = useState(false);
+  const [brand, setBrand] = useState('YSNSOFT');
+  // Kart açılınca adayın ortağı okunur (white-label): kartta ortağın adı basılır
+  const openCard = async () => {
+    setCard(true);
+    const j = await fetch(`/api/admin/partners?id=${id}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null);
+    const p = j?.success && j.current ? j.partners.find((x: { id: string; active: boolean }) => x.id === j.current && x.active) : null;
+    setBrand(p?.name ?? 'YSNSOFT');
+  };
   const origin = typeof window === 'undefined' ? 'https://ysnsoft.com' : window.location.origin;
   const url = (p: string) => `${origin}/${p}/${token}`;
   const copy = async (p: string, label: string) => {
@@ -20,7 +28,7 @@ export default function CustomerLinks({ token, name, status, hasOffer, notify }:
 
   return (
     <div className="mt-3 flex flex-wrap gap-2">
-      <button type="button" onClick={() => setCard(true)} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5">
+      <button type="button" onClick={() => void openCard()} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5">
         <QrIcon className="w-3.5 h-3.5" aria-hidden="true" /> QR kart (site kontrolü)
       </button>
       <button type="button" onClick={() => copy('korrektur', 'Metin düzeltme')} className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold"
@@ -49,7 +57,7 @@ export default function CustomerLinks({ token, name, status, hasOffer, notify }:
                 <p className="font-bold text-[13px]">Kostenloser Website-Check</p>
                 <p className="mt-1">für {name}</p>
                 <p className="mt-2 text-[#6E6E73]">QR-Code scannen: Ergebnis und Ihr unverbindlicher Entwurf.</p>
-                <p className="mt-2 font-semibold">YSNSOFT</p>
+                <p className="mt-2 font-semibold">{brand}</p>
               </div>
             </div>
             <div className="mt-3 flex gap-2 print:hidden">
