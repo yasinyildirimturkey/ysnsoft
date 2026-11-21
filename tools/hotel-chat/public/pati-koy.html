@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Pati Koy Butik Otel · Kaş'ta deniz kenarında, evcil hayvan dostu</title>
+    <meta name="description" content="Kaş'ta deniz kenarında, yalnızca 5 odalı, tüm odaları deniz manzaralı, evcil hayvan dostu butik otel. Örnek tanıtım sitesi." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0f6e6e" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%230f6e6e'/%3E%3Cg fill='%23fff'%3E%3Ccircle cx='12' cy='14' r='4'/%3E%3Ccircle cx='20' cy='10' r='4'/%3E%3Ccircle cx='28' cy='14' r='4'/%3E%3Cpath d='M20 18c-6 0-10 5-10 10 0 3 2 5 5 5 2 0 3-1 5-1s3 1 5 1c3 0 5-2 5-5 0-5-4-10-10-10z'/%3E%3C/g%3E%3C/svg%3E" />
+    <style>
+      :root { --teal: #0f6e6e; --deep: #0a3f45; --sand: #f6efe4; --ink: #1d2b2e; --mut: #5d6b6e; --coral: #e2725b; --line: #e4dccd; --r: 18px; }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+      body { margin: 0; font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #fffdf9; }
+      h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; font-weight: 600; line-height: 1.15; margin: 0; letter-spacing: -0.01em; }
+      h2 { font-size: clamp(28px, 4.2vw, 40px); }
+      p { margin: 0; }
+      a { color: inherit; }
+      .wrap { width: min(1120px, 100% - 40px); margin-inline: auto; }
+      .eyebrow { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--teal); font-weight: 600; margin-bottom: 10px; }
+      .lead { color: var(--mut); max-width: 62ch; margin-top: 14px; }
+      section { padding: clamp(56px, 8vw, 96px) 0; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 999px; border: 0; cursor: pointer; font: inherit; font-weight: 600; text-decoration: none; background: var(--coral); color: #fff; transition: transform .15s, box-shadow .15s; }
+      .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(226, 114, 91, .35); }
+      .btn.alt { background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, .7); }
+      .btn.alt:hover { background: rgba(255, 255, 255, .12); box-shadow: none; }
+      .btn.teal { background: var(--teal); }
+      .btn.teal:hover { box-shadow: 0 8px 20px rgba(15, 110, 110, .3); }
+      .btn.small { min-height: 42px; padding: 0 18px; font-size: 15px; }
+      :focus-visible { outline: 3px solid #f2b705; outline-offset: 3px; }
+
+      .sample { background: var(--deep); color: #d7e6e6; font-size: 13.5px; text-align: center; padding: 8px 16px; }
+      .sample a { color: #fff; font-weight: 600; }
+
+      header { position: absolute; left: 0; right: 0; z-index: 5; color: #fff; }
+      header .wrap { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; gap: 16px; }
+      .logo { display: flex; align-items: center; gap: 10px; font-family: Georgia, serif; font-size: 21px; font-weight: 600; text-decoration: none; }
+      .logo svg { width: 34px; height: 34px; }
+      nav { display: flex; gap: 26px; font-size: 15.5px; }
+      nav a { text-decoration: none; opacity: .92; }
+      nav a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 5px; }
+
+      .hero { position: relative; min-height: min(760px, 92vh); display: flex; align-items: center; color: #fff; overflow: hidden; background: linear-gradient(180deg, #f7b98a 0%, #f3a183 22%, #c97f8e 40%, #4f8fa0 58%, #156d77 74%, #0a4a52 100%); }
+      .hero svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8, 40, 46, .62) 0%, rgba(8, 40, 46, .25) 55%, rgba(8, 40, 46, 0) 100%); }
+      .hero .wrap { position: relative; z-index: 2; padding: 120px 0 80px; }
+      .hero h1 { font-size: clamp(38px, 6.4vw, 72px); max-width: 15ch; text-wrap: balance; }
+      .hero p { font-size: clamp(17px, 2vw, 21px); max-width: 44ch; margin-top: 18px; opacity: .95; }
+      .hero .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+
+      .facts { margin-top: -46px; position: relative; z-index: 3; padding: 0; }
+      .facts .grid { display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; border-radius: var(--r); box-shadow: 0 18px 50px rgba(10, 63, 69, .14); overflow: hidden; }
+      .facts .item { padding: 24px 22px; border-right: 1px solid var(--line); }
+      .facts .item:last-child { border-right: 0; }
+      .facts b { display: block; font-family: Georgia, serif; font-size: 24px; color: var(--teal); }
+      .facts span { font-size: 14.5px; color: var(--mut); }
+
+      .rooms .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 36px; }
+      .room { background: #fff; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; }
+      .room .art { aspect-ratio: 16 / 8; position: relative; }
+      .room .art svg { width: 100%; height: 100%; display: block; }
+      .room .tag { position: absolute; left: 14px; top: 14px; background: rgba(255, 255, 255, .92); color: var(--deep); font-size: 12.5px; font-weight: 600; padding: 5px 11px; border-radius: 999px; }
+      .room .body { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+      .room h3 { font-size: 23px; }
+      .room ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+      .room li { font-size: 13.5px; background: var(--sand); padding: 4px 10px; border-radius: 999px; color: #47554f; }
+      .room p { color: var(--mut); font-size: 15.5px; }
+      .room .foot { margin-top: auto; padding-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+      .room .foot small { color: var(--mut); font-size: 13.5px; }
+      .all { margin-top: 20px; color: var(--mut); font-size: 15px; }
+
+      .pets { background: var(--sand); }
+      .pets .cols { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(28px, 5vw, 64px); align-items: center; }
+      .pets .art { border-radius: var(--r); overflow: hidden; aspect-ratio: 5 / 4; }
+      .pets .art svg { width: 100%; height: 100%; display: block; }
+      .checks { list-style: none; padding: 0; margin: 22px 0 26px; display: grid; gap: 12px; }
+      .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: start; }
+      .checks svg { width: 24px; height: 24px; margin-top: 2px; }
+
+      .amen .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 36px; }
+      .amen .card { border: 1px solid var(--line); border-radius: var(--r); padding: 22px; background: #fff; }
+      .amen .card svg { width: 30px; height: 30px; color: var(--teal); }
+      .amen h3 { font-size: 20px; margin: 12px 0 6px; }
+      .amen p { color: var(--mut); font-size: 15.5px; }
+      .honest { margin-top: 22px; padding: 16px 20px; border-left: 4px solid var(--teal); background: #f1f7f6; border-radius: 0 12px 12px 0; color: #37504f; font-size: 15.5px; }
+
+      .where { background: var(--deep); color: #e8f1f0; }
+      .where .eyebrow { color: #8fd3c8; }
+      .where .cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 64px); }
+      .where dl { margin: 24px 0 0; display: grid; gap: 14px; }
+      .where dt { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #8fd3c8; }
+      .where dd { margin: 2px 0 0; font-size: 17px; }
+      .rules { background: rgba(255, 255, 255, .07); border-radius: var(--r); padding: 26px; }
+      .rules h3 { font-size: 22px; margin-bottom: 14px; }
+      .rules ul { margin: 0; padding-left: 20px; display: grid; gap: 9px; color: #d4e3e2; font-size: 15.5px; }
+
+      .ask { text-align: center; }
+      .ask .box { background: linear-gradient(135deg, #0f6e6e, #0a4a52); color: #fff; border-radius: 26px; padding: clamp(36px, 6vw, 64px) 24px; }
+      .ask p { opacity: .92; max-width: 52ch; margin: 14px auto 0; }
+      .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 26px; }
+      .chips button { font: inherit; font-size: 15.5px; background: rgba(255, 255, 255, .13); color: #fff; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; padding: 10px 18px; cursor: pointer; min-height: 44px; }
+      .chips button:hover { background: rgba(255, 255, 255, .22); }
+
+      footer { padding: 40px 0 110px; color: var(--mut); font-size: 14.5px; border-top: 1px solid var(--line); }
+      footer .cols { display: flex; flex-wrap: wrap; gap: 20px 40px; justify-content: space-between; }
+      footer b { color: var(--ink); }
+
+      @media (max-width: 860px) {
+        nav { display: none; }
+        .facts .grid { grid-template-columns: repeat(2, 1fr); }
+        .facts .item:nth-child(2) { border-right: 0; }
+        .facts .item:nth-child(-n + 2) { border-bottom: 1px solid var(--line); }
+        .rooms .grid, .pets .cols, .where .cols { grid-template-columns: 1fr; }
+        .amen .grid { grid-template-columns: 1fr 1fr; }
+        .pets .art { order: -1; }
+      }
+      @media (max-width: 560px) {
+        body { font-size: 16.5px; }
+        .wrap { width: min(1120px, 100% - 32px); }
+        .hero { min-height: 640px; }
+        .hero::after { background: linear-gradient(180deg, rgba(8, 40, 46, .5) 0%, rgba(8, 40, 46, .35) 100%); }
+        .hero .cta .btn { flex: 1 1 100%; }
+        .facts .item { padding: 18px 16px; }
+        .facts b { font-size: 21px; }
+        .amen .grid { grid-template-columns: 1fr; }
+        .room .foot .btn { flex: 1 1 100%; }
+      }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="sample">Bu, kurgusal bir otel için hazırlanmış <b>örnek tanıtım sitesidir</b>. Tasarım, yazılım ve yapay zekâ asistanı: <a href="https://ysnsoft.com" rel="noopener">YSNSOFT</a></div>
+
+    <header>
+      <div class="wrap">
+        <a class="logo" href="#ust" aria-label="Pati Koy Butik Otel">
+          <svg viewBox="0 0 40 40" fill="#fff" aria-hidden="true"><circle cx="12" cy="13" r="4"/><circle cx="20" cy="9" r="4"/><circle cx="28" cy="13" r="4"/><path d="M20 17c-6 0-10 5-10 10 0 3 2 5 5 5 2 0 3-1 5-1s3 1 5 1c3 0 5-2 5-5 0-5-4-10-10-10z"/></svg>
+          Pati Koy
+        </a>
+        <nav aria-label="Sayfa bölümleri">
+          <a href="#odalar">Odalar</a><a href="#evcil">Evcil hayvanlar</a><a href="#olanaklar">Olanaklar</a><a href="#ulasim">Ulaşım</a>
+        </nav>
+        <button class="btn small" type="button" data-ask="Müsaitlik ve fiyat öğrenmek istiyorum.">Müsaitlik sor</button>
+      </div>
+    </header>
+
+    <main id="ust">
+      <div class="hero">
+        <svg class="scene" viewBox="0 0 1440 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <circle cx="1020" cy="330" r="92" fill="#ffe6b8" opacity=".95"/>
+          <circle cx="1020" cy="330" r="150" fill="#ffe6b8" opacity=".18"/>
+          <path d="M0 430 L160 372 L300 404 L470 330 L640 398 L800 356 L940 410 L1440 420 L1440 470 L0 470Z" fill="#3d6f7d" opacity=".55"/>
+          <path d="M0 470 L1440 470 L1440 760 L0 760Z" fill="#0f6470"/>
+          <path d="M900 470h240l-30 26H930z" fill="#ffe6b8" opacity=".35"/>
+          <path d="M940 505h160l-22 20H962z" fill="#ffe6b8" opacity=".22"/>
+          <path d="M975 536h90l-14 14H989z" fill="#ffe6b8" opacity=".14"/>
+          <path d="M0 520 Q180 500 360 520 T720 520 T1080 520 T1440 520 V760 H0Z" fill="#0c5661" opacity=".7"/>
+          <path d="M0 590 Q240 566 480 590 T960 590 T1440 590 V760 H0Z" fill="#0a4a52" opacity=".8"/>
+          <path d="M0 470 L0 380 Q90 330 180 360 Q260 300 330 372 Q400 392 430 470Z" fill="#12383d"/>
+          <g fill="#f7efe2"><rect x="96" y="386" width="118" height="70" rx="3"/><path d="M88 388 L155 352 L222 388Z" fill="#c9644f"/><rect x="230" y="408" width="84" height="48" rx="3"/><path d="M224 410 L272 384 L320 410Z" fill="#c9644f"/></g>
+          <g fill="#0f6e6e"><rect x="112" y="404" width="18" height="22"/><rect x="146" y="404" width="18" height="22"/><rect x="180" y="404" width="18" height="22"/><rect x="246" y="424" width="16" height="18"/><rect x="282" y="424" width="16" height="18"/></g>
+          <path d="M360 470 h150 v10 h-150z M372 480 v40 M498 480 v40" stroke="#6b4a36" stroke-width="6" fill="#8a6247"/>
+          <g fill="#0d2f33"><path d="M48 372 q10-70 4-112 q22 40 14 112z"/><path d="M52 262 q-44-20-70 8 q40-8 70 2z M54 262 q40-30 78-10 q-44-2-76 14z M52 258 q-10-40-46-48 q34 14 42 50z M54 258 q16-40 54-42 q-36 12-50 46z"/></g>
+        </svg>
+        <div class="wrap">
+          <p class="eyebrow" style="color:#ffe6b8">Kaş · Çukurbağ Yarımadası</p>
+          <h1>Denizin kıyısında, patilerle birlikte.</h1>
+          <p>Yalnızca 5 odalı, tüm odaları deniz manzaralı, kedinizi ve köpeğinizi de misafir eden sakin bir butik otel.</p>
+          <div class="cta">
+            <button class="btn" type="button" data-ask="Müsaitlik ve fiyat öğrenmek istiyorum.">Müsaitlik ve fiyat sor</button>
+            <a class="btn alt" href="#odalar">Odaları gör</a>
+          </div>
+        </div>
+      </div>
+
+      <section class="facts" aria-label="Kısaca">
+        <div class="wrap">
+          <div class="grid">
+            <div class="item"><b>5 oda</b><span>Hepsi deniz manzaralı</span></div>
+            <div class="item"><b>Kedi &amp; köpek</b><span>Irk ve kilo sınırı yok</span></div>
+            <div class="item"><b>Köy kahvaltısı</b><span>Fiyata dahil, 08:30–11:00</span></div>
+            <div class="item"><b>Yıl boyu açık</b><span>Kaş merkeze 2,5 km</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rooms" id="odalar">
+        <div class="wrap">
+          <p class="eyebrow">Odalar</p>
+          <h2>Dört oda tipi, beş oda.</h2>
+          <p class="lead">Fiyatlar tarihe göre değişir. Güncel fiyat ve müsaitliği asistanımız rezervasyon sistemimizden anında öğrenir.</p>
+          <div class="grid">
+            <article class="room">
+              <div class="art"><span class="tag">2 adet · 22 m²</span>
+                <svg viewBox="0 0 640 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="640" height="320" fill="#f3a183"/><rect y="150" width="640" height="170" fill="#2f8590"/><circle cx="470" cy="150" r="44" fill="#ffe6b8"/><path d="M0 200 Q160 184 320 200 T640 200 V320 H0Z" fill="#1c6f7a"/><rect x="0" y="0" width="60" height="320" fill="#f7efe2"/><rect x="580" y="0" width="60" height="320" fill="#f7efe2"/><rect x="60" y="250" width="520" height="12" fill="#e9dcc6"/><g stroke="#e9dcc6" stroke-width="5"><path d="M110 250V196M170 250V196M230 250V196M290 250V196M350 250V196M410 250V196M470 250V196M530 250V196M60 196H580"/></g></svg>
+              </div>
+              <div class="body">
+                <h3>Deniz Manzaralı Standart Oda</h3>
+                <ul><li>En fazla 2 yetişkin</li><li>1. kat</li><li>Fransız balkon</li><li>Çift kişilik yatak</li></ul>
+                <p>İki kişilik sakin bir kaçamak için. 0–2 yaş için bebek yatağı konulabilir.</p>
+                <div class="foot"><small>Kahvaltı dahil</small><button class="btn teal small" type="button" data-ask="Deniz Manzaralı Standart Oda için müsaitlik ve fiyat öğrenmek istiyorum.">Fiyat sor</button></div>
+              </div>
+            </article>
+            <article class="room">
+              <div class="art"><span class="tag">1 adet · 28 m²</span>
+                <svg viewBox="0 0 640 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="640" height="320" fill="#8fc7cf"/><rect y="140" width="640" height="180" fill="#1f7f8b"/><path d="M0 140 L120 112 L240 132 L380 96 L520 128 L640 116 V140Z" fill="#5a97a3"/><path d="M0 190 Q160 174 320 190 T640 190 V320 H0Z" fill="#156d77"/><rect y="236" width="640" height="84" fill="#d9c7a6"/><g fill="#f7efe2"><rect x="150" y="204" width="110" height="12" rx="4"/><rect x="160" y="216" width="8" height="42"/><rect x="242" y="216" width="8" height="42"/><rect x="380" y="198" width="70" height="10" rx="4"/><rect x="410" y="208" width="8" height="50"/></g><g stroke="#f7efe2" stroke-width="5"><path d="M0 236H640M60 236V180M200 236V180M340 236V180M480 236V180M620 236V180M0 180H640"/></g></svg>
+              </div>
+              <div class="body">
+                <h3>Balkonlu Deluxe Oda</h3>
+                <ul><li>2 yetişkin + 1 çocuk</li><li>2. kat</li><li>Özel balkon</li><li>Çift yatak + çekyat</li></ul>
+                <p>Denize bakan kendi balkonunuzda kahve ve gün batımı.</p>
+                <div class="foot"><small>Kahvaltı dahil</small><button class="btn teal small" type="button" data-ask="Balkonlu Deluxe Oda için müsaitlik ve fiyat öğrenmek istiyorum.">Fiyat sor</button></div>
+              </div>
+            </article>
+            <article class="room">
+              <div class="art"><span class="tag">1 adet · 30 m² · köpekliler için</span>
+                <svg viewBox="0 0 640 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="640" height="320" fill="#cfe8e2"/><rect y="120" width="640" height="60" fill="#2f8590"/><rect y="176" width="640" height="144" fill="#7fae6a"/><path d="M0 232 Q160 214 320 232 T640 232 V320 H0Z" fill="#6a9a58"/><g fill="#f7efe2"><path d="M30 320V150M90 320V150M150 320V150M490 320V150M550 320V150M610 320V150" stroke="#f7efe2" stroke-width="16"/><rect x="0" y="176" width="180" height="12"/><rect x="460" y="176" width="180" height="12"/></g><g fill="#7a5236"><ellipse cx="330" cy="256" rx="54" ry="26"/><circle cx="386" cy="230" r="22"/><path d="M398 212l12-22 8 26zM372 212l-6-24 18 14z"/><rect x="292" y="268" width="12" height="30" rx="5"/><rect x="352" y="268" width="12" height="30" rx="5"/><path d="M276 250q-26-12-22-40" stroke="#7a5236" stroke-width="10" fill="none" stroke-linecap="round"/></g><circle cx="392" cy="228" r="3" fill="#1d2b2e"/></svg>
+              </div>
+              <div class="body">
+                <h3>Bahçe Katı Pati Odası</h3>
+                <ul><li>2 yetişkin + 1 çocuk</li><li>Zemin kat</li><li>20 m² özel bahçe</li><li>Merdivensiz giriş</li></ul>
+                <p>Çitle çevrili kendi bahçesiyle köpekli misafirlerimizin gözdesi.</p>
+                <div class="foot"><small>Kahvaltı dahil</small><button class="btn teal small" type="button" data-ask="Bahçe Katı Pati Odası için müsaitlik ve fiyat öğrenmek istiyorum.">Fiyat sor</button></div>
+              </div>
+            </article>
+            <article class="room">
+              <div class="art"><span class="tag">1 adet · 45 m²</span>
+                <svg viewBox="0 0 640 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="640" height="320" fill="#2b3f66"/><rect y="150" width="640" height="170" fill="#16465a"/><circle cx="500" cy="80" r="30" fill="#f4ecd8"/><g fill="#f4ecd8"><circle cx="90" cy="50" r="2.5"/><circle cx="200" cy="90" r="2"/><circle cx="310" cy="40" r="2.5"/><circle cx="400" cy="110" r="2"/><circle cx="580" cy="130" r="2"/><circle cx="150" cy="120" r="1.8"/></g><path d="M470 150h60l-10 60h-40z" fill="#f4ecd8" opacity=".25"/><rect y="230" width="640" height="90" fill="#c9b79a"/><g fill="#f7efe2"><rect x="110" y="196" width="180" height="20" rx="8"/><rect x="100" y="180" width="16" height="50" rx="6"/><rect x="284" y="180" width="16" height="50" rx="6"/><rect x="400" y="206" width="70" height="8" rx="3"/><rect x="430" y="214" width="8" height="30"/></g><g fill="#ffcf7a"><circle cx="60" cy="150" r="5"/><circle cx="180" cy="158" r="5"/><circle cx="320" cy="162" r="5"/><circle cx="460" cy="158" r="5"/><circle cx="590" cy="150" r="5"/></g><path d="M0 144 Q320 176 640 144" stroke="#f7efe2" stroke-width="1.5" fill="none" opacity=".7"/></svg>
+              </div>
+              <div class="body">
+                <h3>Teras Süit</h3>
+                <ul><li>En fazla 4 kişi</li><li>En üst kat</li><li>25 m² özel teras</li><li>Ayrı oturma alanı</li></ul>
+                <p>Aileler ve uzun konaklamalar için. En çok 3 yetişkin; örneğin 2 yetişkin + 2 çocuk.</p>
+                <div class="foot"><small>Kahvaltı dahil</small><button class="btn teal small" type="button" data-ask="Teras Süit için müsaitlik ve fiyat öğrenmek istiyorum.">Fiyat sor</button></div>
+              </div>
+            </article>
+          </div>
+          <p class="all">Tüm odalarda: deniz manzarası, klima, ücretsiz Wi-Fi, mini buzdolabı, çay-kahve seti, kasa, saç kurutma makinesi ve duşlu banyo. Odalarda televizyon yoktur.</p>
+        </div>
+      </section>
+
+      <section class="pets" id="evcil">
+        <div class="wrap cols">
+          <div>
+            <p class="eyebrow">Evcil hayvanlar</p>
+            <h2>Onlar da ailenin üyesi.</h2>
+            <p class="lead">Kediniz ve köpeğiniz otelimizde sizinle birlikte misafirimizdir.</p>
+            <ul class="checks">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#0f6e6e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Oda başına en fazla 2 evcil hayvan; ırk ve kilo sınırı yok.</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#0f6e6e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Odanızda mama-su kabı ve evcil hayvan yatağı hazır bekler.</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#0f6e6e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>300 m ileride köpeklerin denize girebildiği küçük bir koy var.</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#0f6e6e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Girişte güncel aşı karnesi (kuduz aşısı dahil) gösterilir.</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#0f6e6e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Evcil hayvan ücreti hayvan başına gecelik 400 TL'dir ve otelde ödenir.</span></li>
+            </ul>
+            <button class="btn teal" type="button" data-ask="Evcil hayvan politikanız hakkında bilgi alabilir miyim?">Evcil hayvan kurallarını sor</button>
+          </div>
+          <div class="art">
+            <svg viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="500" height="400" fill="#f7c9a0"/><circle cx="380" cy="130" r="56" fill="#ffe6b8"/><rect y="200" width="500" height="200" fill="#2f8590"/><path d="M0 250 Q125 232 250 250 T500 250 V400 H0Z" fill="#1c6f7a"/><path d="M0 320 Q150 290 300 318 T500 310 V400 H0Z" fill="#e8d5b0"/><g fill="#7a5236"><ellipse cx="190" cy="306" rx="62" ry="30"/><circle cx="254" cy="272" r="27"/><path d="M268 250l16-26 8 32zM240 250l-10-28 22 16z"/><rect x="146" y="318" width="14" height="38" rx="6"/><rect x="216" y="318" width="14" height="38" rx="6"/><path d="M130 296q-30-10-28-44" stroke="#7a5236" stroke-width="12" fill="none" stroke-linecap="round"/></g><circle cx="262" cy="268" r="3.5" fill="#1d2b2e"/><g fill="#3a3a3a"><ellipse cx="350" cy="330" rx="34" ry="20"/><circle cx="382" cy="308" r="17"/><path d="M372 294l-2-18 14 10zM392 294l8-16 4 18z"/><path d="M318 326q-24 4-26-22" stroke="#3a3a3a" stroke-width="8" fill="none" stroke-linecap="round"/></g><circle cx="388" cy="306" r="2.5" fill="#ffe6b8"/></svg>
+          </div>
+        </div>
+      </section>
+
+      <section class="amen" id="olanaklar">
+        <div class="wrap">
+          <p class="eyebrow">Olanaklar</p>
+          <h2>Az ama özenli.</h2>
+          <div class="grid">
+            <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 17q3-2.5 6 0t6 0 6 0M3 21q3-2.5 6 0t6 0 6 0M8 13V5a2 2 0 014 0M14 13V7"/></svg><h3>Yüzme platformu</h3><p>Denize otelin önündeki ahşap platformdan girilir. Şezlong, şemsiye ve plaj havlusu ücretsizdir.</p></div>
+            <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 11h12a3 3 0 010 6h-1M5 11v5a4 4 0 004 4h3a4 4 0 004-4v-5M8 4v3M12 3v4"/></svg><h3>Serpme köy kahvaltısı</h3><p>Deniz manzaralı terasta, 08:30–11:00 arası. Vejetaryen ve glütensiz seçenek için bir gün önceden haber verin.</p></div>
+            <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 15q9-9 18 0M3 15q9 5 18 0M12 6v12"/></svg><h3>Kano ve SUP</h3><p>İki kano ve iki SUP misafirlerimize ücretsizdir; resepsiyona haber vermeniz yeterli.</p></div>
+            <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 8h13l-1 9a3 3 0 01-3 3H8a3 3 0 01-3-3zM17 10h2a2 2 0 010 5h-2"/></svg><h3>Teras servisi</h3><p>11:00–22:00 arası ücretli içecek ve atıştırmalık; bira ve şarap servisi vardır.</p></div>
+            <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 17h14M6 17l1.5-6h9L18 17M8 11l1-4h6l1 4"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg><h3>Ücretsiz otopark</h3><p>Beş araçlık açık otopark; rezervasyon gerekmez.</p></div>
+            <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 9q9-7 18 0M6 13q6-5 12 0M9.5 16.5q2.5-2 5 0"/><circle cx="12" cy="20" r="1"/></svg><h3>Ücretsiz Wi-Fi</h3><p>Odalarda ve tüm ortak alanlarda.</p></div>
+          </div>
+          <p class="honest"><b>Bilmenizi isteriz:</b> Otelimizde havuz, spa, spor salonu, asansör ve akşam yemeği servisi yoktur. Kumsalımız yok; deniz platformdan hemen derinleşir ve yüzme bilmeyenler ile küçük çocuklar için uygun değildir.</p>
+        </div>
+      </section>
+
+      <section class="where" id="ulasim">
+        <div class="wrap cols">
+          <div>
+            <p class="eyebrow">Ulaşım</p>
+            <h2>Kaş'ın sakin yarımadasında.</h2>
+            <dl>
+              <div><dt>Kaş merkez</dt><dd>2,5 km · arabayla yaklaşık 7 dakika</dd></div>
+              <div><dt>Dalaman Havalimanı</dt><dd>Yaklaşık 150 km · 2 saat</dd></div>
+              <div><dt>Antalya Havalimanı</dt><dd>Yaklaşık 190 km · 3 saat</dd></div>
+              <div><dt>Havalimanı transferi</dt><dd>Ücretlidir; en az 48 saat önce talep edilir</dd></div>
+            </dl>
+          </div>
+          <div class="rules">
+            <h3>Konaklama bilgileri</h3>
+            <ul>
+              <li>Giriş 14:00'ten itibaren, çıkış 11:00'e kadar.</li>
+              <li>Resepsiyon 08:00–23:00 arası açıktır.</li>
+              <li>0–6 yaş çocuklar ücretsizdir; 7–12 yaş için çocuk fiyatı uygulanır.</li>
+              <li>15 Haziran – 15 Eylül arasında en az 3 gece konaklama.</li>
+              <li>İade edilebilir fiyatta girişten 7 gün öncesine kadar ücretsiz iptal.</li>
+              <li>Kapalı alanlarda sigara içilmez; 23:00 sonrası sessizlik saatidir.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="ask">
+        <div class="wrap">
+          <div class="box">
+            <h2>Aklınıza takılan bir şey mi var?</h2>
+            <p>Asistanımız 7 gün 24 saat sorularınızı yanıtlar, tarihlerinize göre fiyat verir ve rezervasyon sayfasına yönlendirir.</p>
+            <div class="chips">
+              <button type="button" data-ask="Bu hafta sonu için 2 kişilik oda var mı?">Bu hafta sonu yer var mı?</button>
+              <button type="button" data-ask="İki kedimle gelebilir miyim, ücreti ne olur?">İki kedimle gelebilir miyim?</button>
+              <button type="button" data-ask="Havalimanından otele nasıl ulaşırım?">Havalimanından nasıl gelirim?</button>
+              <button type="button" data-ask="Bir yetkiliyle görüşmek istiyorum.">Bir yetkiliyle görüşeyim</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap cols">
+        <div><b>Pati Koy Butik Otel</b><br />Çukurbağ Yarımadası, Kaş / Antalya<br />rezervasyon@patikoy.example</div>
+        <div>Bu site ve içindeki otel kurgusaldır; fiyat ve müsaitlik örnek veridir.<br />Benzer bir site ve asistan için: <a href="https://ysnsoft.com" rel="noopener"><b>ysnsoft.com</b></a></div>
+      </div>
+    </footer>
+
+    <script>
+      // Sayfadaki düğmeler sohbet asistanını açar ve ilgili soruyu sorar.
+      // Widget geç yüklenirse kısa bir süre beklenir.
+      function ask(question, tries) {
+        if (window.HotelChat) return window.HotelChat.ask(question);
+        if ((tries || 0) < 40) setTimeout(function () { ask(question, (tries || 0) + 1); }, 150);
+      }
+      document.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-ask]");
+        if (b) ask(b.getAttribute("data-ask"));
+      });
+    </script>
+    <script src="/widget.js" data-hotel="pati-koy" data-lang="tr" data-color="#0f6e6e" async></script>
+  </body>
+</html>

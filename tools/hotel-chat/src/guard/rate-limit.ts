@@ -31,5 +31,16 @@ export class RateLimiter {
   }
 }
 
+/**
+ * Hız sınırı anahtarı için istemci adresi. Bazı vekiller (iisnode) X-Forwarded-For'a
+ * "1.2.3.4:56789" biçiminde port ekler; port her bağlantıda değiştiği için atılır.
+ */
+export function clientIp(ip: string): string {
+  const v4 = ip.match(/^([0-9]{1,3}(?:[.][0-9]{1,3}){3}):[0-9]+$/);
+  if (v4?.[1]) return v4[1];
+  const v6 = ip.match(/^\[([0-9a-fA-F:]+)\]:[0-9]+$/);
+  return v6?.[1] ?? ip;
+}
+
 export const MINUTE = 60_000;
 export const DAY = 86_400_000;

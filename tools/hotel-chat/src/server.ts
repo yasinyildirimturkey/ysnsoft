@@ -81,7 +81,8 @@ function purge(): void {
 purge();
 setInterval(purge, 60 * 60 * 1000).unref();
 
-await app.listen({ port: env.PORT, host: "0.0.0.0" });
+// iisnode PORT olarak bir adlandırılmış kanal (\\.\pipe\...) verir; normal çalıştırmada sayıdır.
+await (/^[0-9]+$/.test(env.PORT) ? app.listen({ port: Number(env.PORT), host: "0.0.0.0" }) : app.listen({ path: env.PORT }));
 log("listening", {
   port: env.PORT,
   hotels: [...hotels.keys()],

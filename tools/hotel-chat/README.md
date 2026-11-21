@@ -197,6 +197,24 @@ Model her seferinde biraz farklı cevap verebildiği için tek bir geçiş garan
 Müsaitlik çıkmayan sorgularda araç kendiliğinden 1–2 gün öncesini ve sonrasını dener ve bulduğu en fazla iki alternatifi fiyatıyla önerir.
 `OPS_ALERT_EMAIL` tanımlıysa PMS arızası, model hatası ve bütçe aşımında uyarı e-postası gider (aynı sorun için 15 dakikada bir).
 
+## IIS / iisnode üzerinde çalıştırma
+
+Windows + IIS + iisnode sunucusunda servis kendi sitesinde (alt alan adı) çalışır. Node 22.13 ya da üstü gerekir.
+
+```bash
+npm run package:iis      # _deploy/hotel-chat.zip: derlenmiş kod + çalışma zamanı bağımlılıkları
+```
+
+Paket `.env` ve `data/` içermez. Sunucuda `scripts/iis-deploy.ps1` paketi site klasörüne açar, var olan `.env` ve kayıtları korur,
+izinleri düzenler ve `web.config`'i en son yerleştirir. `scripts/iis-set-key.ps1` API anahtarını standart girdiden okuyup `.env`'e yazar ve gerçek modele geçer.
+İki betikteki klasör yolları kendi sunucunuza göre düzenlenmelidir.
+
+- `iis-start.cjs` iisnode'un giriş noktasıdır: `.env`'i yükler ve IIS'in verdiği adlandırılmış kanalı dinler.
+- `web.config` her isteği uygulamaya yönlendirir (`.env`, `data/` ve kaynak dosyalar doğrudan sunulmaz), sohbet akışı için tamponlamayı kapatır ve tek işlemle çalıştırır.
+- Sunucudaki `.env` içinde `TRUST_PROXY=true` olmalıdır; aksi halde IP hız sınırı tüm ziyaretçileri tek adres sayar.
+- Yeniden başlatmak için `web.config` dosyasına dokunmak yeterlidir.
+- Site klasörünün kendi izinlerine dokunmayın; IIS kullanıcısı `data/` ve `iisnode/` klasörlerine yazabilmelidir.
+
 ## Mimari
 
 ```

@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { runChatTurn, type ChatDeps, type ChatEvent } from "../../chat/engine.js";
 import { localized, type Hotel } from "../../config/hotel.js";
-import { DAY, MINUTE, type RateLimiter } from "../../guard/rate-limit.js";
+import { clientIp, DAY, MINUTE, type RateLimiter } from "../../guard/rate-limit.js";
 import type { Mailer } from "../../handoff/mailer.js";
 import { completeHandoff } from "../../handoff/service.js";
 
@@ -77,8 +77,10 @@ export function registerWebChannel(app: FastifyInstance, deps: WebDeps): void {
     return hotel;
   };
 
-  const ipAllowed = (ip: string): boolean =>
-    limiter.take(`ip:m:${ip}`, limits.ipPerMinute, MINUTE) && limiter.take(`ip:d:${ip}`, limits.ipPerDay, DAY);
+  const ipAllowed = (rawIp: string): boolean => {
+    const ip = clientIp(rawIp);
+    return limiter.take(`ip:m:${ip}`, limits.ipPerMinute, MINUTE) && limiter.take(`ip:d:${ip}`, limits.ipPerDay, DAY);
+  };
 
   // Widget'ın açılışta gösterdiği, gizli olmayan ayarlar.
   app.get<{ Params: { hotelId: string }; Querystring: { lang?: string } }>(

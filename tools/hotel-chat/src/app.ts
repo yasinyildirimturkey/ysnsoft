@@ -34,6 +34,8 @@ export function buildApp({ deps, publicDir, trustProxy, admin, whatsapp }: AppOp
     "Access-Control-Allow-Origin": "*",
   });
   serveFile("/demo", "demo.html", "text/html; charset=utf-8", { "Cache-Control": "no-store" });
+  // Ana sayfa: örnek otelin tanıtım sitesi (asistan içine gömülü).
+  serveFile("/", "pati-koy.html", "text/html; charset=utf-8", { "Cache-Control": "no-cache" });
 
   registerWebChannel(app, deps);
 

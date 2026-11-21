@@ -6,7 +6,8 @@ const bool = z
   .transform((v) => v === "true");
 
 const EnvSchema = z.object({
-  PORT: z.coerce.number().int().default(8787),
+  /** Port numarası ya da (iisnode altında) IIS'in verdiği adlandırılmış kanal yolu. */
+  PORT: z.string().default("8787"),
   TRUST_PROXY: bool,
   DATA_DIR: z.string().default("./data"),
   HOTELS_DIR: z.string().default("./hotels"),

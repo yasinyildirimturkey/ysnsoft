@@ -4,11 +4,19 @@
   "city": "Kaş, Antalya",
   "website": "https://www.patikoy.example",
   "timezone": "Europe/Istanbul",
-  "languages": ["tr", "en", "de", "ru"],
+  "languages": [
+    "tr",
+    "en",
+    "de",
+    "ru"
+  ],
   "defaultLanguage": "tr",
   "currency": "TRY",
   "knowledgeBaseFile": "bilgi-tabani.md",
-  "pms": { "type": "mock", "dataFile": "mock-pms.json" },
+  "pms": {
+    "type": "mock",
+    "dataFile": "mock-pms.json"
+  },
   "priceBasis": "total_stay",
   "bookingLink": {
     "template": "https://rezervasyon.patikoy.example/?checkin={checkin}&checkout={checkout}&adult={adults}&childages={childAges}&roomtype={roomTypeId}&lang={language}&utm_source=sohbet-asistani",
@@ -17,7 +25,10 @@
   "handoff": {
     "email": "rezervasyon@patikoy.example",
     "subjectPrefix": "[Sohbet asistanı]",
-    "hours": { "open": "08:00", "close": "23:00" }
+    "hours": {
+      "open": "08:00",
+      "close": "23:00"
+    }
   },
   "privacy": {
     "noticeUrl": "https://www.patikoy.example/kvkk",
@@ -36,7 +47,9 @@
     "retentionDays": 30
   },
   "widget": {
-    "allowedOrigins": ["*"],
+    "allowedOrigins": [
+      "*"
+    ],
     "title": {
       "tr": "Pati Koy Asistanı",
       "en": "Pati Koy Assistant",
@@ -50,11 +63,32 @@
       "ru": "Здравствуйте и добро пожаловать в Pati Koy! Отвечу на вопросы о номерах, проживании с питомцами, наличии мест и ценах."
     },
     "quickReplies": {
-      "tr": ["Müsaitlik ve fiyat", "Evcil hayvan politikası", "Odalar", "Ulaşım ve otopark"],
-      "en": ["Availability and prices", "Pet policy", "Rooms", "Getting there & parking"],
-      "de": ["Verfügbarkeit und Preise", "Haustiere", "Zimmer", "Anreise & Parken"],
-      "ru": ["Наличие и цены", "Проживание с питомцами", "Номера", "Как добраться"]
+      "tr": [
+        "Müsaitlik ve fiyat",
+        "Evcil hayvan politikası",
+        "Odalar",
+        "Ulaşım ve otopark"
+      ],
+      "en": [
+        "Availability and prices",
+        "Pet policy",
+        "Rooms",
+        "Getting there & parking"
+      ],
+      "de": [
+        "Verfügbarkeit und Preise",
+        "Haustiere",
+        "Zimmer",
+        "Anreise & Parken"
+      ],
+      "ru": [
+        "Наличие и цены",
+        "Проживание с питомцами",
+        "Номера",
+        "Как добраться"
+      ]
     },
     "primaryColor": "#0f6e6e"
-  }
+  },
+  "monthlyTokenLimit": 5000000
 }
