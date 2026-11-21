@@ -1,0 +1,86 @@
+{
+  "currency": "TRY",
+  "boardType": "Oda Kahvaltı",
+  "defaultSeason": "dusuk",
+  "seasons": [
+    { "name": "orta", "from": "04-15", "to": "06-14" },
+    { "name": "yuksek", "from": "06-15", "to": "09-15" },
+    { "name": "orta", "from": "09-16", "to": "10-31" },
+    { "name": "yilbasi", "from": "12-28", "to": "01-02" }
+  ],
+  "weekendSurchargePercent": 10,
+  "children": { "freeUnderAge": 7, "maxChildAge": 12, "perNight": 600 },
+  "ratePlans": [
+    {
+      "name": "İade edilebilir",
+      "refundable": true,
+      "discountPercent": 0,
+      "cancellationNote": "Girişten 7 gün öncesine kadar ücretsiz iptal; sonrasında ilk gece ücreti alınır."
+    },
+    {
+      "name": "İade edilemez",
+      "refundable": false,
+      "discountPercent": 10,
+      "cancellationNote": "İptal ve tarih değişikliği yapılamaz."
+    }
+  ],
+  "minStay": { "yuksek": 3, "yilbasi": 2 },
+  "roomTypes": [
+    {
+      "id": "STD",
+      "name": "Deniz Manzaralı Standart Oda",
+      "units": 2,
+      "maxAdults": 2,
+      "maxChildren": 0,
+      "maxGuests": 2,
+      "nightly": { "dusuk": 3800, "orta": 5600, "yuksek": 8200, "yilbasi": 6500 }
+    },
+    {
+      "id": "DLX",
+      "name": "Balkonlu Deluxe Oda",
+      "units": 1,
+      "maxAdults": 2,
+      "maxChildren": 1,
+      "maxGuests": 3,
+      "nightly": { "dusuk": 4600, "orta": 6800, "yuksek": 9900, "yilbasi": 7800 }
+    },
+    {
+      "id": "PATI",
+      "name": "Bahçe Katı Pati Odası",
+      "units": 1,
+      "maxAdults": 2,
+      "maxChildren": 1,
+      "maxGuests": 3,
+      "nightly": { "dusuk": 5000, "orta": 7400, "yuksek": 10800, "yilbasi": 8500 }
+    },
+    {
+      "id": "SUIT",
+      "name": "Teras Süit",
+      "units": 1,
+      "maxAdults": 3,
+      "maxChildren": 2,
+      "maxGuests": 4,
+      "extraAdultPerNight": 1500,
+      "nightly": { "dusuk": 7200, "orta": 10500, "yuksek": 15500, "yilbasi": 12000 }
+    }
+  ],
+  "bookings": [
+    { "roomTypeId": "PATI", "from": "2026-12-04", "to": "2026-12-08" },
+    { "roomTypeId": "STD", "from": "2026-12-11", "to": "2026-12-14" },
+    { "roomTypeId": "PATI", "from": "2026-12-18", "to": "2026-12-21" },
+    { "roomTypeId": "SUIT", "from": "2026-12-19", "to": "2026-12-22" },
+    { "roomTypeId": "STD", "from": "2026-12-30", "to": "2027-01-02", "units": 2 },
+    { "roomTypeId": "DLX", "from": "2026-12-30", "to": "2027-01-02" },
+    { "roomTypeId": "PATI", "from": "2026-12-29", "to": "2027-01-03" },
+    { "roomTypeId": "SUIT", "from": "2026-12-30", "to": "2027-01-02" },
+    { "roomTypeId": "DLX", "from": "2027-02-12", "to": "2027-02-15" },
+    { "roomTypeId": "PATI", "from": "2027-04-23", "to": "2027-04-26" },
+    { "roomTypeId": "PATI", "from": "2027-07-03", "to": "2027-07-17" },
+    { "roomTypeId": "SUIT", "from": "2027-07-10", "to": "2027-07-24" },
+    { "roomTypeId": "STD", "from": "2027-07-12", "to": "2027-07-19", "units": 2 },
+    { "roomTypeId": "DLX", "from": "2027-07-14", "to": "2027-07-21" },
+    { "roomTypeId": "PATI", "from": "2027-08-01", "to": "2027-08-10" },
+    { "roomTypeId": "DLX", "from": "2027-08-05", "to": "2027-08-12" }
+  ],
+  "outageDates": ["2027-03-03"]
+}

@@ -10,9 +10,21 @@
     </style>
   </head>
   <body>
-    <h1>Demo Otel</h1>
+    <h1 id="name">Widget demo</h1>
     <p>Bu sayfa widget'ı denemek içindir. Sağ alttaki düğmeye tıklayın.</p>
-    <p>Gömme kodu: <code>&lt;script src="/widget.js" data-hotel="demo-otel" async&gt;&lt;/script&gt;</code></p>
-    <script src="/widget.js" data-hotel="demo-otel" async></script>
+    <p>Otel: <a href="?hotel=pati-koy">pati-koy</a> · <a href="?hotel=demo-otel">demo-otel</a></p>
+    <p>Gömme kodu: <code id="embed"></code></p>
+    <script>
+      // Otel kimliği adresten okunur: /demo?hotel=pati-koy
+      var hotel = new URLSearchParams(location.search).get("hotel") || "pati-koy";
+      if (!/^[a-z0-9-]+$/.test(hotel)) hotel = "pati-koy";
+      document.getElementById("name").textContent = "Widget demo: " + hotel;
+      document.getElementById("embed").textContent =
+        '<script src="/widget.js" data-hotel="' + hotel + '" async></' + "script>";
+      var s = document.createElement("script");
+      s.src = "/widget.js";
+      s.dataset.hotel = hotel;
+      document.body.appendChild(s);
+    </script>
   </body>
 </html>

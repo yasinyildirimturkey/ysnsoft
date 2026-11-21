@@ -15,7 +15,7 @@ const log = (msg: string, extra: Record<string, unknown> = {}) =>
 
 const hotels = loadHotels(path.resolve(env.HOTELS_DIR));
 const pmsClients = new Map<string, PmsClient>();
-for (const [id, hotel] of hotels) pmsClients.set(id, createPmsClient(hotel.config));
+for (const [id, hotel] of hotels) pmsClients.set(id, createPmsClient(hotel));
 
 const store = new Store(path.resolve(env.DATA_DIR, "chat.sqlite"));
 const limiter = new RateLimiter();

@@ -17,7 +17,7 @@ Gereken: Node.js 22.13 veya üstü.
 
 ```bash
 npm install
-npm run demo        # API anahtarı gerektirmez; http://localhost:8787/demo
+npm run demo        # API anahtarı gerektirmez; http://localhost:8787/demo?hotel=demo-otel
 ```
 
 `npm run demo` gerçek bir dil modeli yerine kural tabanlı sahte bir model (`LLM_MODE=demo`) ve sahte PMS kullanır.
@@ -32,6 +32,24 @@ npm run build && npm start   # üretim
 ```
 
 Diğer komutlar: `npm test` (Vitest), `npm run typecheck`.
+
+## Örnek otel ve sanal PMS
+
+Gerçek otel ve gerçek API bağlanmadan müşteri testine yakın bir deneme için `hotels/pati-koy` kurgusal bir oteldir:
+5 odalı, deniz manzaralı, evcil hayvan dostu bir butik otel. Denemek için: `http://localhost:8787/demo?hotel=pati-koy`.
+
+| Dosya | İçerik | Gerçek otelde yerine ne gelir |
+|---|---|---|
+| `bilgi-tabani.md` | Odalar, evcil hayvan politikası, kahvaltı, ulaşım, iptal vb. Fiyat içermez | Otelin onayladığı bilgiler |
+| `mock-pms.json` | Oda tipleri ve adetleri, sezonluk gecelik fiyatlar, hafta sonu farkı, çocuk fiyatı, fiyat planları, asgari konaklama, dolu tarihler | Elektra API (`"pms": {"type": "elektra", ...}`) |
+| `hotel.json` | Otel ayarları; `"pms": {"type": "mock", "dataFile": "mock-pms.json"}` | Aynı dosya, gerçek değerlerle |
+
+Sanal PMS (`src/pms/sample.ts`) fiyatı gece gece hesaplar (sezon, cuma-cumartesi farkı, ek yetişkin, ücretli çocuk),
+kapasiteye uymayan odaları eler, `bookings` listesine göre kalan oda sayısını bulur ve asgari konaklamayı uygular.
+`outageDates` içindeki bir tarihe giriş sorgulanırsa arıza taklit eder (örnekte 2027-03-03).
+
+Asistanın söylediği her fiyat bu dosyadan hesaplanan değerdir; bilgi tabanında fiyat yoktur ve bir test bunu denetler.
+`dataFile` verilmezse `demo-otel`deki gibi yerleşik basit örnek veri kullanılır.
 
 ## Siteye gömme
 
@@ -130,14 +148,14 @@ src/
   config/              ortam değişkenleri ve hotel.json şeması
   chat/                sohbet çekirdeği (araç döngüsü) ve sistem promptu
   tools/               musaitlik_sorgula, rezervasyon_linki_uret, insana_devret
-  pms/                 PmsClient arayüzü, ElektraClient, MockPmsClient
+  pms/                 PmsClient arayüzü, ElektraClient, sanal PMS (sample.ts), MockPmsClient
   llm/                 Claude istemcisi ve anahtarsız demo modeli
   channels/web/        HTTP + SSE adaptörü
   handoff/             devir e-postası
   store/               SQLite: oturumlar, mesajlar, devir kayıtları
   guard/               hız sınırı
 widget/                gömülebilir widget kaynağı (public/widget.js olarak derlenir)
-hotels/<otel-id>/      hotel.json + bilgi-tabani.md
+hotels/<otel-id>/      hotel.json + bilgi-tabani.md (+ mock-pms.json)
 test/
 ```
 

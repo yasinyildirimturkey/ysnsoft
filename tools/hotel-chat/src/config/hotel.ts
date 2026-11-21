@@ -5,7 +5,11 @@ import { z } from "zod";
 const Localized = z.record(z.string(), z.string());
 
 const PmsSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("mock") }),
+  z.object({
+    type: z.literal("mock"),
+    /** Otel klasöründeki sanal PMS verisi (oda tipleri, sezon fiyatları, doluluk). Yoksa yerleşik örnek veri kullanılır. */
+    dataFile: z.string().optional(),
+  }),
   z.object({
     type: z.literal("elektra"),
     /** Elektra'daki sayısal otel kimliği (URL'deki /hotel/{id}). */
@@ -77,6 +81,8 @@ export type HotelConfig = z.infer<typeof HotelConfigSchema>;
 export type ElektraPmsConfig = Extract<HotelConfig["pms"], { type: "elektra" }>;
 
 export interface Hotel {
+  /** Otel klasörünün yolu; klasördeki ek dosyalar (ör. sanal PMS verisi) buna göre çözülür. */
+  dir: string;
   config: HotelConfig;
   knowledgeBase: string;
 }
@@ -96,7 +102,7 @@ export function loadHotel(dir: string): Hotel {
   }
   const knowledgeBase = fs.readFileSync(path.join(dir, config.knowledgeBaseFile), "utf8").trim();
   if (!knowledgeBase) throw new Error(`${config.id}: bilgi tabanı dosyası boş`);
-  return { config, knowledgeBase };
+  return { dir, config, knowledgeBase };
 }
 
 /** hotels/ altındaki her klasörü bir otel olarak yükler. Yeni otel = yeni klasör. */

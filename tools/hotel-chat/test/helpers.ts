@@ -40,7 +40,7 @@ export function testHotel(overrides: Record<string, unknown> = {}): Hotel {
     },
     ...overrides,
   });
-  return { config, knowledgeBase: "Giriş saati 14:00." };
+  return { dir: ".", config, knowledgeBase: "Giriş saati 14:00." };
 }
 
 export const text = (t: string): LlmTurn => ({
