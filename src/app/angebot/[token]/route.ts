@@ -26,7 +26,7 @@ async function view(token: string, done = false, error = '') {
   if (!found) return notFound();
   const { biz, demoOpen } = found;
   if (biz.offer_setup == null) {
-    return page('Angebot', `<div class="card"><h1>${esc(biz.name)}</h1><p>Für Sie liegt derzeit kein Angebot vor. Sprechen Sie uns gern an.</p></div>`);
+    return page('Angebot', `<div class="card"><h1>${esc(biz.name)}</h1><p>Für Sie liegt derzeit kein Angebot vor. Sprechen Sie uns gern an.</p></div>`, 200, found.brand);
   }
   const pr = (await runWebscout<{ pricing: Pricing }>(['pricing'])).pricing;
   const pkg = pr.packages.find((p) => p.key === biz.offer_package);
@@ -35,7 +35,7 @@ async function view(token: string, done = false, error = '') {
   const addons = (pr.addons ?? []).filter((a) => addonKeys.includes(a.key));
   const sector = (pr.sectors ?? []).find((s) => s.key === biz.category);
   const priceOf = (a: { setup: number; monthly: number }) => [a.setup ? `${eur(a.setup)} einmalig` : '', a.monthly ? `${eur(a.monthly)} / Monat` : ''].filter(Boolean).join(' + ');
-  const c = contact();
+  const c = contact(found.brand);
   const body = `
 <div class="card">
   <p class="mut">Ihr Angebot</p>
@@ -68,7 +68,7 @@ ${done ? `<div class="card ok"><b>Vielen Dank!</b> Ihre Nachricht ist bei uns an
   <p class="mut">Ihre Angaben verwenden wir nur, um Sie zu diesem Angebot zu kontaktieren.</p>
 </form>`}
 <div class="card"><h2>Fragen?</h2><div class="row">${c.tel ? `<a class="btn2" href="tel:${esc(c.tel)}">Anrufen</a>` : ''}<a class="btn2" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(`Angebot ${biz.name}`)}">E-Mail</a></div></div>`;
-  return page(`Angebot ${biz.name}`, body);
+  return page(`Angebot ${biz.name}`, body, 200, found.brand);
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {

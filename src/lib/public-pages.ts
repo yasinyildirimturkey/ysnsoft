@@ -5,7 +5,11 @@
  * arama motorlarına kapalıdır. Sayfalarda betik yoktur; içerik dışarıdan toplanmış metin içerebileceği için
  * katı CSP ile sunulur (form yalnız aynı adrese gönderilebilir).
  */
+import { partnerFor, type Partner } from '@/lib/partners';
 import { draftBusinessId, readWebscoutDraft, runWebscout } from '@/lib/webscout';
+
+/** Ortak (white-label) markası; null = YSNSOFT */
+export type Brand = Partner | null;
 
 export const PUBLIC_HEADERS = {
   'X-Robots-Tag': 'noindex, nofollow, noarchive',
@@ -27,25 +31,31 @@ export interface PublicBiz {
 }
 
 /** Kod → işletme (taslak süresi dolmuş olsa da kod geçerlidir; demo bağlantısı ayrıca denetlenir). */
-export async function bizForToken(token: string): Promise<{ biz: PublicBiz; demoOpen: boolean } | null> {
+export async function bizForToken(token: string): Promise<{ biz: PublicBiz; demoOpen: boolean; brand: Brand } | null> {
   if (!TOKEN_RE.test(token)) return null;
   const id = draftBusinessId(token);
   if (!id) return null;
   const res = await runWebscout<{ rows?: PublicBiz[] }>(['query', '--id', String(id), '--min-score', '0', '--limit', '1']);
   const biz = res.rows?.[0];
   if (!biz || biz.status === 'do_not_contact') return null;
-  return { biz, demoOpen: readWebscoutDraft(token).state === 'ok' };
+  return { biz, demoOpen: readWebscoutDraft(token).state === 'ok', brand: partnerFor(biz.id) };
 }
 
-export function contact() {
-  const phone = process.env.COMPANY_PHONE || '';
-  const email = process.env.COMPANY_INFO_EMAIL || 'info@ysnsoft.com';
+export function contact(brand: Brand = null) {
+  const phone = brand ? brand.phone : process.env.COMPANY_PHONE || '';
+  const email = (brand && brand.email) || process.env.COMPANY_INFO_EMAIL || 'info@ysnsoft.com';
   return { phone, email, tel: phone.replace(/[^+\d]/g, '') };
 }
 
-export function page(title: string, body: string, status = 200) {
+/** Tanıtım sayfaları için: arama motoruna açık mı, ek <head> (açıklama, canonical, JSON-LD), alt bilgi bağlantıları */
+export interface PageOpts { index?: boolean; head?: string; footer?: string }
+
+export function page(title: string, body: string, status = 200, brand: Brand = null, opts: PageOpts = {}) {
+  const bName = brand ? brand.name : 'YSNSOFT';
+  const bTag = brand ? brand.tagline : 'Websites für lokale Betriebe';
+  const initials = brand ? bName.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 3).toUpperCase() || 'W' : 'YSN';
   const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><title>${esc(title)} · YSNSOFT</title>
+${opts.index ? '' : '<meta name="robots" content="noindex, nofollow">'}${opts.head ?? ''}<title>${esc(title)} · ${esc(bName)}</title>
 <style>
 :root{--a:#0071e3;--t:#1d1d1f;--m:#6e6e73;--b:#f5f5f7}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--b);color:var(--t);line-height:1.55}
@@ -63,11 +73,13 @@ input,textarea,select{width:100%;font:inherit;padding:10px 12px;border:1px solid
 .price{font-size:1.8rem;font-weight:700}.ok{background:#e8f8ee;color:#126b35;border-radius:12px;padding:14px}
 footer{text-align:center;color:var(--m);font-size:.8rem;margin-top:24px}
 </style></head><body><div class="wrap">
-<header><div class="logo">YSN</div><div><b>YSNSOFT</b><div class="mut">Websites für lokale Betriebe</div></div></header>
+<header><div class="logo">${esc(initials)}</div><div><b>${esc(bName)}</b>${bTag ? `<div class="mut">${esc(bTag)}</div>` : ''}</div></header>
 ${body}
-<footer>YSNSOFT · Diese Seite ist nur über Ihren persönlichen Link erreichbar.</footer>
+<footer>${esc(bName)} · ${opts.footer ?? 'Diese Seite ist nur über Ihren persönlichen Link erreichbar.'}</footer>
 </div></body></html>`;
-  return new Response(html, { status, headers: { ...PUBLIC_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+  const headers: Record<string, string> = { ...PUBLIC_HEADERS, 'Content-Type': 'text/html; charset=utf-8' };
+  if (opts.index) { delete headers['X-Robots-Tag']; headers['Cache-Control'] = 'public, max-age=600'; }
+  return new Response(html, { status, headers });
 }
 
 export const notFound = () => page('Nicht gefunden', `<div class="card"><h1>Seite nicht gefunden</h1><p class="mut">Unter dieser Adresse gibt es keine Seite. Bitte prüfen Sie den Link.</p></div>`, 404);

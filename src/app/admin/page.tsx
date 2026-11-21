@@ -17,6 +17,8 @@ import { addSite, createInvoice, fetchAppointments, fetchInvoices, fetchLeads, f
 import ProspectsPanel from '@/components/admin/ProspectsPanel';
 import SystemMailPanel from '@/components/admin/SystemMailPanel';
 import TestimonialsPanel from '@/components/admin/TestimonialsPanel';
+import SalesRegionsPanel from '@/components/admin/SalesRegionsPanel';
+import PartnersPanel from '@/components/admin/PartnersPanel';
 import ProposalDocument from '@/components/admin/ProposalDocument';
 import NotificationBell from '@/components/admin/NotificationBell';
 import UsersPanel from '@/components/admin/UsersPanel';
@@ -2540,6 +2542,12 @@ YSN_ALLOWED_ORIGINS=http://localhost:3000,https://ysnsoft.com`}
 
             {/* Müşteri yorumları: müşterinin kendi yazdığı ve izin verdiği yorumların onayı */}
             <TestimonialsPanel notify={notify} />
+
+            {/* Satış bölgeleri: her saha kullanıcısına şehir / posta kodu ataması */}
+            <SalesRegionsPanel notify={notify} />
+
+            {/* Ortaklar (white-label): ortak ajansların adı/iletişimi müşteri sayfalarında */}
+            <PartnersPanel notify={notify} />
 
           </div>
         )}

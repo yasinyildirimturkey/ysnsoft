@@ -18,6 +18,7 @@ import DraftChecklist from './DraftChecklist';
 import CustomerCare from './CustomerCare';
 import CustomerLinks from './CustomerLinks';
 import DemoTranslate from './DemoTranslate';
+import PartnerSelect from './PartnerSelect';
 import TextCorrections from './TextCorrections';
 import OfferBox, { usePricing } from './OfferBox';
 import WhatsAppDemo from './WhatsAppDemo';
@@ -315,6 +316,7 @@ export default function ProspectPage() {
                 <section className={card} aria-labelledby="h-offer">
                   <h2 id="h-offer" className="text-sm font-semibold text-[#1D1D1F] mb-3">Teklif</h2>
                   <OfferBox key={`o${p.id}`} prospect={p} pricing={pricing} onSave={saveOffer} />
+                  <PartnerSelect key={`pt${p.id}`} id={p.id} notify={notify} />
                   {p.status === 'won' && <CustomerCare key={`c${p.id}`} id={p.id} token={p.draft_token ?? null} hasGbp={offerAddons(p).includes('gbp')} notify={notify} />}
                 </section>
 
@@ -347,7 +349,7 @@ export default function ProspectPage() {
                             className="apple-pill-btn-secondary px-3 py-1.5 text-xs font-semibold">Yayın paketi (zip)</a>
                         )}
                       </div>
-                      <CustomerLinks token={p.draft_token} name={p.name} status={p.status} hasOffer={p.offer_setup != null} notify={notify} />
+                      <CustomerLinks id={p.id} token={p.draft_token} name={p.name} status={p.status} hasOffer={p.offer_setup != null} notify={notify} />
                       <div className="mt-2"><DemoTranslate key={`t${p.id}`} id={p.id} token={p.draft_token} notify={notify} /></div>
                       <TextCorrections key={`k${p.id}`} id={p.id} notify={notify} />
                       {p.draft_quality && <DraftChecklist quality={p.draft_quality} />}

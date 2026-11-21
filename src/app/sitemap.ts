@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next';
+import { CITIES, landingIndexable, SECTORS } from '@/lib/landing';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://ysnsoft.com';
@@ -59,5 +60,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.70,
     },
+    // Almanca şehir + sektör sayfaları: yalnız Impressum/Datenschutz tanımlanıp indeksleme açılınca
+    ...(landingIndexable() ? [
+      `${baseUrl}/de/webdesign`,
+      ...SECTORS.map((s) => `${baseUrl}/de/webdesign/${s.slug}`),
+      ...SECTORS.flatMap((s) => CITIES.map((c) => `${baseUrl}/de/webdesign/${s.slug}/${c.slug}`)),
+    ].map((url) => ({ url, lastModified: currentDate, changeFrequency: 'monthly' as const, priority: 0.6 })) : []),
   ];
 }

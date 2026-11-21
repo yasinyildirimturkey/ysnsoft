@@ -29,7 +29,7 @@ async function view(token: string, done = false, error = '') {
   <label class="chk"><input type="checkbox" name="consent" value="1" required><span>Ich bin damit einverstanden, dass YSNSOFT diese Bewertung zusammen mit dem Namen meines Betriebs auf ysnsoft.com veröffentlicht. Ich kann die Einwilligung jederzeit per E-Mail widerrufen.</span></label>
   <p style="margin-top:14px"><button class="btn" type="submit">Bewertung senden</button></p>
 </form>`;
-  return page(`Bewertung ${biz.name}`, body);
+  return page(`Bewertung ${biz.name}`, body, 200, found.brand);
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {

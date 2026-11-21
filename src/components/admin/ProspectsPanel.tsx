@@ -31,6 +31,7 @@ import {
   type Job, type Prospect,
 } from './prospect-shared';
 import ProspectFunnel from './ProspectFunnel';
+import RegionReport from './RegionReport';
 import ProspectMap from './ProspectMap';
 
 /** "dün 21:40", "bugün 09:12", "12.11. 18:05" */
@@ -554,6 +555,7 @@ export default function ProspectsPanel({ notify }: { notify: (message: string) =
 
       {/* 2b) Satış hunisi + yapılacaklar */}
       {summary && <ProspectFunnel query={regionQuery().toString()} stamp={summary} onOpen={openProspect} />}
+      {summary && <RegionReport />}
 
       {/* 3) Süzgeçler */}
       <div className="apple-card p-4 sm:p-5 bg-white border border-black/[0.07] flex flex-col lg:flex-row lg:items-center justify-between gap-4">

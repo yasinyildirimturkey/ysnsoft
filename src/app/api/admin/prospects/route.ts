@@ -3,6 +3,10 @@ import path from 'node:path';
 import { recordWonInvoice } from '@/lib/won-invoice';
 import { NextResponse } from 'next/server';
 import { getAdminSession, requireRole } from '@/lib/admin-auth';
+import { regionArgs as salesRegionArgs, regionOf } from '@/lib/sales-regions';
+
+/** Ziyaret kaydı ve plan sahibi için kullanıcı anahtarı (ziyaret geçmişindeki by_user ile aynı) */
+const userKey = (u: { name?: string; email: string }) => String(u.name || u.email).slice(0, 120);
 import {
   deleteWebscoutUpload,
   listWebscoutUploads,
@@ -142,7 +146,10 @@ export async function GET(request: Request) {
     if (view === 'day') {
       const day = String(searchParams.get('date') ?? '');
       if (!DAY_RE.test(day)) return fail('Geçersiz tarih.');
-      const res = await runWebscout(['query', '--visit-day', day, '--kind', 'all', '--limit', '60']);
+      // Her satışçı kendi gününü görür (iki kişi çalışınca listeler karışmaz); ?all=1 tüm ekibin günü
+      const me = getAdminSession(request);
+      const mine = me && searchParams.get('all') !== '1' ? ['--visit-by-b64', b64(userKey(me))] : [];
+      const res = await runWebscout(['query', '--visit-day', day, ...mine, '--kind', 'all', '--limit', '60']);
       return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
     }
 
@@ -166,13 +173,23 @@ export async function GET(request: Request) {
       const day = searchParams.get('date') ?? '';
       if (!DAY_RE.test(day)) return fail('Geçersiz tarih.');
       const city = searchParams.get('city');
-      const res = await runWebscout(['suggest-day', '--date', day, ...(city && city.length <= 80 && !city.startsWith('--') ? ['--city', city] : [])]);
+      // Satışçının bölgesi varsa öneri yalnız oradan seçilir
+      const me = getAdminSession(request);
+      const res = await runWebscout(['suggest-day', '--date', day, ...(city && city.length <= 80 && !city.startsWith('--') ? ['--city', city] : []), ...salesRegionArgs(me ? regionOf(me.id) : null)]);
       return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
     }
 
     // Teklif paketleri ve fiyatlar
     if (view === 'pricing') {
       const res = await runWebscout(['pricing']);
+      return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
+    }
+
+    // Bölge raporu: şehirler; ?city= verilirse posta kodu (by=suburb) ya da sektör (by=category) kırılımı
+    if (view === 'regions') {
+      const city = searchParams.get('city');
+      const by = searchParams.get('by') === 'category' ? 'category' : 'suburb';
+      const res = await runWebscout(['regions', ...(city && city.length <= 80 && !city.startsWith('--') ? ['--city', city, '--by', by] : [])]);
       return NextResponse.json({ success: true, available: true, ...res }, { headers: NO_STORE });
     }
 
@@ -351,7 +368,7 @@ export async function POST(request: Request) {
         args.push('--next', body.next);
       }
       const who = getAdminSession(request);
-      if (who) args.push('--user-b64', b64(String(who.name || who.email).slice(0, 120)));
+      if (who) args.push('--user-b64', b64(userKey(who)));
       const res = await runWebscout<{ status?: string }>(args);
       // Sahada "Anlaştık": Muhasebe'de beklemede tahsilat kaydı (teklif tutarıyla; aynı aday için bir kez)
       const invoice = body.outcome === 'won' || res.status === 'won' ? await recordWonInvoice(id) : undefined;
@@ -365,7 +382,8 @@ export async function POST(request: Request) {
       const ids = Array.isArray(body.ids) ? body.ids.map(Number) : [];
       if (ids.length > 30 || ids.some((n: number) => !Number.isInteger(n) || n <= 0)) return fail('Geçersiz aday listesi.');
       // Boş liste = o günün planını temizle
-      const res = await runWebscout(['plan-visits', '--date', day, ...(ids.length ? ['--ids', ids.join(',')] : [])]);
+      const me = getAdminSession(request);
+      const res = await runWebscout(['plan-visits', '--date', day, ...(ids.length ? ['--ids', ids.join(',')] : []), ...(me ? ['--by-b64', b64(userKey(me))] : [])]);
       return NextResponse.json({ success: true, ...res }, { headers: NO_STORE });
     }
 

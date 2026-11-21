@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Otel Asistanı Paneli</title>
+    <style>
+      :root { --c: #1f4e79; --bg: #f5f6f8; --line: #dfe2e6; --mut: #5c6570; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1d21; background: var(--bg); }
+      header { background: var(--c); color: #fff; padding: 12px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      header h1 { font-size: 16px; margin: 0; flex: 1; }
+      select, input, textarea, button { font: inherit; }
+      select, input[type=password] { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
+      button { padding: 7px 14px; border: 0; border-radius: 6px; background: var(--c); color: #fff; cursor: pointer; }
+      button.ghost { background: transparent; color: inherit; border: 1px solid currentColor; }
+      button:disabled { opacity: .5; cursor: default; }
+      main { max-width: 1080px; margin: 0 auto; padding: 16px 20px 60px; }
+      nav { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+      nav button { background: transparent; color: var(--mut); border-radius: 6px 6px 0 0; border-bottom: 2px solid transparent; }
+      nav button[aria-selected=true] { color: var(--c); border-bottom-color: var(--c); font-weight: 600; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+      .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+      .card .n { font-size: 26px; font-weight: 650; }
+      .card .l { color: var(--mut); font-size: 12.5px; }
+      table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+      th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { background: #eef0f3; font-size: 12.5px; color: var(--mut); font-weight: 600; }
+      tr:last-child td { border-bottom: 0; }
+      tr.click { cursor: pointer; } tr.click:hover { background: #f3f6fa; }
+      .mut { color: var(--mut); } .small { font-size: 12.5px; }
+      .tx { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+      .tx div { max-width: 80%; padding: 8px 11px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+      .tx .guest { align-self: flex-end; background: var(--c); color: #fff; }
+      .tx .assistant { align-self: flex-start; background: #fff; border: 1px solid var(--line); }
+      .tx .tool { align-self: flex-start; background: #fff7e0; border: 1px dashed #d9b84a; font: 12px/1.4 ui-monospace, Consolas, monospace; }
+      textarea { width: 100%; min-height: 460px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; font: 13px/1.5 ui-monospace, Consolas, monospace; }
+      .row { display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+      .msg { padding: 8px 12px; border-radius: 8px; background: #e7f4ea; color: #1c5b2c; }
+      .msg.err { background: #fbe9e9; color: #8a1c1c; }
+      #login { max-width: 360px; margin: 80px auto; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+      #login input { width: 100%; margin: 10px 0; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <form id="login">
+      <h2 style="margin-top:0">Otel Asistanı Paneli</h2>
+      <label for="token">Panel parolası</label>
+      <input id="token" type="password" autocomplete="current-password" required />
+      <button type="submit">Giriş</button>
+      <p id="loginErr" class="msg err" hidden></p>
+    </form>
+
+    <div id="app" hidden>
+      <header>
+        <h1>Otel Asistanı Paneli</h1>
+        <label>Otel <select id="hotel"></select></label>
+        <button id="logout" class="ghost" type="button">Çıkış</button>
+      </header>
+      <main>
+        <nav id="tabs" role="tablist"></nav>
+        <section id="view"></section>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+        var KEY = "hotel-chat-admin";
+        var token = sessionStorage.getItem(KEY) || "";
+        var hotelId = "";
+        var tab = "ozet";
+        var $ = function (id) { return document.getElementById(id); };
+        var TABS = [["ozet", "Özet"], ["sohbetler", "Sohbetler"], ["devirler", "Devir talepleri"], ["eksikler", "Cevaplanamayan sorular"], ["bilgi", "Bilgi bankası"]];
+
+        // Metin her zaman textContent ile basılır; misafirin yazdığı hiçbir şey HTML olarak yorumlanmaz.
+        function el(tag, props, children) {
+          var n = document.createElement(tag);
+          for (var k in props || {}) { if (k === "text") n.textContent = props[k]; else if (k === "cls") n.className = props[k]; else n[k] = props[k]; }
+          (children || []).forEach(function (c) { n.append(c); });
+          return n;
+        }
+        function when(ms) { return new Date(ms).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }); }
+        function num(n) { return Number(n || 0).toLocaleString("tr-TR"); }
+
+        function api(path, opts) {
+          opts = opts || {};
+          opts.headers = Object.assign({ Authorization: "Bearer " + token }, opts.headers || {});
+          return fetch("/admin/api" + path, opts).then(function (res) {
+            if (res.status === 401 || res.status === 429) { logout(res.status === 429 ? "Çok fazla deneme. Biraz bekleyin." : "Parola hatalı."); throw new Error("auth"); }
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          });
+        }
+        function logout(message) {
+          token = ""; sessionStorage.removeItem(KEY);
+          $("app").hidden = true; $("login").hidden = false;
+          $("loginErr").hidden = !message; $("loginErr").textContent = message || "";
+        }
+        function table(headers, rows, onClick) {
+          if (!rows.length) return el("p", { cls: "mut", text: "Kayıt yok." });
+          var tbody = el("tbody");
+          rows.forEach(function (r) {
+            var tr = el("tr", {}, r.cells.map(function (c) { return el("td", { text: c }); }));
+            if (onClick) { tr.className = "click"; tr.tabIndex = 0; tr.onclick = function () { onClick(r); }; tr.onkeydown = function (e) { if (e.key === "Enter") onClick(r); }; }
+            tbody.append(tr);
+          });
+          return el("table", {}, [el("thead", {}, [el("tr", {}, headers.map(function (h) { return el("th", { text: h }); }))]), tbody]);
+        }
+
+        var VIEWS = {
+          ozet: function (view) {
+            return api("/hotels/" + hotelId + "/stats?days=30").then(function (s) {
+              var click = s.linksCreated ? Math.round((s.linksClicked / s.linksCreated) * 100) + "%" : "—";
+              var items = [
+                [s.sessions, "Sohbet (son 30 gün)"], [s.guestMessages, "Misafir mesajı"], [s.whatsappSessions, "WhatsApp sohbeti"],
+                [s.availabilityQueries, "Müsaitlik sorgusu"], [s.linksCreated, "Verilen rezervasyon linki"], [s.linksClicked, "Tıklanan link (web)"],
+                [click, "Link tıklama oranı"], [s.handoffs, "Devir talebi"], [s.unanswered, "Cevaplanamayan soru"]
+              ];
+              view.append(el("div", { cls: "cards" }, items.map(function (i) {
+                return el("div", { cls: "card" }, [el("div", { cls: "n", text: typeof i[0] === "number" ? num(i[0]) : i[0] }), el("div", { cls: "l", text: i[1] })]);
+              })));
+              var u = s.usage;
+              var line = u.month + " kullanımı: " + num(u.totalTokens) + " token (" + num(u.turns) + " model çağrısı)";
+              if (u.monthlyTokenLimit) line += " / sınır " + num(u.monthlyTokenLimit);
+              if (u.estimatedCostUsd !== null) line += " · tahmini " + u.estimatedCostUsd.toFixed(3) + " USD";
+              view.append(el("p", { cls: "mut", text: line }));
+              view.append(el("p", { cls: "mut small", text: "Link tıklaması yalnızca web widget'ında ölçülür. Tamamlanan rezervasyon sayısı burada görünmez; o bilgi rezervasyon sistemindedir." }));
+            });
+          },
+          sohbetler: function (view) {
+            return api("/hotels/" + hotelId + "/sessions").then(function (list) {
+              var detail = el("div");
+              view.append(table(["Son mesaj", "Kanal", "Mesaj", "İlk soru"], list.map(function (s) {
+                return { id: s.id, cells: [when(s.lastAt), s.channel, String(s.turns), s.preview] };
+              }), function (row) {
+                api("/hotels/" + hotelId + "/sessions/" + row.id).then(function (s) {
+                  detail.textContent = "";
+                  detail.append(el("h3", { text: "Sohbet " + s.id.slice(0, 8) + " (" + s.channel + ")" }));
+                  detail.append(el("div", { cls: "tx" }, s.transcript.map(function (l) { return el("div", { cls: l.role, text: l.text }); })));
+                  detail.scrollIntoView({ behavior: "smooth" });
+                });
+              }), detail);
+            });
+          },
+          devirler: function (view) {
+            return api("/hotels/" + hotelId + "/handoffs").then(function (list) {
+              view.append(table(["Zaman", "Ad", "İletişim", "Talep özeti", "Not"], list.map(function (h) {
+                return { cells: [when(h.consentAt), h.name, h.contact, h.summary, h.note || ""] };
+              })));
+            });
+          },
+          eksikler: function (view) {
+            return api("/hotels/" + hotelId + "/unanswered").then(function (list) {
+              view.append(el("p", { cls: "mut", text: "Asistanın bilgi bankasında bulamadığı için cevaplayamadığı sorular. Bilgi bankasına ekledikçe bu liste kısalır." }));
+              view.append(table(["Zaman", "Soru"], list.map(function (q) { return { cells: [when(q.createdAt), q.question] }; })));
+            });
+          },
+          bilgi: function (view) {
+            return api("/hotels/" + hotelId + "/knowledge-base").then(function (kb) {
+              var area = el("textarea", { value: kb.content, spellcheck: false });
+              area.setAttribute("aria-label", "Bilgi bankası");
+              var save = el("button", { text: "Kaydet", type: "button" });
+              var note = el("span", { cls: "mut small", text: "Kaydedince sonraki mesajdan itibaren geçerli olur. Önceki hali sunucuda yedeklenir. Fiyat yazmayın; fiyatlar rezervasyon sisteminden gelir." });
+              var status = el("p", { hidden: true });
+              save.onclick = function () {
+                save.disabled = true;
+                api("/hotels/" + hotelId + "/knowledge-base", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: area.value }) })
+                  .then(function () { status.className = "msg"; status.textContent = "Kaydedildi."; })
+                  .catch(function (e) { if (e.message !== "auth") { status.className = "msg err"; status.textContent = "Kaydedilemedi (" + e.message + ")."; } })
+                  .then(function () { status.hidden = false; save.disabled = false; });
+              };
+              view.append(area, el("div", { cls: "row" }, [save, note]), status);
+            });
+          }
+        };
+
+        function render() {
+          var nav = $("tabs"); nav.textContent = "";
+          TABS.forEach(function (t) {
+            var b = el("button", { text: t[1], type: "button" });
+            b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(t[0] === tab));
+            b.onclick = function () { tab = t[0]; render(); };
+            nav.append(b);
+          });
+          var view = $("view"); view.textContent = "";
+          VIEWS[tab](view).catch(function (e) { if (e.message !== "auth") view.append(el("p", { cls: "msg err", text: "Yüklenemedi (" + e.message + ")." })); });
+        }
+
+        function start() {
+          api("/hotels").then(function (list) {
+            $("login").hidden = true; $("app").hidden = false;
+            var sel = $("hotel"); sel.textContent = "";
+            list.forEach(function (h) { sel.append(el("option", { value: h.id, text: h.name })); });
+            hotelId = list[0] ? list[0].id : "";
+            sel.onchange = function () { hotelId = sel.value; render(); };
+            if (hotelId) render();
+          }).catch(function () {});
+        }
+
+        $("login").addEventListener("submit", function (e) {
+          e.preventDefault();
+          token = $("token").value; $("token").value = "";
+          sessionStorage.setItem(KEY, token);
+          start();
+        });
+        $("logout").onclick = function () { logout(""); };
+        if (token) start();
+      })();
+    </script>
+  </body>
+</html>
