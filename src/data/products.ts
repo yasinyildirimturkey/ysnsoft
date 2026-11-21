@@ -22,6 +22,10 @@ export interface Product {
   secondaryUrl?: string;
   secondaryDomain?: string;
   realCodePath?: string;
+  /** Varsa "Detayları Gör" bu adrese gider (ürünün kendi tanıtım sayfası). */
+  infoUrl?: string;
+  /** Gerçek bir müşteri sitesi değil, denenebilir örnek kurulum. "Canlı siteler" bölümünde listelenmez. */
+  isDemo?: boolean;
   /** Eskiden ölçülmeyen "kullanıcı/uptime/ciro" rakamları vardı; kaldırıldı. Eski kayıtlarla uyum için isteğe bağlı. */
   liveStats?: {
     users?: string;
@@ -251,6 +255,35 @@ export const PRODUCTS: Product[] = [
     secondaryUrl: 'https://www.armbodrum.com',
     secondaryDomain: 'armbodrum.com',
     realCodePath: 'D:\\web\\2026yy'
+  },
+  {
+    // Örnek kurulum: Pati Koy kurgusal bir oteldir, müşteri sitesi değildir. Rozet ve metinler bunu söyler.
+    id: 'otel-asistani',
+    name: 'Otel Asistanı',
+    tagline: 'Otel Web Sitesi ve WhatsApp için 7/24 Yapay Zekâ Resepsiyon',
+    category: 'tourism',
+    categoryLabel: 'Turizm & Rezervasyon',
+    badge: 'Canlı Demo',
+    shortDesc: 'Misafirin sorularını kendi dilinde yanıtlayan, fiyat ve müsaitliği rezervasyon sisteminden alan ve rezervasyon sayfasına yönlendiren asistan. Kurgusal bir örnek otel üzerinde hemen deneyebilirsiniz.',
+    longDesc: 'Otel Asistanı, otelin onayladığı bilgi bankasından cevap verir; fiyat ve müsaitliği kendisi üretmez, rezervasyon sisteminden aktarır. Rezervasyon oluşturmaz ve kart bilgisi istemez; misafiri otelin kendi rezervasyon sayfasına yönlendirir, cevaplayamadığı talebi açık rızayla ekibe iletir. Demo, kurgusal Pati Koy oteli ve örnek fiyat verisiyle çalışır.',
+    metrics: [
+      { label: 'Tür', value: 'Misafir asistanı' },
+      { label: 'Kanal', value: 'Web & WhatsApp' },
+      { label: 'Diller', value: 'TR / EN / DE / RU / AR' }
+    ],
+    features: [
+      'Tarih ve Kişi Sayısına Göre Canlı Fiyat, Fotoğraflı Oda Kartları',
+      'Yalnız Otelin Bilgi Bankasından Cevap; Bilmediğini Ekibe Devreder',
+      'Mevcut Siteye Tek Satır Kodla Eklenir, 5 Dilde Arayüz',
+      'Yönetim Paneli: Sohbetler, Cevaplanamayan Sorular, Haftalık Rapor'
+    ],
+    techStack: ['Node.js', 'TypeScript', 'Claude API', 'SQLite'],
+    accentColor: '#0F6E6E',
+    previewType: 'tourism',
+    liveUrl: 'https://patiotel.ysnsoft.com',
+    displayDomain: 'patiotel.ysnsoft.com',
+    infoUrl: 'https://patiotel.ysnsoft.com/oteller-icin',
+    isDemo: true
   }
 ];
 

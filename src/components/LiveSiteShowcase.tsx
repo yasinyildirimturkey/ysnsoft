@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 
 export default function LiveSiteShowcase() {
-  const [allProducts, setAllProducts] = useState<Product[]>(PRODUCTS);
+  // Örnek kurulumlar (isDemo) gerçek müşteri sitesi olmadığı için bu bölümde gösterilmez.
+  const [allProducts, setAllProducts] = useState<Product[]>(() => PRODUCTS.filter(p => !p.isDemo));
   const [selectedProduct, setSelectedProduct] = useState<Product>(PRODUCTS[0]);
   const [deviceView, setDeviceView] = useState<'desktop' | 'mobile'>('desktop');
   const [viewMode, setViewMode] = useState<'interactive' | 'proxy'>('interactive');
