@@ -30,6 +30,15 @@ const HandoffBody = z.object({
   consent: z.literal(true),
   language: Lang,
 });
+const ContactBody = z.object({
+  hotelId: z.string().max(64),
+  name: z.string().trim().min(2).max(100),
+  contact: z.string().trim().min(5).max(120),
+  message: z.string().trim().min(5).max(1500),
+  consent: z.literal(true),
+  /** Tuzak alan: insanlar görmez, botlar doldurur. */
+  website: z.string().max(200).optional(),
+});
 const SessionBody = z.object({ hotelId: z.string().max(64), sessionId: z.string().uuid() });
 const ClickBody = SessionBody.extend({ url: z.string().url().max(2000) });
 
@@ -180,6 +189,31 @@ export function registerWebChannel(app: FastifyInstance, deps: WebDeps): void {
     });
     if (outcome === "limit") return reply.code(429).send({ error: "handoff_limit" });
     if (outcome === "mail_failed") return reply.code(502).send({ error: "mail_failed" });
+    return { ok: true };
+  });
+
+  // Web sitesindeki iletişim formu. Sohbet olmadan gelen talep de aynı yoldan resepsiyona gider
+  // ve panelde "Devir talepleri" altında görünür.
+  app.post("/api/contact", async (req, reply) => {
+    const parsed = ContactBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "bad_request" });
+    const body = parsed.data;
+    const hotel = resolveHotel(req, reply, body.hotelId);
+    if (!hotel) return;
+    // Gizli alan doluysa gönderen bir bottur; başarılı gibi yanıtlanır ama hiçbir şey yapılmaz.
+    if (body.website) return { ok: true };
+    const ip = clientIp(req.ip);
+    if (!ipAllowed(req.ip) || !limiter.take(`contact:d:${ip}`, 5, DAY)) {
+      return reply.code(429).send({ error: "rate_limited" });
+    }
+    const session = store.createSession(hotel.config.id, "form");
+    const outcome = await completeHandoff(
+      deps,
+      hotel,
+      { ...session, pendingHandoff: `İletişim formu: ${body.message}` },
+      { name: body.name, contact: body.contact, note: null },
+    );
+    if (outcome !== "sent") return reply.code(502).send({ error: "mail_failed" });
     return { ok: true };
   });
 

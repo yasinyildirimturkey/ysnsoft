@@ -23,24 +23,28 @@ const NOTICES: Record<NoticeCode, Record<string, string>> = {
     en: "I can't respond right now. Please try again shortly, or type “human” to reach our hotel team.",
     de: "Ich kann gerade nicht antworten. Bitte versuchen Sie es gleich noch einmal oder schreiben Sie „Mitarbeiter“, um unser Hotelteam zu erreichen.",
     ru: "Сейчас я не могу ответить. Пожалуйста, попробуйте чуть позже или напишите «оператор», чтобы связаться с нашей командой.",
+    ar: "لا أستطيع الرد الآن. يُرجى المحاولة بعد قليل، أو اكتبوا «موظف» للتواصل مع فريق الفندق.",
   },
   refused: {
     tr: "Bu konuda yardımcı olamıyorum. Otelimizle ilgili başka bir sorunuz varsa memnuniyetle yanıtlarım.",
     en: "I can't help with that. I'm happy to answer any other question about our hotel.",
     de: "Dabei kann ich nicht helfen. Andere Fragen zu unserem Hotel beantworte ich gern.",
     ru: "С этим я помочь не могу. С удовольствием отвечу на другие вопросы о нашем отеле.",
+    ar: "لا أستطيع المساعدة في ذلك. يسعدني الإجابة عن أي سؤال آخر حول فندقنا.",
   },
   session_full: {
     tr: "Bu sohbet azami uzunluğa ulaştı. Devam etmek için lütfen yeni bir sohbet başlatın.",
     en: "This chat has reached its maximum length. Please start a new chat to continue.",
     de: "Dieser Chat hat die maximale Länge erreicht. Bitte starten Sie einen neuen Chat.",
     ru: "Этот чат достиг максимальной длины. Пожалуйста, начните новый чат.",
+    ar: "وصلت هذه المحادثة إلى الحد الأقصى. يُرجى بدء محادثة جديدة.",
   },
   budget: {
     tr: "Asistanımız şu anda hizmet veremiyor. Lütfen otel ekibimizle doğrudan iletişime geçin.",
     en: "Our assistant is unavailable at the moment. Please contact our hotel team directly.",
     de: "Unser Assistent ist derzeit nicht verfügbar. Bitte wenden Sie sich direkt an unser Hotelteam.",
     ru: "Наш ассистент сейчас недоступен. Пожалуйста, свяжитесь с командой отеля напрямую.",
+    ar: "المساعد غير متاح حاليًا. يُرجى التواصل مع فريق الفندق مباشرة.",
   },
 };
 

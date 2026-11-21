@@ -471,3 +471,39 @@ describe("devir: anlık bildirim", () => {
     expect(calls[0]!.body.text).not.toContain("a@b.co");
   });
 });
+
+describe("web: iletişim formu", () => {
+  const post = (app: ReturnType<typeof setup>["app"], payload: Record<string, unknown>) =>
+    app.inject({ method: "POST", url: "/api/contact", headers: { origin: ORIGIN }, payload: { hotelId: "test-otel", name: "Ayşe Yılmaz", contact: "ayse@example.com", message: "Grup konaklaması için bilgi istiyorum.", consent: true, ...payload } });
+
+  it("rıza ile gelen mesajı resepsiyona iletir ve panelde gösterir", async () => {
+    const { app } = setup(new ScriptedLlm([]));
+    expect((await post(app, {})).statusCode).toBe(200);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.text).toContain("Grup konaklaması için bilgi istiyorum.");
+    expect(sent[0]!.text).toContain("ayse@example.com");
+    expect(store.listHandoffs("test-otel")[0]).toMatchObject({ name: "Ayşe Yılmaz", summary: expect.stringContaining("İletişim formu") });
+  });
+
+  it("rıza olmadan ya da eksik alanla kabul etmez", async () => {
+    const { app } = setup(new ScriptedLlm([]));
+    expect((await post(app, { consent: false })).statusCode).toBe(400);
+    expect((await post(app, { message: "kısa" })).statusCode).toBe(400);
+    expect((await post(app, { name: "" })).statusCode).toBe(400);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("tuzak alanı dolduran botu sessizce yok sayar", async () => {
+    const { app } = setup(new ScriptedLlm([]));
+    const res = await post(app, { website: "http://spam.example" });
+    expect(res.json()).toEqual({ ok: true });
+    expect(sent).toHaveLength(0);
+  });
+
+  it("aynı adresten günde en fazla 5 mesaj alır", async () => {
+    const { app } = setup(new ScriptedLlm([]));
+    const codes = [];
+    for (let i = 0; i < 6; i++) codes.push((await post(app, {})).statusCode);
+    expect(codes).toEqual([200, 200, 200, 200, 200, 429]);
+  });
+});

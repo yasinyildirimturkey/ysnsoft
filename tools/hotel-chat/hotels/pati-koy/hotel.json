@@ -1,14 +1,15 @@
 {
   "id": "pati-koy",
   "name": "Pati Koy Butik Otel",
-  "city": "Kaş, Antalya",
+  "city": "Turgutreis, Bodrum",
   "website": "https://www.patikoy.example",
   "timezone": "Europe/Istanbul",
   "languages": [
     "tr",
     "en",
     "de",
-    "ru"
+    "ru",
+    "ar"
   ],
   "defaultLanguage": "tr",
   "currency": "TRY",
@@ -36,13 +37,15 @@
       "tr": "Bu sohbet yapay zekâ destekli bir asistanla yapılır ve hizmet kalitesi için sınırlı süre saklanır. Lütfen kart ya da kimlik bilgisi paylaşmayın.",
       "en": "This chat is handled by an AI assistant and is stored for a limited time for service quality. Please do not share card or ID details.",
       "de": "Dieser Chat wird von einem KI-Assistenten geführt und zur Qualitätssicherung für begrenzte Zeit gespeichert. Bitte teilen Sie keine Karten- oder Ausweisdaten.",
-      "ru": "Этот чат ведёт ИИ-ассистент; переписка хранится ограниченное время для контроля качества. Пожалуйста, не сообщайте данные карты или документов."
+      "ru": "Этот чат ведёт ИИ-ассистент; переписка хранится ограниченное время для контроля качества. Пожалуйста, не сообщайте данные карты или документов.",
+      "ar": "تُدار هذه المحادثة بواسطة مساعد يعمل بالذكاء الاصطناعي وتُحفظ لمدة محدودة لضمان جودة الخدمة. يُرجى عدم مشاركة بيانات البطاقة أو الهوية."
     },
     "consentLabel": {
       "tr": "Ad ve iletişim bilgilerimin, talebime dönüş yapılması amacıyla otelle paylaşılmasına açık rıza veriyorum.",
       "en": "I explicitly consent to my name and contact details being shared with the hotel so they can respond to my request.",
       "de": "Ich willige ausdrücklich ein, dass mein Name und meine Kontaktdaten an das Hotel weitergegeben werden, damit es auf meine Anfrage antworten kann.",
-      "ru": "Я даю явное согласие на передачу моего имени и контактных данных отелю для ответа на мой запрос."
+      "ru": "Я даю явное согласие на передачу моего имени и контактных данных отелю для ответа на мой запрос.",
+      "ar": "أوافق صراحةً على مشاركة اسمي وبيانات الاتصال بي مع الفندق للرد على طلبي."
     },
     "retentionDays": 30
   },
@@ -54,13 +57,15 @@
       "tr": "Pati Koy Asistanı",
       "en": "Pati Koy Assistant",
       "de": "Pati Koy Assistent",
-      "ru": "Ассистент Pati Koy"
+      "ru": "Ассистент Pati Koy",
+      "ar": "مساعد باتي كوي"
     },
     "welcome": {
       "tr": "Merhaba! Pati Koy'a hoş geldiniz. Odalar, evcil hayvan politikamız, müsaitlik ve fiyatlar hakkında sorularınızı yanıtlayabilirim.",
       "en": "Hello and welcome to Pati Koy! I can answer questions about our rooms, pet policy, availability and prices.",
       "de": "Hallo und willkommen im Pati Koy! Ich beantworte gern Fragen zu Zimmern, Haustieren, Verfügbarkeit und Preisen.",
-      "ru": "Здравствуйте и добро пожаловать в Pati Koy! Отвечу на вопросы о номерах, проживании с питомцами, наличии мест и ценах."
+      "ru": "Здравствуйте и добро пожаловать в Pati Koy! Отвечу на вопросы о номерах, проживании с питомцами, наличии мест и ценах.",
+      "ar": "مرحبًا بكم في باتي كوي! يسعدني الإجابة عن أسئلتكم حول الغرف، اصطحاب الحيوانات الأليفة، التوفر والأسعار."
     },
     "quickReplies": {
       "tr": [
@@ -86,6 +91,12 @@
         "Проживание с питомцами",
         "Номера",
         "Как добраться"
+      ],
+      "ar": [
+        "التوفر والأسعار",
+        "الحيوانات الأليفة",
+        "الغرف",
+        "الوصول ومواقف السيارات"
       ]
     },
     "primaryColor": "#0f6e6e"

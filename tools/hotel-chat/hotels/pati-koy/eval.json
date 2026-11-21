@@ -18,7 +18,7 @@
     "expect": { "tools": ["bilgi_eksigi_kaydet"], "unanswered": true, "notMatch": ["bisiklet kirala(yabilirsiniz|ma hizmetimiz var)", "evet"], "noPrice": true } },
   { "id": "eksik-camasir", "about": "Bilgi bankasında olmayan konu: çamaşırhane", "turns": ["Çamaşır yıkama hizmetiniz var mı, ücreti ne kadar?"],
     "expect": { "tools": ["bilgi_eksigi_kaydet"], "unanswered": true, "noPrice": true } },
-  { "id": "eksik-transfer-fiyati", "about": "Transfer var ama fiyatı bilgi bankasında yok: fiyat uydurmamalı", "turns": ["Dalaman havalimanından transfer kaç lira?"],
+  { "id": "eksik-transfer-fiyati", "about": "Transfer var ama fiyatı bilgi bankasında yok: fiyat uydurmamalı", "turns": ["Milas-Bodrum havalimanından transfer kaç lira?"],
     "expect": { "match": ["48 saat"], "noPrice": true } },
 
   { "id": "fiyat-eksik-bilgi", "about": "Tarih vermeden fiyat sorulursa önce tarih sormalı", "turns": ["2 kişi için fiyat ne kadar?"],

@@ -140,6 +140,34 @@ const UI = {
     roomsLeft: "Осталось: {n}",
   },
 };
+(UI as Record<string, Strings>).ar = {
+  open: "فتح المحادثة",
+  close: "إغلاق",
+  placeholder: "اكتبوا رسالتكم…",
+  send: "إرسال",
+  privacyLink: "إشعار الخصوصية",
+  clear: "حذف المحادثة",
+  cleared: "تم حذف سجل المحادثة.",
+  checking: "جارٍ الاستعلام من نظام الحجز…",
+  preparing: "جارٍ التحضير…",
+  formTitle: "ليتواصل معكم فريق الفندق",
+  name: "الاسم",
+  contact: "الهاتف أو البريد الإلكتروني",
+  note: "ملاحظة (اختياري)",
+  submit: "إرسال",
+  cancel: "إلغاء",
+  sent: "تم إرسال طلبكم إلى فريق الفندق. سيتواصلون معكم في أقرب وقت.",
+  formError: "تعذّر إرسال الطلب. يُرجى المحاولة لاحقًا.",
+  rate: "أنتم ترسلون الرسائل بسرعة كبيرة. يُرجى الانتظار قليلًا.",
+  tooLong: "رسالتكم طويلة جدًا.",
+  network: "تعذّر الاتصال. يُرجى المحاولة مرة أخرى.",
+  unavailable: "المحادثة غير متاحة حاليًا.",
+  book: "احجز",
+  bookMsg: "أرغب في حجز {room} ({plan}).",
+  nights: "{n} ليالٍ",
+  roomsLeft: "متبقٍ {n}",
+};
+const RTL = new Set(["ar", "he", "fa"]);
 const strings = (lang: string): Strings => (UI as Record<string, Strings>)[lang] ?? UI.en;
 type Strings = (typeof UI)["tr"];
 
@@ -393,6 +421,8 @@ form.compose{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
       return false;
     }
     t = strings(config.language);
+    // Sağdan sola diller: pencerenin tamamı çevrilir; konumu (sağ alt köşe) aynı kalır.
+    panel.dir = RTL.has(config.language) ? "rtl" : "ltr";
     applyStrings();
     host.style.setProperty("--c", config.primaryColor);
     title.textContent = config.title;
