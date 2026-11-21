@@ -59,6 +59,9 @@ next-env.d.ts
 /data/text-corrections.json
 /data/sales-regions.json
 /data/partners.json
+/data/published-sites.json
+/data/site-legal.json
+/data/publish-known_hosts
 /data/sites.json
 /data/mail-log.jsonl
 /data/scheduler/
