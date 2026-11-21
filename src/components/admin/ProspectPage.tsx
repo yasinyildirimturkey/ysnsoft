@@ -19,6 +19,7 @@ import CustomerCare from './CustomerCare';
 import CustomerLinks from './CustomerLinks';
 import DemoTranslate from './DemoTranslate';
 import PartnerSelect from './PartnerSelect';
+import PublishSite from './PublishSite';
 import TextCorrections from './TextCorrections';
 import OfferBox, { usePricing } from './OfferBox';
 import WhatsAppDemo from './WhatsAppDemo';
@@ -318,6 +319,7 @@ export default function ProspectPage() {
                   <OfferBox key={`o${p.id}`} prospect={p} pricing={pricing} onSave={saveOffer} />
                   <PartnerSelect key={`pt${p.id}`} id={p.id} notify={notify} />
                   {p.status === 'won' && <CustomerCare key={`c${p.id}`} id={p.id} token={p.draft_token ?? null} hasGbp={offerAddons(p).includes('gbp')} notify={notify} />}
+                  {p.status === 'won' && <PublishSite key={`pub${p.id}`} id={p.id} website={p.website ?? null} notify={notify} onPublished={() => void load(true)} />}
                 </section>
 
                 <section className={card} aria-labelledby="h-draft">

@@ -6,7 +6,7 @@
 // pakette doldurulması gereken alanları açıkça işaretlenmiş taslak sayfalar olarak gelir ve kontrol listesi bunu yazar.
 // Hiçbir hukuki metin "hazır/uygun" diye sunulmaz: içerik müşteriyle ve gerekirse bir uzmanla kontrol edilmelidir.
 import { deflateRawSync, crc32 } from 'node:zlib';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DATA_DIR } from './db.js';
 
@@ -144,4 +144,64 @@ export function exportSite(db, id) {
   const file = join(out, `${id}-${slug}.zip`);
   writeFileSync(file, zip(files));
   return { file, name: `${id}-${slug}.zip`, files: files.length, notes: live.notes };
+}
+
+// ── Tek tıkla yayın (Almanya'daki sunucu) ───────────────────────────────
+
+const clean = (v, n) => String(v ?? '').replace(/\r/g, '').trim().slice(0, n);
+
+function impressumLive(name, address, phone, legal) {
+  return legalPage('Impressum', name, `
+<p>Angaben gemäß § 5 DDG</p>
+<p>${esc(name)}<br>${esc(legal.owner)}<br>${esc(address)}</p>
+<p>Telefon: ${esc(legal.phone || phone || '')}<br>E-Mail: <a href="mailto:${esc(legal.email)}">${esc(legal.email)}</a></p>
+${legal.register ? `<p>${esc(legal.register)}</p>` : ''}${legal.vat ? `<p>USt-IdNr.: ${esc(legal.vat)}</p>` : ''}
+${legal.extra ? legal.extra.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('') : ''}`);
+}
+
+function datenschutzLive(name, text) {
+  return legalPage('Datenschutzerklärung', name, `
+${text.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n')}
+<p>Hinweis zur Karte: Die Kartenausschnitte sind lokal gespeicherte Bilder aus OpenStreetMap (© OpenStreetMap-Mitwirkende); beim Aufruf
+der Seite werden keine Daten an OpenStreetMap übertragen.</p>`);
+}
+
+/**
+ * Yayına gidecek klasörü hazırlar (data/publish/<id>/). Müşterinin Impressum bilgisi ve Datenschutz metni ZORUNLU;
+ * sayfada yer tutucu/taslak izi varsa "problems" döner ve panel yayına izin vermez. Hukuki değerlendirme yapılmaz:
+ * metinlerin doğruluğu müşteri/danışmanı tarafından kontrol edilmelidir.
+ */
+export function publishPack(db, id, legalIn) {
+  const biz = db.prepare('SELECT id, name, address, postcode, city, phone FROM businesses WHERE id=?').get(id);
+  if (!biz) throw new Error(`#${id} bulunamadı`);
+  const d = db.prepare('SELECT token FROM drafts WHERE business_id=?').get(id);
+  if (!d?.token) throw new Error('Bu adayın taslağı yok; önce taslak üretin.');
+  const src = join(DATA_DIR, 'drafts', d.token);
+  if (!existsSync(join(src, 'index.html'))) throw new Error('Taslak dosyası bulunamadı; taslağı yeniden üretin.');
+  const legal = {
+    owner: clean(legalIn?.owner, 160), email: clean(legalIn?.email, 160), phone: clean(legalIn?.phone, 60),
+    register: clean(legalIn?.register, 300), vat: clean(legalIn?.vat, 40), extra: clean(legalIn?.extra, 2000),
+    datenschutz: clean(legalIn?.datenschutz, 40000),
+  };
+  const problems = [];
+  if (!legal.owner) problems.push('Impressum: Inhaber/in bzw. Vertretungsberechtigte/r eksik.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(legal.email)) problems.push('Impressum: geçerli e-posta eksik.');
+  if (legal.datenschutz.length < 300) problems.push('Datenschutzerklärung metni eksik ya da çok kısa (müşteriden / bir jeneratörden alınmalı).');
+
+  const live = toLiveHtml(readFileSync(join(src, 'index.html'), 'utf8'), { token: d.token, name: biz.name, phone: biz.phone });
+  const body = live.html.replace(/<style[\s\S]*?<\/style>/gi, '');
+  if (/Hier stellen Sie|Kurze Beschreibung|Platzhalter|Hier stehen in der fertigen Website/i.test(body)) problems.push('Sayfada yer tutucu metin var (ör. "Hier stellen Sie…", "Kurze Beschreibung…"): metin düzeltme ile gerçek metin girilmeli.');
+  if (/class="draft"|demo-note|\(Entwurf\)/i.test(body)) problems.push('Sayfada taslak izi kaldı; taslağı yeniden üretin.');
+
+  const address = [biz.address, [biz.postcode, biz.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const assets = readdirSync(src).filter((f) => /^(logo|foto[1-9]|karte[1-9])\.(jpg|png|gif|webp)$/.test(f) && live.html.includes(f));
+  const out = join(DATA_DIR, 'publish', String(id));
+  rmSync(out, { recursive: true, force: true });
+  mkdirSync(out, { recursive: true });
+  writeFileSync(join(out, 'index.html'), live.html, 'utf8');
+  for (const f of assets) writeFileSync(join(out, f), readFileSync(join(src, f)));
+  writeFileSync(join(out, 'impressum.html'), impressumLive(biz.name, address, biz.phone, legal), 'utf8');
+  writeFileSync(join(out, 'datenschutz.html'), datenschutzLive(biz.name, legal.datenschutz), 'utf8');
+  writeFileSync(join(out, 'robots.txt'), 'User-agent: *\nAllow: /\n', 'utf8');
+  return { dir: out, files: readdirSync(out), problems, notes: live.notes.filter((n) => !/yer tutucu|Entwurf/.test(n)) };
 }

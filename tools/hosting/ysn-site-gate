@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Yayın kapısı: deploy anahtarıyla gelen SSH bağlantısı YALNIZ bu komutları çalıştırabilir.
+#   ping                → "pong"
+#   publish <domain>    → stdin'deki tar arşivini /srv/sites/<domain> olarak yayınlar (atomik değiştirme)
+#   unpublish <domain>  → siteyi kaldırır
+#   list                → yayındaki alan adları
+set -euo pipefail
+SITES="${YSN_SITES:-/srv/sites}"
+read -r CMD DOMAIN EXTRA <<< "${SSH_ORIGINAL_COMMAND:-}"
+[ -z "${EXTRA:-}" ] || { echo "ERR fazla argüman" >&2; exit 2; }
+
+valid() { [[ "$1" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]] && [[ "${#1}" -le 253 ]]; }
+
+case "${CMD:-}" in
+  ping) echo pong ;;
+  list) find "$SITES" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf '%f\n' | sort ;;
+  publish)
+    valid "${DOMAIN:-}" || { echo "ERR geçersiz alan adı" >&2; exit 2; }
+    case "$DOMAIN" in www.*) echo "ERR www olmadan girin" >&2; exit 2 ;; esac
+    NEW="$SITES/.${DOMAIN}.new.$$"
+    OLD="$SITES/.${DOMAIN}.old.$$"
+    trap 'rm -rf "$NEW" "$OLD"' EXIT
+    mkdir -p "$NEW"
+    # Boyut sınırı (50 MB) ve güvenli açma: sahiplik/izin alınmaz, mutlak yol ve ../ GNU tar tarafından ayıklanır
+    head -c 52428800 | tar -x -C "$NEW" --no-same-owner --no-same-permissions --no-overwrite-dir
+    [ -f "$NEW/index.html" ] || { echo "ERR index.html yok" >&2; exit 3; }
+    find "$NEW" -type l -delete
+    chmod -R u=rwX,go=rX "$NEW"
+    [ -d "$SITES/$DOMAIN" ] && mv "$SITES/$DOMAIN" "$OLD"
+    mv "$NEW" "$SITES/$DOMAIN"
+    ln -sfn "$SITES/$DOMAIN" "$SITES/www.$DOMAIN"
+    echo "OK $DOMAIN"
+    ;;
+  unpublish)
+    valid "${DOMAIN:-}" || { echo "ERR geçersiz alan adı" >&2; exit 2; }
+    rm -rf "${SITES:?}/$DOMAIN" "${SITES:?}/www.$DOMAIN"
+    echo "OK removed $DOMAIN"
+    ;;
+  *) echo "ERR bilinmeyen komut" >&2; exit 2 ;;
+esac

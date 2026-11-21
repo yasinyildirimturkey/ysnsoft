@@ -1,0 +1,43 @@
+{
+	email __ACME_EMAIL__
+	# Sertifika yalnız /srv/sites altında klasörü olan alan adları için alınır (kötüye kullanıma karşı)
+	on_demand_tls {
+		ask http://127.0.0.1:5555/check
+	}
+}
+
+# Sertifika izni: ?domain=<ad> için /srv/sites/<ad>/index.html varsa 200
+http://127.0.0.1:5555 {
+	bind 127.0.0.1
+	@known file {
+		root /srv/sites
+		try_files {query.domain}/index.html
+	}
+	handle /check {
+		respond @known 200
+		respond 404
+	}
+}
+
+# Müşteri siteleri: alan adına göre klasör
+https:// {
+	tls {
+		on_demand
+	}
+	root * /srv/sites/{host}
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options SAMEORIGIN
+		-Server
+	}
+	@assets path *.jpg *.jpeg *.png *.webp *.gif
+	header @assets Cache-Control "public, max-age=604800"
+	file_server
+}
+
+http:// {
+	redir https://{host}{uri} permanent
+}
