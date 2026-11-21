@@ -17,6 +17,8 @@ import {
 import DraftChecklist from './DraftChecklist';
 import CustomerCare from './CustomerCare';
 import CustomerLinks from './CustomerLinks';
+import DemoTranslate from './DemoTranslate';
+import TextCorrections from './TextCorrections';
 import OfferBox, { usePricing } from './OfferBox';
 import WhatsAppDemo from './WhatsAppDemo';
 import GoodExamples from './GoodExamples';
@@ -346,6 +348,8 @@ export default function ProspectPage() {
                         )}
                       </div>
                       <CustomerLinks token={p.draft_token} name={p.name} status={p.status} hasOffer={p.offer_setup != null} notify={notify} />
+                      <div className="mt-2"><DemoTranslate key={`t${p.id}`} id={p.id} token={p.draft_token} notify={notify} /></div>
+                      <TextCorrections key={`k${p.id}`} id={p.id} notify={notify} />
                       {p.draft_quality && <DraftChecklist quality={p.draft_quality} />}
                     </>
                   ) : (

@@ -92,6 +92,32 @@ export function readWebscoutDraft(token: string, file?: string): DraftFile {
   }
 }
 
+/** Demonun Türkçe sürümü (index.tr.html) varsa okur; yoksa null. Süre denetimi readWebscoutDraft ile aynı. */
+export function readWebscoutDraftTr(token: string): Buffer | null {
+  if (readWebscoutDraft(token).state !== 'ok') return null;
+  try { return fs.readFileSync(path.join(TOOL_DIR, 'data', 'drafts', token, 'index.tr.html')); } catch { return null; }
+}
+
+/** Türkçe sürüm işinin durumu (translate.js yazar): running/done/error; hiç başlatılmadıysa null. */
+export function readTrStatus(token: string): { state: string; done?: number; total?: number; translated?: number; failed?: number; error?: string; at?: string } | null {
+  if (!DRAFT_TOKEN_RE.test(token)) return null;
+  try { return JSON.parse(fs.readFileSync(path.join(TOOL_DIR, 'data', 'drafts', token, 'tr-status.json'), 'utf8')); } catch { return null; }
+}
+
+/**
+ * Müşterinin onaylanan metin düzeltmesi uygulanınca demo sayfası yeniden yazılır. Türkçe sürüm eskidiği için silinir.
+ * Yalnız var olan, süresi dolmamış taslak yazılır.
+ */
+export function writeWebscoutDraftHtml(token: string, html: string): boolean {
+  if (readWebscoutDraft(token).state !== 'ok') return false;
+  const dir = path.join(TOOL_DIR, 'data', 'drafts', token);
+  fs.writeFileSync(path.join(dir, 'index.html.tmp'), html, 'utf8');
+  fs.renameSync(path.join(dir, 'index.html.tmp'), path.join(dir, 'index.html'));
+  fs.rmSync(path.join(dir, 'index.tr.html'), { force: true });
+  fs.rmSync(path.join(dir, 'tr-status.json'), { force: true });
+  return true;
+}
+
 // ── Demo açılma sayacı ───────────────────────────────────────
 // Müşteri demoyu açınca panelde "2× açıldı · dün 21:40" görünür (sıcak aday sinyali).
 // Yalnızca sayaç ve zaman tutulur: IP, tarayıcı, çerez SAKLANMAZ. Dosya taslak klasörünün dışındadır
@@ -218,7 +244,7 @@ export function makeWebscoutUploadCover(businessId: number, name: string): boole
  * `job` = çekim + tarama (+ isteğe bağlı derin profil), `job-enrich` = yalnızca derin profil (Seviye 2),
  * `job-draft` = şablon taslağı (Seviye 3).
  */
-export function startWebscoutJob(args: string[], command: 'job' | 'job-enrich' | 'job-draft' = 'job'): void {
+export function startWebscoutJob(args: string[], command: 'job' | 'job-enrich' | 'job-draft' | 'draft-translate' = 'job'): void {
   const child = spawn(process.execPath, [...NODE_FLAGS, CLI, command, ...args], {
     cwd: TOOL_DIR,
     detached: true,

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { clientKey, getAdminSession, isOwnDevice } from '@/lib/admin-auth';
-import { draftBusinessId, readDemoViews, readWebscoutDraft, recordDemoView, runWebscout } from '@/lib/webscout';
+import { draftBusinessId, readDemoViews, readWebscoutDraft, readWebscoutDraftTr, recordDemoView, runWebscout } from '@/lib/webscout';
 import { notify } from '@/lib/notifications';
 
 /** Demonun sahibi işletmeyi bulup ekibe bildirim gönderir. Aynı demo 2 saat içinde tekrar açılırsa tek bildirimde sayılır. */
@@ -78,5 +78,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     // Ekibe anında haber: "Demo açıldı" (zil + telefona bildirim). Sayfayı bekletmez; hata sessizce geçer.
     void notifyDemoOpened(token).catch(() => {});
   }
-  return new Response(new Uint8Array(draft.data), { headers: { ...HEADERS, 'Content-Type': draft.type } });
+  // Türkçe sürüm varsa sağ üstte DE | TR anahtarı (betik yok, yalnız bağlantı); ?lang=tr Türkçe sayfayı açar
+  const tr = readWebscoutDraftTr(token);
+  if (!tr) return new Response(new Uint8Array(draft.data), { headers: { ...HEADERS, 'Content-Type': draft.type } });
+  const wantTr = new URL(request.url).searchParams.get('lang') === 'tr';
+  const html = (wantTr ? tr : draft.data).toString('utf8');
+  const link = (code: string, on: boolean) => `<a href="/demo/${token}${code === 'tr' ? '?lang=tr' : ''}" style="color:${on ? '#fff' : '#d2d2d7'};text-decoration:none;font-weight:${on ? 700 : 500};padding:2px 6px">${code.toUpperCase()}</a>`;
+  const toggle = `<div style="position:fixed;bottom:96px;right:12px;z-index:2147483647;box-shadow:0 2px 8px rgba(0,0,0,.25);background:rgba(29,29,31,.82);border-radius:999px;padding:4px 6px;font:13px system-ui,sans-serif" lang="de" aria-label="Sprache">${link('de', !wantTr)}${link('tr', wantTr)}</div>`;
+  const out = html.replace(/<body\b[^>]*>/i, (m) => `${m}${toggle}`);
+  return new Response(out, { headers: { ...HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 }

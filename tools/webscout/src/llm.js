@@ -11,7 +11,9 @@ const BASE = (process.env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4'
 const MODEL = process.env.WEBSCOUT_GLM_MODEL || 'glm-5.3';
 const FALLBACK = process.env.GLM_FALLBACK_MODEL || 'glm-4-plus';
 const FREE = process.env.GLM_FREE_MODEL || 'glm-4.7-flash';
-const CHAIN = [...new Set([MODEL, FALLBACK, FREE])];
+// İkinci ücretsiz model: glm-4.7-flash yoğunken (429) sık düşüyor (2026-11-21)
+const FREE2 = process.env.GLM_FREE_MODEL_2 || 'glm-4.5-flash';
+const CHAIN = [...new Set([MODEL, FALLBACK, FREE, FREE2])];
 
 /** Bu hata sıradaki modeli denemeyi gerektiriyor mu (model yok / bakiye bitti / hız sınırı)? */
 const tryNext = (r) => !r.ok && (['1211', '1113'].includes(String(r.data?.error?.code)) || [400, 404, 429].includes(r.status));

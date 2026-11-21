@@ -13,6 +13,7 @@ import { enrichBusiness } from './enrich.js';
 import { buildDraft, newToken } from './draft.js';
 import { siteMismatch } from './sitematch.js';
 import { readPricing, writePricing } from './pricing.js';
+import { translateDraft } from './translate.js';
 
 const HELP = `WebScout – yerel işletme sitelerini tara, puanla, takip et
 
@@ -810,7 +811,7 @@ const { pos, opt } = parseArgs(process.argv.slice(2));
 const cmd = pos[0];
 if (!cmd || opt.help) { console.log(HELP); process.exit(cmd ? 0 : 1); }
 
-const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'pricing', 'pricing-set', 'examples', 'reminders', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits']);
+const JSON_COMMANDS = new Set(['meta', 'query', 'funnel', 'pricing', 'pricing-set', 'examples', 'reminders', 'job', 'job-enrich', 'job-draft', 'job-status', 'prospect-set', 'profile', 'visit-add', 'visits', 'plan-visits', 'draft-translate', 'export-site']);
 try {
   const db = openDb();
   switch (cmd) {
@@ -846,6 +847,12 @@ try {
       const id = Number(opt.id);
       if (!Number.isInteger(id) || id <= 0) throw new Error('Geçersiz kayıt');
       printJson({ ok: true, ...exportSite(db, id) });
+      break;
+    }
+    case 'draft-translate': {
+      const id = Number(opt.id);
+      if (!Number.isInteger(id) || id <= 0) throw new Error('Geçersiz kayıt');
+      printJson({ ok: true, ...(await translateDraft(db, id)) });
       break;
     }
     case 'weekly': printJson({ ok: true, ...weeklyReport(db) }); break;
