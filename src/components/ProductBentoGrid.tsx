@@ -188,9 +188,21 @@ export default function ProductBentoGrid({ onSelectProduct, onOpenContact }: Pro
                       rel="noopener noreferrer"
                       className="apple-pill-btn-secondary px-3.5 py-2 text-[13px] font-medium flex items-center gap-1.5"
                     >
-                      <span>Siteyi Aç</span>
+                      <span>{prod.isDemo ? 'Demoyu Aç' : 'Siteyi Aç'}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
+                    {prod.infoUrl ? (
+                      <a
+                        href={prod.infoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${prod.name} — detayları gör`}
+                        className="apple-pill-btn px-4 py-2 text-[13px] font-medium flex items-center gap-1"
+                      >
+                        <span>Detayları Gör</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </a>
+                    ) : (
                     <button
                       type="button"
                       onClick={() => onSelectProduct(prod)}
@@ -200,6 +212,7 @@ export default function ProductBentoGrid({ onSelectProduct, onOpenContact }: Pro
                       <span>Detayları Gör</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
+                    )}
                   </div>
                 </div>
               </article>
