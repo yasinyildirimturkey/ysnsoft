@@ -66,6 +66,12 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
     return [...hotels.values()].map((h) => ({ id: h.config.id, name: h.config.name }));
   });
 
+  // "Oteller için" sayfasından gelen teklif talepleri (bir otele bağlı değildir).
+  app.get("/admin/api/leads", async (req, reply) => {
+    if (!authed(req, reply)) return;
+    return store.listEvents("_ysnsoft", "lead", 200).map((e) => ({ ...e.data, createdAt: e.createdAt }));
+  });
+
   app.get<{ Querystring: { days?: string } }>("/admin/api/hotels/:hotelId/stats", async (req, reply) => {
     const hotel = hotelOf(req, reply);
     if (!hotel) return;

@@ -15,6 +15,8 @@ const MonthDay = z.string().regex(/^\d{2}-\d{2}$/);
 export const SamplePmsDataSchema = z.object({
   currency: z.string().length(3),
   boardType: z.string(),
+  /** Pansiyon adının diğer dillerdeki karşılığı: dil → ad. */
+  boardTypeNames: z.record(z.string(), z.string()).default({}),
   /** Sezon dışında kalan her gün bu sezondan fiyatlanır. */
   defaultSeason: z.string(),
   /** Yıl içinde tekrar eden sezon aralıkları (AA-GG, uçlar dahil). */
@@ -32,9 +34,11 @@ export const SamplePmsDataSchema = z.object({
     .array(
       z.object({
         name: z.string(),
+        names: z.record(z.string(), z.string()).default({}),
         refundable: z.boolean(),
         discountPercent: z.number().min(0).max(90).default(0),
         cancellationNote: z.string().nullable().default(null),
+        cancellationNotes: z.record(z.string(), z.string()).default({}),
       }),
     )
     .min(1),
@@ -45,6 +49,10 @@ export const SamplePmsDataSchema = z.object({
       z.object({
         id: z.string(),
         name: z.string(),
+        /** Oda adının diğer dillerdeki karşılığı: dil → ad. Sorgu dili burada yoksa `name` kullanılır. */
+        names: z.record(z.string(), z.string()).default({}),
+        /** Sohbet kartında gösterilecek fotoğrafın yolu. */
+        image: z.string().regex(/^\/img\/[a-z0-9-]+\/[a-z0-9-]+[.](webp|jpg|png)$/).optional(),
         /** Bu tipten kaç fiziksel oda var. */
         units: z.number().int().positive(),
         maxAdults: z.number().int().positive(),
@@ -118,6 +126,7 @@ export class SamplePmsClient implements PmsClient {
     const adults = q.adults + (q.childAges.length - children.length);
     const payingChildren = children.filter((age) => age >= d.children.freeUnderAge).length;
 
+    const lang = q.language.slice(0, 2).toLowerCase();
     const offers: Offer[] = [];
     for (const room of d.roomTypes) {
       if (adults > room.maxAdults || children.length > room.maxChildren) continue;
@@ -147,16 +156,17 @@ export class SamplePmsClient implements PmsClient {
       for (const plan of d.ratePlans) {
         offers.push({
           roomTypeId: room.id,
-          roomTypeName: room.name,
-          boardType: d.boardType,
-          rateType: plan.name,
+          roomTypeName: room.names[lang] ?? room.name,
+          boardType: d.boardTypeNames[lang] ?? d.boardType,
+          rateType: plan.names[lang] ?? plan.name,
           availableRooms: available,
           price: total,
           discountedPrice: plan.discountPercent > 0 ? Math.round(total * (1 - plan.discountPercent / 100)) : null,
           currency: d.currency,
           refundable: plan.refundable,
-          cancellationNote: plan.cancellationNote,
+          cancellationNote: plan.cancellationNotes[lang] ?? plan.cancellationNote,
           minStayNights: minStay > 1 ? minStay : null,
+          imagePath: room.image ?? null,
         });
       }
     }

@@ -507,3 +507,87 @@ describe("web: iletişim formu", () => {
     expect(codes).toEqual([200, 200, 200, 200, 200, 429]);
   });
 });
+
+describe("fotoğraflar, çok dilli kartlar, haftalık rapor, satış talepleri", () => {
+  it("/img yalnızca beklenen adlardaki dosyaları sunar", async () => {
+    const { app } = setup(new ScriptedLlm([]));
+    const ok = await app.inject({ url: "/img/pati-koy/room-std-640.webp" });
+    expect([ok.statusCode, ok.headers["content-type"]]).toEqual([200, "image/webp"]);
+    expect(ok.headers["cache-control"]).toMatch(/max-age=2592000/);
+    for (const bad of ["/img/pati-koy/yok.webp", "/img/pati-koy/..%2F..%2Fpackage.json", "/img/..%2Fhotels/hotel.json", "/img/pati-koy/room-std-640.webp.bak"]) {
+      expect((await app.inject({ url: bad })).statusCode).toBe(404);
+    }
+  });
+
+  it("sanal PMS oda, pansiyon ve plan adlarını sorgu diline çevirir, fotoğraf yolunu verir", async () => {
+    const { loadHotels } = await import("../src/config/hotel.js");
+    const { createPmsClient } = await import("../src/pms/index.js");
+    const pms = createPmsClient(loadHotels(path.resolve("hotels")).get("pati-koy")!);
+    const q = { checkIn: "2027-03-09", checkOut: "2027-03-11", adults: 2, childAges: [], currency: "TRY" };
+    const de = await pms.searchOffers({ ...q, language: "de" });
+    const tr = await pms.searchOffers({ ...q, language: "tr" });
+    const fr = await pms.searchOffers({ ...q, language: "fr" });
+    expect(de[0]).toMatchObject({ roomTypeName: "Standardzimmer mit Meerblick", boardType: "Übernachtung mit Frühstück", rateType: "Erstattbar", imagePath: "/img/pati-koy/room-std-640.webp" });
+    expect(tr[0]).toMatchObject({ roomTypeName: "Deniz Manzaralı Standart Oda", rateType: "İade edilebilir" });
+    expect(fr[0]!.roomTypeName).toBe(tr[0]!.roomTypeName); // çevirisi olmayan dilde asıl ad
+    expect(de.map((o) => o.price)).toEqual(tr.map((o) => o.price)); // dil fiyatı değiştirmez
+    for (const o of de) expect(fs.existsSync(path.join("public", o.imagePath!))).toBe(true);
+  });
+
+  it("haftalık raporu belirlenen gün ve saatten sonra haftada bir kez gönderir", async () => {
+    const { sendDueWeeklyReports } = await import("../src/ops/weekly-report.js");
+    const hotel = testHotel({ report: { weekday: 1, hour: 9 } });
+    const hotels = new Map([[hotel.config.id, hotel]]);
+    // Olay zamanları rapor tarihiyle aynı haftaya düşsün diye saati sabit bir depo kullanılır.
+    const timed = new Store(":memory:", () => Date.parse("2027-03-08T06:00:00Z"));
+    const session = timed.createSession("test-otel", "web");
+    timed.appendTurn(session.id, [{ role: "user", content: "x" }], 0, null);
+    timed.recordEvent("test-otel", session.id, "unanswered", { question: "Bisiklet kiralanıyor mu?" });
+    timed.recordEvent("test-otel", session.id, "link_created", { url: "https://x" });
+    const mailer = { send: async (m: Mail) => void sent.push(m) };
+    const at = (iso: string) => sendDueWeeklyReports(hotels, timed, mailer, vi.fn(), new Date(iso));
+
+    expect(await at("2027-03-07T12:00:00Z")).toBe(0); // pazar
+    expect(await at("2027-03-08T05:30:00Z")).toBe(0); // pazartesi 08:30 (İstanbul)
+    expect(await at("2027-03-08T06:05:00Z")).toBe(1); // pazartesi 09:05
+    expect(await at("2027-03-08T10:00:00Z")).toBe(0); // aynı gün ikinci kez gitmez
+    expect(await at("2027-03-15T07:00:00Z")).toBe(1); // sonraki pazartesi
+    expect(sent).toHaveLength(2);
+    expect(sent[0]!.to).toBe("resepsiyon@test.example.com");
+    expect(sent[0]!.text).toContain("Bisiklet kiralanıyor mu?");
+    expect(sent[0]!.text).toMatch(/Verilen rezervasyon linki:\s+1/);
+  });
+
+  it("rapor ayarı olmayan otele rapor göndermez; gönderim hatasında ertesi saat yeniden dener", async () => {
+    const { sendDueWeeklyReports } = await import("../src/ops/weekly-report.js");
+    const none = new Map([["test-otel", testHotel()]]);
+    expect(await sendDueWeeklyReports(none, store, { send: async () => {} }, vi.fn(), new Date("2027-03-08T07:00:00Z"))).toBe(0);
+    const hotels = new Map([["test-otel", testHotel({ report: { weekday: 1, hour: 9 } })]]);
+    let fail = true;
+    const mailer = { send: async (m: Mail) => { if (fail) throw new Error("smtp"); sent.push(m); } };
+    expect(await sendDueWeeklyReports(hotels, store, mailer, vi.fn(), new Date("2027-03-08T07:00:00Z"))).toBe(0);
+    fail = false;
+    expect(await sendDueWeeklyReports(hotels, store, mailer, vi.fn(), new Date("2027-03-08T08:00:00Z"))).toBe(1);
+  });
+
+  it("satış talebini kaydeder ve panelde gösterir; rızasız ya da bot talebini almaz", async () => {
+    const { app } = setup(new ScriptedLlm([]));
+    const post = (payload: Record<string, unknown>) => app.inject({ method: "POST", url: "/api/lead", payload: { name: "Mehmet Kaya", hotel: "Deniz Otel", contact: "+90 555 111 22 33", consent: true, ...payload } });
+    expect((await post({ message: "20 odalı otelimiz var." })).statusCode).toBe(200);
+    expect((await post({ consent: false })).statusCode).toBe(400);
+    expect((await post({ hotel: "" })).statusCode).toBe(400);
+    expect((await post({ website: "http://spam.example" })).json()).toEqual({ ok: true });
+    const leads = (await app.inject({ url: "/admin/api/leads", headers: { authorization: `Bearer ${ADMIN}` } })).json();
+    expect(leads).toHaveLength(1);
+    expect(leads[0]).toMatchObject({ name: "Mehmet Kaya", hotel: "Deniz Otel", message: "20 odalı otelimiz var." });
+    expect((await app.inject({ url: "/admin/api/leads" })).statusCode).toBe(401);
+  });
+
+  it("satış sayfası ve örnek site sunulur", async () => {
+    const { app } = setup(new ScriptedLlm([]));
+    expect((await app.inject({ url: "/oteller-icin" })).body).toContain("Komisyona giden paranın");
+    const site = (await app.inject({ url: "/" })).body;
+    expect(site).toContain("Pati Koy");
+    expect(site).not.toContain("images.unsplash.com");
+  });
+});

@@ -27,7 +27,7 @@ export interface HandoffRecord {
 }
 
 /** Panel istatistikleri ve dönüşüm takibi için kaydedilen olay türleri. */
-export type EventType = "availability_query" | "link_created" | "link_clicked" | "unanswered" | "handoff";
+export type EventType = "availability_query" | "link_created" | "link_clicked" | "unanswered" | "handoff" | "lead";
 
 export interface EventRow {
   id: number;
@@ -85,6 +85,10 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS events_hotel_type ON events(hotel_id, type, created_at);
 CREATE INDEX IF NOT EXISTS events_session ON events(session_id);
+CREATE TABLE IF NOT EXISTS meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS usage (
   hotel_id TEXT NOT NULL,
   month TEXT NOT NULL,
@@ -220,6 +224,17 @@ export class Store {
   linkBelongsToSession(sessionId: string, url: string): boolean {
     const rows = this.db.prepare("SELECT data FROM events WHERE session_id = ? AND type = 'link_created'").all(sessionId);
     return rows.some((r) => (JSON.parse(r.data as string) as { url?: string }).url === url);
+  }
+
+  // --- Küçük durum kayıtları (ör. son rapor tarihi) -------------------------
+
+  getMeta(key: string): string | null {
+    const row = this.db.prepare("SELECT value FROM meta WHERE key = ?").get(key);
+    return (row?.value as string | undefined) ?? null;
+  }
+
+  setMeta(key: string, value: string): void {
+    this.db.prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
   }
 
   // --- Kullanım ------------------------------------------------------------

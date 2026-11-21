@@ -26,6 +26,7 @@ interface OffersPayload {
     roomTypeName: string;
     boardType: string | null;
     availableRooms: number | null;
+    imagePath?: string | null;
     plans: Array<{ rateType: string | null; price: number; discountedPrice: number | null; currency: string; refundable: boolean | null }>;
   }>;
 }
@@ -212,6 +213,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
 .offers .stay{font-size:12px;color:#666}
 .room{border:1px solid #d5d8dc;border-radius:12px;padding:10px 12px;background:#fff}
 .room h4{margin:0 0 2px;font-size:14px}
+.room img{display:block;width:calc(100% + 24px);margin:-10px -12px 10px;aspect-ratio:16/9;object-fit:cover;border-radius:11px 11px 0 0}
 .room .meta{font-size:12px;color:#666;margin-bottom:6px}
 .plan{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #eceef1}
 .plan .info{flex:1;min-width:0}
@@ -230,6 +232,9 @@ textarea,.card input[type=text]{font-size:16px}
 .head button{font-size:14px;padding:8px 10px}
 form.compose{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
 .msg{max-width:90%;font-size:15px}
+/* Parmakla rahat basılacak kadar büyük düğmeler. */
+.plan .btn{min-height:42px;padding:0 16px;font-size:14px}
+.quick button{padding:9px 14px;font-size:14px}
 }
 `;
 
@@ -360,6 +365,14 @@ form.compose{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
     wrap.append(el("div", "stay", `${p.checkIn} → ${p.checkOut} · ${t.nights.replace("{n}", String(p.nights))}`));
     for (const room of p.rooms) {
       const card = el("div", "room");
+      // Fotoğraf yolu yalnızca sohbet sunucusunun /img/ klasörünü gösterebilir.
+      if (room.imagePath && /^\/img\/[a-z0-9-]+\/[a-z0-9-]+[.](webp|jpg|png)$/.test(room.imagePath)) {
+        const img = el("img");
+        img.src = api + room.imagePath;
+        img.alt = "";
+        img.loading = "lazy";
+        card.append(img);
+      }
       card.append(el("h4", undefined, room.roomTypeName));
       const left = room.availableRooms !== null && room.availableRooms <= 2 ? t.roomsLeft.replace("{n}", String(room.availableRooms)) : null;
       const meta = [room.boardType, left].filter(Boolean).join(" · ");
@@ -410,16 +423,28 @@ form.compose{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
   };
   applyStrings();
 
-  const loadConfig = async (): Promise<boolean> => {
+  // Ayarlar sayfa yüklenince arka planda bir kez alınır; misafir düğmeye bastığında pencere
+  // beklemeden, karşılama mesajı hazır olarak açılır. Eşzamanlı çağrılar aynı isteği paylaşır.
+  let configRequest: Promise<WidgetConfig | null> | null = null;
+  const fetchConfig = (): Promise<WidgetConfig | null> =>
+    (configRequest ??= fetch(`${api}/api/hotels/${encodeURIComponent(hotelId)}/widget-config?lang=${browserLang}`)
+      .then((res) => (res.ok ? (res.json() as Promise<WidgetConfig>) : null))
+      .catch(() => null)
+      .then((value) => {
+        if (!value) configRequest = null; // başarısızsa sonraki açılışta yeniden denenir
+        return value;
+      }));
+
+  /** `silent`: arka plan ön yüklemesi; başarısız olursa misafire bir şey gösterilmez. */
+  const loadConfig = async (silent = false): Promise<boolean> => {
     if (config) return true;
-    try {
-      const res = await fetch(`${api}/api/hotels/${encodeURIComponent(hotelId)}/widget-config?lang=${browserLang}`);
-      if (!res.ok) throw new Error(String(res.status));
-      config = (await res.json()) as WidgetConfig;
-    } catch {
-      addSys(t.unavailable);
+    const loaded = await fetchConfig();
+    if (config) return true; // eşzamanlı bir çağrı bu arada kurmuş olabilir
+    if (!loaded) {
+      if (!silent) addSys(t.unavailable);
       return false;
     }
+    config = loaded;
     t = strings(config.language);
     // Sağdan sola diller: pencerenin tamamı çevrilir; konumu (sağ alt köşe) aynı kalır.
     panel.dir = RTL.has(config.language) ? "rtl" : "ltr";
@@ -693,7 +718,13 @@ form.compose{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
     }
   });
 
-  const mount = () => document.body.append(host);
+  const mount = () => {
+    document.body.append(host);
+    // Sayfanın kendi yüklenmesini geciktirmemek için tarayıcı boşta kalınca ön yükleme yapılır.
+    const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+    if (idle) idle(() => void loadConfig(true), { timeout: 2500 });
+    else setTimeout(() => void loadConfig(true), 1200);
+  };
   if (document.body) mount();
   else document.addEventListener("DOMContentLoaded", mount);
 })();

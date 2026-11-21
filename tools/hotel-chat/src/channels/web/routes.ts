@@ -12,6 +12,8 @@ export interface WebDeps extends ChatDeps {
   hotels: Map<string, Hotel>;
   limiter: RateLimiter;
   mailer: Mailer;
+  /** Satış talepleri bu adrese de e-postalanır. */
+  salesLeadEmail?: string;
 }
 
 const Lang = z.string().regex(/^[a-zA-Z]{2}(-[a-zA-Z0-9]{2,8})?$/).optional();
@@ -39,6 +41,16 @@ const ContactBody = z.object({
   /** Tuzak alan: insanlar görmez, botlar doldurur. */
   website: z.string().max(200).optional(),
 });
+const LeadBody = z.object({
+  name: z.string().trim().min(2).max(100),
+  hotel: z.string().trim().min(2).max(120),
+  contact: z.string().trim().min(5).max(120),
+  message: z.string().trim().max(1500).optional(),
+  consent: z.literal(true),
+  website: z.string().max(200).optional(),
+});
+/** Satış talepleri bir otele ait değildir; olay kaydında bu sabit kimlikle tutulur. */
+export const SALES_SCOPE = "_ysnsoft";
 const SessionBody = z.object({ hotelId: z.string().max(64), sessionId: z.string().uuid() });
 const ClickBody = SessionBody.extend({ url: z.string().url().max(2000) });
 
@@ -214,6 +226,31 @@ export function registerWebChannel(app: FastifyInstance, deps: WebDeps): void {
       { name: body.name, contact: body.contact, note: null },
     );
     if (outcome !== "sent") return reply.code(502).send({ error: "mail_failed" });
+    return { ok: true };
+  });
+
+  // "Oteller için" sayfasındaki teklif formu. Talep her zaman kaydedilir (panelde görünür);
+  // adres tanımlıysa ayrıca e-postalanır. E-posta gitmese de talep kaybolmaz.
+  app.post("/api/lead", async (req, reply) => {
+    const parsed = LeadBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "bad_request" });
+    const body = parsed.data;
+    if (body.website) return { ok: true };
+    const ip = clientIp(req.ip);
+    if (!ipAllowed(req.ip) || !limiter.take(`lead:d:${ip}`, 5, DAY)) return reply.code(429).send({ error: "rate_limited" });
+    const lead = { name: body.name, hotel: body.hotel, contact: body.contact, message: body.message ?? "" };
+    store.recordEvent(SALES_SCOPE, null, "lead", lead);
+    if (deps.salesLeadEmail) {
+      try {
+        await deps.mailer.send({
+          to: deps.salesLeadEmail,
+          subject: "[hotel-chat] Yeni teklif talebi",
+          text: [`Ad: ${lead.name}`, `Otel: ${lead.hotel}`, `İletişim: ${lead.contact}`, "", lead.message || "(mesaj yok)"].join("\n"),
+        });
+      } catch (err) {
+        deps.log("lead_mail_failed", { error: err instanceof Error ? err.message : String(err) });
+      }
+    }
     return { ok: true };
   });
 

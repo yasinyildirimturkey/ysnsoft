@@ -183,6 +183,13 @@ fiyat uydurma (para tutarı yasağı), PMS fiyatının aynen aktarılması, devi
 Her çalıştırma API'ye istek atar, yani ücretlidir (örnek otelin 25 sorusu Haiku 5.5 ile birkaç sent). Bilgi bankası, sistem promptu ya da model değiştiğinde çalıştırın.
 Model her seferinde biraz farklı cevap verebildiği için tek bir geçiş garanti değildir; önemli değişikliklerde birkaç kez çalıştırın.
 
+## Örnek site, fotoğraflar ve satış sayfası
+
+- `/` örnek otelin tanıtım sitesidir (`public/pati-koy.html`, 5 dil). Fotoğraflar `public/img/<otel-id>/` altında durur ve `/img/<otel-id>/<dosya>` adresinden sunulur; üçüncü taraf sunucuya istek gitmez. Örnek fotoğraflar Unsplash lisansıyla alınmıştır.
+- Sohbetteki oda kartlarının fotoğrafı ve çok dilli oda/plan adları sanal PMS verisinden gelir (`mock-pms.json` içinde `names` ve `image`).
+- `/oteller-icin` otellere yönelik satış sayfasıdır: komisyon hesaplayıcı (tarayıcıda çalışır, veri göndermez) ve teklif formu. Talepler panelde “Satış talepleri” sekmesinde görünür; `SALES_LEAD_EMAIL` tanımlıysa ayrıca e-postalanır.
+- Haftalık rapor: `hotel.json` içinde `"report": { "weekday": 1, "hour": 9 }` (0 = pazar) tanımlıysa otele her hafta o gün ve saatten sonra özet e-postası gider. SMTP ayarlı değilse rapor gönderilmez, loga yazılır.
+
 ## İşletme ayarları (hotel.json)
 
 | Alan | Ne yapar |

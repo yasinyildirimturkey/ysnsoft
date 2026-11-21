@@ -7,7 +7,6 @@
     <meta name="description" content="Bodrum Turgutreis'te deniz kenarında, yalnızca 5 odalı, evcil hayvan dostu butik otel. Örnek tanıtım sitesi." />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#0b3b40" />
-    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%230f6e6e'/%3E%3Cg fill='%23fff'%3E%3Ccircle cx='12' cy='14' r='4'/%3E%3Ccircle cx='20' cy='10' r='4'/%3E%3Ccircle cx='28' cy='14' r='4'/%3E%3Cpath d='M20 18c-6 0-10 5-10 10 0 3 2 5 5 5 2 0 3-1 5-1s3 1 5 1c3 0 5-2 5-5 0-5-4-10-10-10z'/%3E%3C/g%3E%3C/svg%3E" />
     <style>
       :root { --teal: #0f6e6e; --deep: #0b3b40; --ink: #18272a; --mut: #5b696c; --sand: #f7f1e7; --cream: #fffdf9; --coral: #df6b52; --gold: #c9a45c; --line: #e6ddce; --r: 20px; --shadow: 0 20px 60px rgba(11, 59, 64, .14); --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; }
@@ -231,7 +230,10 @@
         .map { min-height: 320px; }
         .room .foot .btn { flex: 1 1 100%; }
         /* Telefonda altta sabit çağrı çubuğu; sohbet düğmesiyle üst üste binmemesi için solda durur. */
-        .mcta { display: flex; position: fixed; inset-inline-start: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 30; }
+        .mcta { display: flex; position: fixed; inset-inline-start: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 30; transition: opacity .2s, transform .2s; }
+        /* Rezervasyon çubuğu ya da iletişim formu ekrandayken düğme alanların üstünü örtmesin. */
+        .mcta.off { opacity: 0; transform: translateY(12px); pointer-events: none; }
+        .bookbar input, .bookbar select { min-height: 44px; }
         .mcta .btn { min-height: 56px; box-shadow: 0 10px 26px rgba(0, 0, 0, .28); }
         footer { padding-bottom: 130px; }
       }
@@ -260,7 +262,7 @@
 
     <main id="ust">
       <div class="hero">
-        <img src="https://images.unsplash.com/photo-1684858504602-677ac40eadfd?auto=format&fit=crop&w=1800&q=72" srcset="https://images.unsplash.com/photo-1684858504602-677ac40eadfd?auto=format&fit=crop&w=900&q=70 900w, https://images.unsplash.com/photo-1684858504602-677ac40eadfd?auto=format&fit=crop&w=1800&q=72 1800w" sizes="100vw" alt="" fetchpriority="high" />
+        <img src="/img/pati-koy/hero-1800.webp" srcset="/img/pati-koy/hero-900.webp 900w, /img/pati-koy/hero-1800.webp 1800w" sizes="100vw" alt="" fetchpriority="high" />
         <div class="wrap">
           <p class="eyebrow" data-i18n="hero_eyebrow"></p>
           <h1 data-i18n="hero_h1"></h1>
@@ -294,8 +296,8 @@
       <section class="about">
         <div class="wrap cols">
           <div class="pics reveal">
-            <img class="a" data-photo="1779918158581-3aa986a3dc30" data-w="900" alt="" />
-            <img class="b" data-photo="1641924671500-93d652a8d316" data-w="600" alt="" />
+            <img class="a" data-photo="sunset" alt="" />
+            <img class="b" data-photo="terrace" alt="" />
           </div>
           <div class="reveal">
             <p class="eyebrow" data-i18n="about_eyebrow"></p>
@@ -334,9 +336,9 @@
             <button class="btn teal" type="button" data-ask="askPets" data-i18n="pets_btn"></button>
           </div>
           <div class="collage reveal">
-            <img data-photo="1636849241556-e43c85b19018" data-w="900" alt="" />
-            <img data-photo="1759745063504-8d1e2a4b4e49" data-w="600" alt="" />
-            <img data-photo="1791138719507-e54fa7a5c4db" data-w="600" alt="" />
+            <img data-photo="pet-beach" alt="" />
+            <img data-photo="pet-patio" alt="" />
+            <img data-photo="pet-cat" alt="" />
           </div>
         </div>
       </section>
@@ -346,9 +348,9 @@
           <p class="eyebrow" data-i18n="exp_eyebrow"></p>
           <h2 data-i18n="exp_h2"></h2>
           <div class="grid">
-            <article class="card reveal"><img data-photo="1633040243823-6bf8d4edb0ec" data-w="800" alt="" /><div><h3 data-i18n="e1t"></h3><p data-i18n="e1p"></p></div></article>
-            <article class="card reveal"><img data-photo="1778850110332-78bdc368f7a3" data-w="800" alt="" /><div><h3 data-i18n="e2t"></h3><p data-i18n="e2p"></p></div></article>
-            <article class="card reveal"><img data-photo="1548423469-3dcc5c4ccd65" data-w="800" alt="" /><div><h3 data-i18n="e3t"></h3><p data-i18n="e3p"></p></div></article>
+            <article class="card reveal"><img data-photo="breakfast" alt="" /><div><h3 data-i18n="e1t"></h3><p data-i18n="e1p"></p></div></article>
+            <article class="card reveal"><img data-photo="deck" alt="" /><div><h3 data-i18n="e2t"></h3><p data-i18n="e2p"></p></div></article>
+            <article class="card reveal"><img data-photo="sup" alt="" /><div><h3 data-i18n="e3t"></h3><p data-i18n="e3p"></p></div></article>
           </div>
           <div class="extras reveal">
             <div><b data-i18n="x1t"></b><span data-i18n="x1p"></span></div>
@@ -365,10 +367,10 @@
           <p class="eyebrow" data-i18n="gal_eyebrow"></p>
           <h2 data-i18n="gal_h2"></h2>
           <div class="strip reveal">
-            <img class="w2 h2" data-photo="1727720961469-d9b9bd0fe50a" data-w="1100" alt="" />
-            <img data-photo="1769869173719-997e7be14a56" data-w="600" alt="" />
-            <img data-photo="1650808735839-69ebc96cf5a3" data-w="600" alt="" />
-            <img class="w2" data-photo="1681801457582-de60b2a3ac0e" data-w="1100" alt="" />
+            <img class="w2 h2" data-photo="gal-coast" alt="" />
+            <img data-photo="gal-balcony" alt="" />
+            <img data-photo="lighthouse" alt="" />
+            <img class="w2" data-photo="gal-sunset" alt="" />
           </div>
         </div>
       </section>
@@ -395,7 +397,7 @@
             <div class="near"><h3 data-i18n="near_h"></h3><ul id="nearList"></ul></div>
           </div>
           <div class="map" id="map">
-            <img data-photo="1650808735839-69ebc96cf5a3" data-w="1000" alt="" />
+            <img data-photo="lighthouse" alt="" />
             <div class="cover"><div><button class="btn" type="button" id="mapBtn" data-i18n="map_btn"></button><small data-i18n="map_note"></small></div></div>
           </div>
         </div>
@@ -432,7 +434,7 @@
       <section class="band">
         <div class="wrap">
           <div class="box reveal">
-            <img data-photo="1727713682954-271a2135c375" data-w="1500" alt="" />
+            <img data-photo="band" alt="" />
             <h2 data-i18n="band_h2"></h2>
             <p data-i18n="band_p"></p>
             <div class="chips" id="chips"></div>
@@ -677,17 +679,23 @@
         function $(sel, root) { return (root || document).querySelector(sel); }
         function all(sel, root) { return [].slice.call((root || document).querySelectorAll(sel)); }
         function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
-        function photo(id, w) { return "https://images.unsplash.com/photo-" + id + "?auto=format&fit=crop&w=" + w + "&q=72"; }
+        // Fotoğraflar kendi sunucumuzdan, iki boyutta (640 ve 1280 px) sunulur.
+        function photo(name, w) { return "/img/pati-koy/" + name + "-" + w + ".webp"; }
+        function setPhoto(img, name) {
+          img.loading = "lazy"; img.decoding = "async";
+          img.srcset = photo(name, 640) + " 640w, " + photo(name, 1280) + " 1280w";
+          img.sizes = "(max-width: 980px) 100vw, 50vw";
+          img.src = photo(name, 1280);
+        }
 
         all("[data-i18n]").forEach(function (n) { n.textContent = t[n.getAttribute("data-i18n")]; });
         all("[data-i18n-html]").forEach(function (n) { n.innerHTML = t[n.getAttribute("data-i18n-html")]; }); // metinler bu dosyadan gelir
-        all("img[data-photo]").forEach(function (img) {
-          var id = img.getAttribute("data-photo"), w = Number(img.getAttribute("data-w"));
-          img.loading = "lazy"; img.decoding = "async";
-          img.srcset = photo(id, Math.round(w / 2)) + " " + Math.round(w / 2) + "w, " + photo(id, w) + " " + w + "w";
-          img.sizes = "(max-width: 980px) 100vw, 50vw";
-          img.src = photo(id, w);
-        });
+        // Üstteki örnek site notuna satış sayfasının linki eklenir.
+        var forHotels = { tr: "Oteliniz için", en: "For your hotel", de: "Für Ihr Hotel", ru: "Для вашего отеля", ar: "لفندقكم" };
+        var more = el("a", null, forHotels[lang] + " →"); more.href = "/oteller-icin";
+        $(".sample").append(" · ", more);
+
+        all("img[data-photo]").forEach(function (img) { setPhoto(img, img.getAttribute("data-photo")); });
 
         // Dil menüsü
         var langs = $("#langs"), cur = $(".cur", langs), ul = $("ul", langs);
@@ -703,12 +711,11 @@
         document.addEventListener("click", function (e) { if (!langs.contains(e.target)) { langs.classList.remove("open"); cur.setAttribute("aria-expanded", "false"); } });
 
         // Odalar
-        var ROOM_PHOTOS = ["1759264244726-adde4e4318fc", "1714919286244-6f3f6cce6e65", "1774280954999-9758f11f3d41", "1609602126247-4ab7188b4aa1"];
+        var ROOM_PHOTOS = ["room-std", "room-dlx", "room-garden", "room-suite"];
         ["r1", "r2", "r3", "r4"].forEach(function (key, i) {
           var r = t[key], card = el("article", "room reveal");
           var pic = el("div", "pic"), img = el("img");
-          img.alt = r[0]; img.loading = "lazy"; img.decoding = "async"; img.src = photo(ROOM_PHOTOS[i], 900);
-          img.srcset = photo(ROOM_PHOTOS[i], 500) + " 500w, " + photo(ROOM_PHOTOS[i], 900) + " 900w"; img.sizes = "(max-width: 980px) 100vw, 50vw";
+          img.alt = r[0]; setPhoto(img, ROOM_PHOTOS[i]);
           pic.append(img, el("span", "tag", r[1]));
           var body = el("div", "body"), list = el("ul");
           r[3].forEach(function (f) { list.append(el("li", null, f)); });
@@ -792,9 +799,20 @@
             .then(function () { note.hidden = false; btn.disabled = false; });
         });
 
+        // Telefondaki sabit "Müsaitlik sor" düğmesi, form alanları ekrandayken gizlenir.
+        var mcta = $(".mcta");
+        function inView(n) { var r = n.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; }
+        function placeCta() { mcta.classList.toggle("off", inView(book) || inView(cf)); }
+        window.addEventListener("scroll", placeCta, { passive: true });
+        window.addEventListener("resize", placeCta);
+        placeCta();
+
         // Kaydırınca beliren bölümler
         var io = "IntersectionObserver" in window ? new IntersectionObserver(function (entries) { entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } }); }, { threshold: 0.12 }) : null;
         all(".reveal").forEach(function (n) { if (io) io.observe(n); else n.classList.add("in"); });
+        // Güvence: gözlemci herhangi bir nedenle tetiklenmezse içerik gizli kalmasın.
+        setTimeout(function () { all(".reveal:not(.in)").forEach(function (n) { if (inView(n)) n.classList.add("in"); }); }, 1200);
+        window.addEventListener("scroll", function () { all(".reveal:not(.in)").forEach(function (n) { if (inView(n)) n.classList.add("in"); }); }, { passive: true });
 
         // Sohbet asistanı sayfanın diliyle yüklenir.
         var s = document.createElement("script");

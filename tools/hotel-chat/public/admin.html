@@ -73,7 +73,7 @@
         var hotelId = "";
         var tab = "ozet";
         var $ = function (id) { return document.getElementById(id); };
-        var TABS = [["ozet", "Özet"], ["sohbetler", "Sohbetler"], ["devirler", "Devir talepleri"], ["eksikler", "Cevaplanamayan sorular"], ["bilgi", "Bilgi bankası"]];
+        var TABS = [["ozet", "Özet"], ["sohbetler", "Sohbetler"], ["devirler", "Devir talepleri"], ["eksikler", "Cevaplanamayan sorular"], ["bilgi", "Bilgi bankası"], ["talepler", "Satış talepleri"]];
 
         // Metin her zaman textContent ile basılır; misafirin yazdığı hiçbir şey HTML olarak yorumlanmaz.
         function el(tag, props, children) {
@@ -156,6 +156,14 @@
             return api("/hotels/" + hotelId + "/unanswered").then(function (list) {
               view.append(el("p", { cls: "mut", text: "Asistanın bilgi bankasında bulamadığı için cevaplayamadığı sorular. Bilgi bankasına ekledikçe bu liste kısalır." }));
               view.append(table(["Zaman", "Soru"], list.map(function (q) { return { cells: [when(q.createdAt), q.question] }; })));
+            });
+          },
+          talepler: function (view) {
+            return api("/leads").then(function (list) {
+              view.append(el("p", { cls: "mut", text: "“Oteller için” sayfasındaki teklif formundan gelen talepler. Seçili otelden bağımsızdır." }));
+              view.append(table(["Zaman", "Ad", "Otel", "İletişim", "Mesaj"], list.map(function (l) {
+                return { cells: [when(l.createdAt), l.name, l.hotel, l.contact, l.message || ""] };
+              })));
             });
           },
           bilgi: function (view) {

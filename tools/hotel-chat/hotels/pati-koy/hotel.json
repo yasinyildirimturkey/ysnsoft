@@ -101,5 +101,9 @@
     },
     "primaryColor": "#0f6e6e"
   },
-  "monthlyTokenLimit": 5000000
+  "monthlyTokenLimit": 5000000,
+  "report": {
+    "weekday": 1,
+    "hour": 9
+  }
 }
