@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BLOG_POSTS, getPost } from '@/data/blog';
-import { PRODUCTS } from '@/data/products';
+import { PORTFOLIO } from '@/data/products';
 import { ogBase, postGraph, projectPath } from '@/lib/seo';
 import { Breadcrumbs, ContactCta, JsonLd, SiteFooter, SiteHeader } from '@/components/SiteChrome';
 
@@ -39,7 +39,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound();
 
   // Yazının etiketlerinde adı geçen proje (varsa) sayfasına bağlantı
-  const project = PRODUCTS.find((p) => post.tags.some((t) => p.name.toLowerCase().startsWith(t.toLowerCase())));
+  const project = PORTFOLIO.find((p) => post.tags.some((t) => p.name.toLowerCase().startsWith(t.toLowerCase())));
   const others = BLOG_POSTS.filter((p) => p.slug !== post.slug);
 
   return (

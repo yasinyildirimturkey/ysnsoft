@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { CITIES, landingIndexable, SECTORS } from '@/lib/landing';
-import { PRODUCTS } from '@/data/products';
+import { PORTFOLIO } from '@/data/products';
 import { BLOG_POSTS } from '@/data/blog';
 import { CONTENT_UPDATED, postUrl, projectUrl, SITE_URL } from '@/lib/seo';
 
@@ -12,7 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: baseUrl, lastModified: CONTENT_UPDATED, changeFrequency: 'weekly', priority: 1.0 },
     { url: `${baseUrl}/projeler`, lastModified: CONTENT_UPDATED, changeFrequency: 'weekly', priority: 0.9 },
-    ...PRODUCTS.map((p) => ({
+    ...PORTFOLIO.map((p) => ({
       url: projectUrl(p),
       lastModified: CONTENT_UPDATED,
       changeFrequency: 'monthly' as const,

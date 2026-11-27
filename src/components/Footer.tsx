@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Layers, ArrowRight, MessageCircle, Mail, Phone } from 'lucide-react';
-import { PRODUCTS } from '@/data/products';
+import { PORTFOLIO } from '@/data/products';
 
 interface FooterProps {
   onOpenContact: (productName?: string) => void;
@@ -82,7 +82,7 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
               Ürünlerimiz
             </h5>
             <ul className="space-y-2.5">
-              {PRODUCTS.map((p) => (
+              {PORTFOLIO.map((p) => (
                 <li key={p.id}>
                   <a href={`/projeler/${p.id}`} className="hover:text-[#1D1D1F] transition-colors">
                     {p.name}

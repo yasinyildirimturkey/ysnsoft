@@ -1,4 +1,4 @@
-import { PRODUCTS, type Product } from '@/data/products';
+import { PORTFOLIO, type Product } from '@/data/products';
 import { FAQS } from '@/data/faq';
 import type { BlogPost } from '@/data/blog';
 
@@ -161,8 +161,8 @@ const projectList = (id: string) => ({
   '@type': 'ItemList',
   '@id': id,
   name: 'YSNSOFT canlı projeler',
-  numberOfItems: PRODUCTS.length,
-  itemListElement: PRODUCTS.map((p, i) => ({
+  numberOfItems: PORTFOLIO.length,
+  itemListElement: PORTFOLIO.map((p, i) => ({
     '@type': 'ListItem',
     position: i + 1,
     name: p.name,

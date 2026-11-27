@@ -1,4 +1,4 @@
-import { PRODUCTS } from '@/data/products';
+import { PORTFOLIO } from '@/data/products';
 import { BLOG_POSTS } from '@/data/blog';
 import { FAQS } from '@/data/faq';
 import { CONTACT, postUrl, projectUrl, SITE_URL } from '@/lib/seo';
@@ -23,7 +23,7 @@ export function llmsTxt(): string {
   return [
     intro,
     '## Projeler',
-    PRODUCTS.map((p) => `- [${p.name}](${projectUrl(p)}): ${p.tagline}. Canlı adres: ${p.liveUrl}`).join('\n'),
+    PORTFOLIO.map((p) => `- [${p.name}](${projectUrl(p)}): ${p.tagline}. Canlı adres: ${p.liveUrl}`).join('\n'),
     '## Blog',
     BLOG_POSTS.map((p) => `- [${p.title}](${postUrl(p)}): ${p.summary}`).join('\n'),
     '## Diğer',
@@ -36,7 +36,7 @@ export function llmsTxt(): string {
 }
 
 export function llmsFullTxt(): string {
-  const projects = PRODUCTS.map((p) =>
+  const projects = PORTFOLIO.map((p) =>
     [
       `### ${p.name}`,
       `- Sayfa: ${projectUrl(p)}`,

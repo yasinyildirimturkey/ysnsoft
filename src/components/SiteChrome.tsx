@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PRODUCTS } from '@/data/products';
+import { PORTFOLIO } from '@/data/products';
 import { CONTACT, jsonLdString, projectPath } from '@/lib/seo';
 
 /** Alt sayfalar (projeler, blog) için sunucuda çizilen sade üst ve alt bölüm. */
@@ -95,7 +95,7 @@ export function SiteFooter() {
         <div className="sm:col-span-2">
           <div className="font-semibold text-[#1D1D1F] mb-3">Projeler</div>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[#515154]">
-            {PRODUCTS.map((p) => (
+            {PORTFOLIO.map((p) => (
               <li key={p.id}>
                 <Link href={projectPath(p)} className="hover:text-[#1D1D1F] hover:underline">
                   {p.name}

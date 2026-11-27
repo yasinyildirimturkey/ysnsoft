@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProduct, PRODUCTS } from '@/data/products';
+import { getProduct, PORTFOLIO } from '@/data/products';
 import { ogBase, projectFaqs, projectGraph, projectPath } from '@/lib/seo';
 import { Breadcrumbs, ContactCta, JsonLd, SiteFooter, SiteHeader } from '@/components/SiteChrome';
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  return PRODUCTS.map((p) => ({ slug: p.id }));
+  return PORTFOLIO.map((p) => ({ slug: p.id }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -32,8 +32,8 @@ export default async function ProjectPage({ params }: Props) {
 
   const faqs = projectFaqs(p);
   const related = [
-    ...PRODUCTS.filter((x) => x.id !== p.id && x.category === p.category),
-    ...PRODUCTS.filter((x) => x.id !== p.id && x.category !== p.category),
+    ...PORTFOLIO.filter((x) => x.id !== p.id && x.category === p.category),
+    ...PORTFOLIO.filter((x) => x.id !== p.id && x.category !== p.category),
   ].slice(0, 3);
 
   return (

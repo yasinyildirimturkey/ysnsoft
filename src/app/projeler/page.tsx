@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { PRODUCTS } from '@/data/products';
+import { PORTFOLIO } from '@/data/products';
 import { ogBase, projectPath, projectsIndexGraph } from '@/lib/seo';
 import { Breadcrumbs, ContactCta, JsonLd, SiteFooter, SiteHeader } from '@/components/SiteChrome';
 
-const description = `YSNSOFT’un canlıda çalışan ${PRODUCTS.length} projesi: hukuk yazılımı KGLEX, harita ve imar yazılımı HaritaPlan, emlak platformu Panelde, tekne kiralama pazaryeri DMyacht ve hukuk bürosu, restoran, e-ticaret siteleri.`;
+const description = `YSNSOFT’un canlıda çalışan ${PORTFOLIO.length} projesi: hukuk yazılımı KGLEX, harita ve imar yazılımı HaritaPlan, emlak platformu Panelde, tekne kiralama pazaryeri DMyacht ve hukuk bürosu, restoran, e-ticaret siteleri.`;
 
 export const metadata: Metadata = {
   title: 'Projeler: Canlıda Çalışan Web Siteleri ve Yazılımlar',
@@ -26,13 +26,13 @@ export default function ProjectsPage() {
             YSNSOFT projeleri
           </h1>
           <p className="text-base sm:text-lg text-[#515154] mt-4 leading-relaxed">
-            Aşağıdaki {PRODUCTS.length} proje YSNSOFT tarafından geliştirildi ve kendi alan adında yayında. Her projenin
+            Aşağıdaki {PORTFOLIO.length} proje YSNSOFT tarafından geliştirildi ve kendi alan adında yayında. Her projenin
             sayfasında ne işe yaradığı, özellikleri ve kullanılan teknolojiler yazıyor.
           </p>
         </div>
 
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {PRODUCTS.map((p) => (
+          {PORTFOLIO.map((p) => (
             <li key={p.id} className="apple-card p-6 flex flex-col">
               <div className="text-xs font-semibold" style={{ color: p.accentColor }}>
                 {p.categoryLabel}
