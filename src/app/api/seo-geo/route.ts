@@ -29,7 +29,9 @@ const DEFAULT_TARGETS = [
   { domain: 'acikellaw.com', url: 'https://www.acikellaw.com' },
   { domain: 'panelde.com', url: 'https://www.panelde.com' },
   { domain: 'flamantyou.com', url: 'https://www.flamantyou.com' },
-  { domain: 'tarihisamatyamezecisi.com', url: 'https://www.tarihisamatyamezecisi.com' }
+  { domain: 'tarihisamatyamezecisi.com', url: 'https://www.tarihisamatyamezecisi.com' },
+  { domain: 'dmyacht.com', url: 'https://dmyacht.com' },
+  { domain: 'kenangumusten.com', url: 'https://www.kenangumusten.com' }
 ];
 
 export async function GET(request: Request) {

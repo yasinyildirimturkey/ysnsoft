@@ -20,7 +20,9 @@ const DEFAULT_TARGETS = [
   { domain: 'acikellaw.com', name: 'Açıkel Law Danışmanlık', url: 'https://www.acikellaw.com' },
   { domain: 'panelde.com', name: 'Panelde Multi-Tenant SaaS', url: 'https://www.panelde.com' },
   { domain: 'flamantyou.com', name: 'Flamantyou Kozmetik (AI)', url: 'https://www.flamantyou.com' },
-  { domain: 'tarihisamatyamezecisi.com', name: 'Tarihi Samatya Mezecisi', url: 'https://www.tarihisamatyamezecisi.com' }
+  { domain: 'tarihisamatyamezecisi.com', name: 'Tarihi Samatya Mezecisi', url: 'https://www.tarihisamatyamezecisi.com' },
+  { domain: 'dmyacht.com', name: 'DMyacht Yat Kiralama Pazaryeri', url: 'https://dmyacht.com' },
+  { domain: 'kenangumusten.com', name: 'Av. Kenan Gümüşten Hukuk ve Danışmanlık', url: 'https://www.kenangumusten.com' }
 ];
 
 function getDynamicTargets() {

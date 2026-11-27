@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Layers, ArrowRight, MessageCircle, Mail, Phone } from 'lucide-react';
+import { PRODUCTS } from '@/data/products';
 
 interface FooterProps {
   onOpenContact: (productName?: string) => void;
@@ -81,35 +82,17 @@ export default function Footer({ onOpenContact, onScrollTo }: FooterProps) {
               Ürünlerimiz
             </h5>
             <ul className="space-y-2.5">
+              {PRODUCTS.map((p) => (
+                <li key={p.id}>
+                  <a href={`/projeler/${p.id}`} className="hover:text-[#1D1D1F] transition-colors">
+                    {p.name}
+                  </a>
+                </li>
+              ))}
               <li>
-                <button onClick={() => onScrollTo('products')} className="hover:text-[#1D1D1F] transition-colors">
-                  KGLEX LegalTech AI
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onScrollTo('products')} className="hover:text-[#1D1D1F] transition-colors">
-                  HaritaPlan / GeoPlan
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onScrollTo('products')} className="hover:text-[#1D1D1F] transition-colors">
-                  Panelde Multi-Tenant
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onScrollTo('products')} className="hover:text-[#1D1D1F] transition-colors">
-                  Flamantyou Kozmetik
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onScrollTo('products')} className="hover:text-[#1D1D1F] transition-colors">
-                  Tarihi Samatya Mezecisi
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onScrollTo('products')} className="hover:text-[#1D1D1F] transition-colors">
-                  Dolphin & ARM Bodrum
-                </button>
+                <a href="/projeler" className="text-[#0071E3] font-semibold hover:underline">
+                  Tüm projeler
+                </a>
               </li>
             </ul>
           </div>

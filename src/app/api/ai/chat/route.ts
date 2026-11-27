@@ -34,6 +34,8 @@ Portföydeki ürünler ve projeler:
 5. HG Avukatlık / Açıkel Hukuk (hgavukatlik.com): Çok dilli hukuk bürosu sitesi.
 6. Tarihi Samatya Mezecisi (tarihisamatyamezecisi.com): QR menü ve sipariş sistemi.
 7. Dolphin & ARM Bodrum (dolphinbodrum.com): Yat ve villa kiralama sitesi.
+8. DMyacht (dmyacht.com): Bodrum, Göcek, Fethiye ve Marmaris'te yat kiralama, gulet ve tekne turu pazaryeri; beş dilde rezervasyon.
+9. Av. Kenan Gümüşten (kenangumusten.com): İstanbul'da avukatlık bürosu için beş dilli kurumsal site ve müvekkil portalı.
 
 Yukarıdaki listede yazanlar dışında bu ürünler hakkında HİÇBİR BİLGİN YOK.
 

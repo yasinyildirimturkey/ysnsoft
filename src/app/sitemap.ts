@@ -1,65 +1,30 @@
 import { MetadataRoute } from 'next';
 import { CITIES, landingIndexable, SECTORS } from '@/lib/landing';
+import { PRODUCTS } from '@/data/products';
+import { BLOG_POSTS } from '@/data/blog';
+import { CONTENT_UPDATED, postUrl, projectUrl, SITE_URL } from '@/lib/seo';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://ysnsoft.com';
+  const baseUrl = SITE_URL;
   const currentDate = new Date().toISOString();
 
+  // Not: "#bölüm" adresleri ayrı sayfa değildir, sitemap'e yazılmaz.
   return [
-    {
-      url: `${baseUrl}`,
-      lastModified: currentDate,
-      changeFrequency: 'daily',
-      priority: 1.0,
-      alternates: {
-        languages: {
-          tr: `${baseUrl}`,
-          en: `${baseUrl}`,
-        },
-      },
-    },
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly',
-      priority: 0.80,
-    },
-    {
-      url: `${baseUrl}/#products`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly',
-      priority: 0.90,
-    },
-    {
-      url: `${baseUrl}/#live-sites`,
-      lastModified: currentDate,
-      changeFrequency: 'daily',
-      priority: 0.95,
-    },
-    {
-      url: `${baseUrl}/#sandbox`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/#architecture`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.75,
-    },
-    {
-      url: `${baseUrl}/#calculator`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.75,
-    },
-    {
-      url: `${baseUrl}/#faq`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.70,
-    },
+    { url: baseUrl, lastModified: CONTENT_UPDATED, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${baseUrl}/projeler`, lastModified: CONTENT_UPDATED, changeFrequency: 'weekly', priority: 0.9 },
+    ...PRODUCTS.map((p) => ({
+      url: projectUrl(p),
+      lastModified: CONTENT_UPDATED,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
+    { url: `${baseUrl}/blog`, lastModified: BLOG_POSTS[0]?.isoDate ?? CONTENT_UPDATED, changeFrequency: 'weekly', priority: 0.7 },
+    ...BLOG_POSTS.map((p) => ({
+      url: postUrl(p),
+      lastModified: p.isoDate,
+      changeFrequency: 'yearly' as const,
+      priority: 0.6,
+    })),
     // Almanca şehir + sektör sayfaları: yalnız Impressum/Datenschutz tanımlanıp indeksleme açılınca
     ...(landingIndexable() ? [
       `${baseUrl}/de/webdesign`,

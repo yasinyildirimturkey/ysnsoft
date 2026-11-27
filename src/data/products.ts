@@ -251,8 +251,62 @@ export const PRODUCTS: Product[] = [
     secondaryUrl: 'https://www.armbodrum.com',
     secondaryDomain: 'armbodrum.com',
     realCodePath: 'D:\\web\\2026yy'
+  },
+  {
+    id: 'dmyacht',
+    name: 'DMyacht',
+    tagline: 'Yat Kiralama, Gulet ve Tekne Turu Pazaryeri',
+    category: 'tourism',
+    categoryLabel: 'Turizm & Pazaryeri',
+    badge: '5 Dilde Rezervasyon',
+    shortDesc: 'Bodrum, Göcek, Fethiye ve Marmaris’te saatlik, günlük ve haftalık yat kiralama, gulet ile mavi tur ve günlük tekne turlarını tek yerde toplayan tekne kiralama platformu.',
+    longDesc: 'DMyacht; tekne firmalarının ilanlarını yayınladığı, misafirlerin müsaitliğe bakıp çevrim içi rezervasyon yaptığı bir pazaryeridir. Misafir rotasını ve bütçesini yazar, bölgedeki firmalar teklif gönderir. Harita üzerinden arama, denizde hava durumu (rüzgâr, yağmur, dalga), firma yönetim paneli ve Türkçe, İngilizce, Almanca, Rusça, Arapça arayüz içerir.',
+    metrics: [
+      { label: 'Tür', value: 'Tekne kiralama pazaryeri' },
+      { label: 'Diller', value: 'TR / EN / DE / RU / AR' },
+      { label: 'Bölge', value: 'Ege & Akdeniz' }
+    ],
+    features: [
+      'Saatlik, Günlük ve Haftalık Kiralama, Mavi Tur ve Günlük Tekne Turu İlanları',
+      '“Rotanı Yaz, Firmalar Teklif Versin” Ters Pazaryeri Akışı',
+      'Harita Üzerinden Arama ve Denizde Hava Durumu (Rüzgâr, Yağmur, Dalga)',
+      'Firma Paneli, 3D Secure Ödeme ve Dijital Biniş Kartı'
+    ],
+    techStack: ['Next.js', 'React', 'Harita Entegrasyonu', '3D Secure Ödeme', '5 Dil (RTL dahil)'],
+    accentColor: '#0EA5E9',
+    previewType: 'tourism',
+    liveUrl: 'https://dmyacht.com',
+    displayDomain: 'dmyacht.com'
+  },
+  {
+    id: 'kenangumusten',
+    name: 'Av. Kenan Gümüşten',
+    tagline: 'Hukuk ve Danışmanlık Bürosu Web Sitesi, Müvekkil Portalı',
+    category: 'legal',
+    categoryLabel: 'Hukuk Portalları',
+    badge: 'Çok Dilli (TR/EN/DE/RU/AR)',
+    shortDesc: 'İstanbul’da ticaret ve şirketler, icra-iflas, iş, gayrimenkul, sözleşmeler ve ceza hukuku alanlarında çalışan avukatlık bürosu için beş dilli kurumsal site ve müvekkil portalı.',
+    longDesc: 'Av. Kenan Gümüşten Hukuk ve Danışmanlık için geliştirilen site; uzmanlık alanları, kurumsal danışmanlık modeli, çalışma süreci ve sık sorulan sorular bölümlerini Türkçe, İngilizce, Almanca, Rusça ve Arapça sunar. Müvekkiller portala giriş yapabilir, ziyaretçiler danışmanlık talep formuyla görüşme isteyebilir.',
+    metrics: [
+      { label: 'Tür', value: 'Hukuk bürosu sitesi' },
+      { label: 'Diller', value: 'TR / EN / DE / RU / AR' },
+      { label: 'Bölüm', value: 'Müvekkil portalı' }
+    ],
+    features: [
+      'TR, EN, DE, RU ve AR Beş Dilli Kurumsal Sayfalar (Arapça Sağdan Sola)',
+      'Müvekkil Portalı Girişi',
+      'Danışmanlık Talep Formu ve Görüşme Planlama',
+      'Uzmanlık Alanları, Çalışma Süreci ve Sık Sorulan Sorular Bölümleri'
+    ],
+    techStack: ['Next.js', 'React', 'Tailwind CSS', '5 Dil (RTL dahil)'],
+    accentColor: '#14284B',
+    previewType: 'legal',
+    liveUrl: 'https://www.kenangumusten.com',
+    displayDomain: 'kenangumusten.com'
   }
 ];
+
+export const getProduct = (id: string) => PRODUCTS.find((p) => p.id === id);
 
 // Eskiden burada gerçek kişilere ait OLMAYAN alıntılar ve sonuç rakamları vardı (2026-11-18 kaldırıldı).
 // Yalnız müşterinin yazılı izniyle alınmış gerçek yorumlar eklenmeli.
