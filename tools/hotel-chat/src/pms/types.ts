@@ -23,6 +23,8 @@ export interface Offer {
   refundable: boolean | null;
   cancellationNote: string | null;
   minStayNights: number | null;
+  /** Oda fotoğrafının sohbet sunucusuna göre yolu (ör. /img/otel/oda-640.webp); yoksa null. */
+  imagePath?: string | null;
 }
 
 export interface PmsClient {

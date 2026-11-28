@@ -26,6 +26,7 @@ interface OffersPayload {
     roomTypeName: string;
     boardType: string | null;
     availableRooms: number | null;
+    imagePath?: string | null;
     plans: Array<{ rateType: string | null; price: number; discountedPrice: number | null; currency: string; refundable: boolean | null }>;
   }>;
 }
@@ -140,6 +141,34 @@ const UI = {
     roomsLeft: "Осталось: {n}",
   },
 };
+(UI as Record<string, Strings>).ar = {
+  open: "فتح المحادثة",
+  close: "إغلاق",
+  placeholder: "اكتبوا رسالتكم…",
+  send: "إرسال",
+  privacyLink: "إشعار الخصوصية",
+  clear: "حذف المحادثة",
+  cleared: "تم حذف سجل المحادثة.",
+  checking: "جارٍ الاستعلام من نظام الحجز…",
+  preparing: "جارٍ التحضير…",
+  formTitle: "ليتواصل معكم فريق الفندق",
+  name: "الاسم",
+  contact: "الهاتف أو البريد الإلكتروني",
+  note: "ملاحظة (اختياري)",
+  submit: "إرسال",
+  cancel: "إلغاء",
+  sent: "تم إرسال طلبكم إلى فريق الفندق. سيتواصلون معكم في أقرب وقت.",
+  formError: "تعذّر إرسال الطلب. يُرجى المحاولة لاحقًا.",
+  rate: "أنتم ترسلون الرسائل بسرعة كبيرة. يُرجى الانتظار قليلًا.",
+  tooLong: "رسالتكم طويلة جدًا.",
+  network: "تعذّر الاتصال. يُرجى المحاولة مرة أخرى.",
+  unavailable: "المحادثة غير متاحة حاليًا.",
+  book: "احجز",
+  bookMsg: "أرغب في حجز {room} ({plan}).",
+  nights: "{n} ليالٍ",
+  roomsLeft: "متبقٍ {n}",
+};
+const RTL = new Set(["ar", "he", "fa"]);
 const strings = (lang: string): Strings => (UI as Record<string, Strings>)[lang] ?? UI.en;
 type Strings = (typeof UI)["tr"];
 
@@ -184,6 +213,7 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
 .offers .stay{font-size:12px;color:#666}
 .room{border:1px solid #d5d8dc;border-radius:12px;padding:10px 12px;background:#fff}
 .room h4{margin:0 0 2px;font-size:14px}
+.room img{display:block;width:calc(100% + 24px);margin:-10px -12px 10px;aspect-ratio:16/9;object-fit:cover;border-radius:11px 11px 0 0}
 .room .meta{font-size:12px;color:#666;margin-bottom:6px}
 .plan{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #eceef1}
 .plan .info{flex:1;min-width:0}
@@ -191,7 +221,21 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
 .plan .price{font-weight:600}
 .plan s{font-weight:400;color:#888;font-size:12px;margin-right:4px}
 .plan .btn{min-height:32px;padding:0 12px;font-size:13px}
-@media (max-width:480px){.panel{right:12px;left:12px;width:auto;bottom:84px}.launcher{right:12px;bottom:12px}}
+.launcher.hide{display:none}
+@media (max-width:600px){
+/* Telefonda pencere tam ekran açılır. Yükseklik ve üst konum, klavye açılınca görünür alana göre betikten ayarlanır. */
+.panel{left:0;right:0;top:0;bottom:auto;width:100%;max-width:none;height:100vh;height:100dvh;max-height:none;border-radius:0;box-shadow:none}
+.launcher{right:14px;bottom:14px}
+/* iOS, 16px'ten küçük yazılı alana odaklanınca sayfayı yakınlaştırır; bunu önlemek için 16px. */
+textarea,.card input[type=text]{font-size:16px}
+.head{padding-top:calc(12px + env(safe-area-inset-top))}
+.head button{font-size:14px;padding:8px 10px}
+form.compose{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.msg{max-width:90%;font-size:15px}
+/* Parmakla rahat basılacak kadar büyük düğmeler. */
+.plan .btn{min-height:42px;padding:0 16px;font-size:14px}
+.quick button{padding:9px 14px;font-size:14px}
+}
 `;
 
 (function init() {
@@ -321,6 +365,14 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
     wrap.append(el("div", "stay", `${p.checkIn} → ${p.checkOut} · ${t.nights.replace("{n}", String(p.nights))}`));
     for (const room of p.rooms) {
       const card = el("div", "room");
+      // Fotoğraf yolu yalnızca sohbet sunucusunun /img/ klasörünü gösterebilir.
+      if (room.imagePath && /^\/img\/[a-z0-9-]+\/[a-z0-9-]+[.](webp|jpg|png)$/.test(room.imagePath)) {
+        const img = el("img");
+        img.src = api + room.imagePath;
+        img.alt = "";
+        img.loading = "lazy";
+        card.append(img);
+      }
       card.append(el("h4", undefined, room.roomTypeName));
       const left = room.availableRooms !== null && room.availableRooms <= 2 ? t.roomsLeft.replace("{n}", String(room.availableRooms)) : null;
       const meta = [room.boardType, left].filter(Boolean).join(" · ");
@@ -371,17 +423,31 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
   };
   applyStrings();
 
-  const loadConfig = async (): Promise<boolean> => {
+  // Ayarlar sayfa yüklenince arka planda bir kez alınır; misafir düğmeye bastığında pencere
+  // beklemeden, karşılama mesajı hazır olarak açılır. Eşzamanlı çağrılar aynı isteği paylaşır.
+  let configRequest: Promise<WidgetConfig | null> | null = null;
+  const fetchConfig = (): Promise<WidgetConfig | null> =>
+    (configRequest ??= fetch(`${api}/api/hotels/${encodeURIComponent(hotelId)}/widget-config?lang=${browserLang}`)
+      .then((res) => (res.ok ? (res.json() as Promise<WidgetConfig>) : null))
+      .catch(() => null)
+      .then((value) => {
+        if (!value) configRequest = null; // başarısızsa sonraki açılışta yeniden denenir
+        return value;
+      }));
+
+  /** `silent`: arka plan ön yüklemesi; başarısız olursa misafire bir şey gösterilmez. */
+  const loadConfig = async (silent = false): Promise<boolean> => {
     if (config) return true;
-    try {
-      const res = await fetch(`${api}/api/hotels/${encodeURIComponent(hotelId)}/widget-config?lang=${browserLang}`);
-      if (!res.ok) throw new Error(String(res.status));
-      config = (await res.json()) as WidgetConfig;
-    } catch {
-      addSys(t.unavailable);
+    const loaded = await fetchConfig();
+    if (config) return true; // eşzamanlı bir çağrı bu arada kurmuş olabilir
+    if (!loaded) {
+      if (!silent) addSys(t.unavailable);
       return false;
     }
+    config = loaded;
     t = strings(config.language);
+    // Sağdan sola diller: pencerenin tamamı çevrilir; konumu (sağ alt köşe) aynı kalır.
+    panel.dir = RTL.has(config.language) ? "rtl" : "ltr";
     applyStrings();
     host.style.setProperty("--c", config.primaryColor);
     title.textContent = config.title;
@@ -552,20 +618,69 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
       if (offers) showOffers(offers);
       if (wantForm) showHandoffForm();
       setBusy(false);
-      input.focus();
+      if (!mobile()) input.focus();
     }
   };
 
-  launcher.addEventListener("click", async () => {
-    const opening = !panel.classList.contains("open");
-    panel.classList.toggle("open", opening);
-    launcher.setAttribute("aria-expanded", String(opening));
-    if (opening && (await loadConfig())) input.focus();
+  const mobile = () => window.matchMedia("(max-width:600px)").matches;
+  let savedOverflow: string | null = null;
+
+  /** Telefonda pencereyi görünür alana oturtur; klavye açılınca mesaj kutusu klavyenin üstünde kalır. */
+  const fit = () => {
+    const vv = window.visualViewport;
+    if (vv && mobile() && panel.classList.contains("open")) {
+      panel.style.height = `${vv.height}px`;
+      panel.style.top = `${vv.offsetTop}px`;
+      scroll();
+    } else {
+      panel.style.height = "";
+      panel.style.top = "";
+    }
+  };
+  window.visualViewport?.addEventListener("resize", fit);
+  window.visualViewport?.addEventListener("scroll", fit);
+  window.addEventListener("resize", fit);
+
+  const setOpen = (open: boolean) => {
+    panel.classList.toggle("open", open);
+    launcher.setAttribute("aria-expanded", String(open));
+    // Telefonda tam ekran pencerenin altında sayfa kaymasın ve açma düğmesi üstte durmasın.
+    launcher.classList.toggle("hide", open && mobile());
+    const root = document.documentElement;
+    if (open && mobile()) {
+      savedOverflow ??= root.style.overflow;
+      root.style.overflow = "hidden";
+    } else if (savedOverflow !== null) {
+      root.style.overflow = savedOverflow;
+      savedOverflow = null;
+    }
+    fit();
+  };
+
+  const openChat = async (): Promise<boolean> => {
+    setOpen(true);
+    const ready = await loadConfig();
+    // Telefonda otomatik odak klavyeyi açıp karşılama mesajını örter; odak masaüstünde verilir.
+    if (ready && !mobile()) input.focus();
+    return ready;
+  };
+
+  launcher.addEventListener("click", () => {
+    if (panel.classList.contains("open")) setOpen(false);
+    else void openChat();
   });
   closeBtn.addEventListener("click", () => {
-    panel.classList.remove("open");
+    setOpen(false);
     launcher.focus();
   });
+
+  // Sayfanın kendi düğmeleri sohbeti açabilsin: HotelChat.open() ve HotelChat.ask("soru").
+  (window as unknown as { HotelChat: unknown }).HotelChat = {
+    open: () => void openChat(),
+    ask: async (question: string) => {
+      if ((await openChat()) && typeof question === "string" && question.trim()) void send(question.trim());
+    },
+  };
   clearBtn.addEventListener("click", async () => {
     if (busy) return;
     const id = sessionId;
@@ -592,6 +707,8 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
     const text = input.value.trim();
     if (!text || busy) return;
     input.value = "";
+    // Telefonda klavye kapanır ki cevap ekranın tamamında okunabilsin.
+    if (mobile()) input.blur();
     void send(text);
   });
   input.addEventListener("keydown", (ev) => {
@@ -601,7 +718,13 @@ textarea{flex:1;resize:none;border:1px solid #c9ccd1;border-radius:10px;padding:
     }
   });
 
-  const mount = () => document.body.append(host);
+  const mount = () => {
+    document.body.append(host);
+    // Sayfanın kendi yüklenmesini geciktirmemek için tarayıcı boşta kalınca ön yükleme yapılır.
+    const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+    if (idle) idle(() => void loadConfig(true), { timeout: 2500 });
+    else setTimeout(() => void loadConfig(true), 1200);
+  };
   if (document.body) mount();
   else document.addEventListener("DOMContentLoaded", mount);
 })();

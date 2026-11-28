@@ -4,11 +4,16 @@
   "city": "Antalya",
   "website": "https://www.example.com",
   "timezone": "Europe/Istanbul",
-  "languages": ["tr", "en"],
+  "languages": [
+    "tr",
+    "en"
+  ],
   "defaultLanguage": "tr",
   "currency": "TRY",
   "knowledgeBaseFile": "bilgi-tabani.md",
-  "pms": { "type": "mock" },
+  "pms": {
+    "type": "mock"
+  },
   "priceBasis": "total_stay",
   "bookingLink": {
     "template": "https://rezervasyon.example.com/?checkin={checkin}&checkout={checkout}&adult={adults}&childages={childAges}&roomtype={roomTypeId}&lang={language}",
@@ -31,12 +36,18 @@
     "retentionDays": 30
   },
   "widget": {
-    "allowedOrigins": ["*"],
-    "title": { "tr": "Demo Otel Asistanı", "en": "Demo Otel Assistant" },
+    "allowedOrigins": [
+      "*"
+    ],
+    "title": {
+      "tr": "Demo Otel Asistanı",
+      "en": "Demo Otel Assistant"
+    },
     "welcome": {
       "tr": "Merhaba! Odalar, olanaklar, müsaitlik ve fiyatlar hakkında sorularınızı yanıtlayabilirim.",
       "en": "Hello! I can answer questions about rooms, facilities, availability and prices."
     },
     "primaryColor": "#1f4e79"
-  }
+  },
+  "monthlyTokenLimit": 5000000
 }

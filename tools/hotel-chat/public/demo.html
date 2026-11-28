@@ -12,12 +12,14 @@
   <body>
     <h1 id="name">Widget demo</h1>
     <p>Bu sayfa widget'ı denemek içindir. Sağ alttaki düğmeye tıklayın.</p>
-    <p>Otel: <a href="?hotel=pati-koy">pati-koy</a> · <a href="?hotel=demo-otel">demo-otel</a></p>
+    <p>Otel: <a href="/">Pati Koy (örnek site)</a> · <a href="?hotel=demo-otel">demo-otel</a></p>
     <p>Gömme kodu: <code id="embed"></code></p>
     <script>
       // Otel kimliği adresten okunur: /demo?hotel=pati-koy
       var hotel = new URLSearchParams(location.search).get("hotel") || "pati-koy";
       if (!/^[a-z0-9-]+$/.test(hotel)) hotel = "pati-koy";
+      // Pati Koy'un kendi tanıtım sitesi var; eski demo linkleri oraya gider.
+      if (hotel === "pati-koy") location.replace("/");
       document.getElementById("name").textContent = "Widget demo: " + hotel;
       document.getElementById("embed").textContent =
         '<script src="/widget.js" data-hotel="' + hotel + '" async></' + "script>";

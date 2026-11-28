@@ -15,6 +15,7 @@ export interface OffersPayload {
     roomTypeName: string;
     boardType: string | null;
     availableRooms: number | null;
+    imagePath: string | null;
     plans: Array<{ rateType: string | null; price: number; discountedPrice: number | null; currency: string; refundable: boolean | null }>;
   }>;
 }
@@ -170,7 +171,7 @@ function groupOffers(offers: Offer[]): OffersPayload["rooms"] {
   for (const o of offers) {
     let room = rooms.get(o.roomTypeId);
     if (!room) {
-      room = { roomTypeId: o.roomTypeId, roomTypeName: o.roomTypeName, boardType: o.boardType, availableRooms: o.availableRooms, plans: [] };
+      room = { roomTypeId: o.roomTypeId, roomTypeName: o.roomTypeName, boardType: o.boardType, availableRooms: o.availableRooms, imagePath: o.imagePath ?? null, plans: [] };
       rooms.set(o.roomTypeId, room);
     }
     room.plans.push({ rateType: o.rateType, price: o.price, discountedPrice: o.discountedPrice, currency: o.currency, refundable: o.refundable });

@@ -34,6 +34,26 @@ export function buildApp({ deps, publicDir, trustProxy, admin, whatsapp }: AppOp
     "Access-Control-Allow-Origin": "*",
   });
   serveFile("/demo", "demo.html", "text/html; charset=utf-8", { "Cache-Control": "no-store" });
+  // Ana sayfa: örnek otelin tanıtım sitesi (asistan içine gömülü).
+  serveFile("/", "pati-koy.html", "text/html; charset=utf-8", { "Cache-Control": "no-cache" });
+
+  // Otellere yönelik satış sayfası (komisyon hesaplayıcı ve teklif formu).
+  serveFile("/oteller-icin", "oteller-icin.html", "text/html; charset=utf-8", { "Cache-Control": "no-cache" });
+
+  // Otel fotoğrafları kendi sunucumuzdan sunulur (üçüncü tarafa istek gitmez). Adlar sıkı
+  // denetlenir; klasör dışına çıkan ya da beklenmeyen uzantılı bir yol asla okunmaz.
+  app.get<{ Params: { hotel: string; file: string } }>("/img/:hotel/:file", async (req, reply) => {
+    const { hotel, file } = req.params;
+    if (!/^[a-z0-9-]+$/.test(hotel) || !/^[a-z0-9-]+[.](webp|jpg|png)$/.test(file)) return reply.code(404).send({ error: "not_found" });
+    const full = path.join(publicDir, "img", hotel, file);
+    if (!fs.existsSync(full)) return reply.code(404).send({ error: "not_found" });
+    const type = file.endsWith(".webp") ? "image/webp" : file.endsWith(".png") ? "image/png" : "image/jpeg";
+    return reply
+      .header("Content-Type", type)
+      .header("Cache-Control", "public, max-age=2592000")
+      .header("Access-Control-Allow-Origin", "*")
+      .send(fs.readFileSync(full));
+  });
 
   registerWebChannel(app, deps);
 

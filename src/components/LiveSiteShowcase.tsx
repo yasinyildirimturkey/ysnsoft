@@ -63,7 +63,9 @@ export default function LiveSiteShowcase() {
               displayDomain: s.domain
             };
           });
-          setAllProducts(mapped);
+          // Panelde kayıtlı olmayan portföy projeleri de vitrinde kalsın
+          const missing = PRODUCTS.filter(p => !p.isDemo && !mapped.some(m => m.id === p.id || m.displayDomain === p.displayDomain));
+          setAllProducts([...mapped, ...missing]);
         }
       })
       .catch(() => {});
@@ -439,7 +441,7 @@ export default function LiveSiteShowcase() {
                             <div className="p-4 bg-white rounded-2xl border border-gray-200/80 shadow-2xs space-y-3">
                               <div className="flex items-center justify-between text-xs">
                                 <span className="font-bold text-[#1D1D1F] flex items-center gap-1.5">
-                                  <Cpu className="w-4 h-4 text-purple-600" /> Multi-Tenant Bulut Altyapısı
+                                  <Cpu className="w-4 h-4 text-purple-600" /> {selectedProduct.categoryLabel}
                                 </span>
                                 <span className="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full">
                                   Canlıda Yayında

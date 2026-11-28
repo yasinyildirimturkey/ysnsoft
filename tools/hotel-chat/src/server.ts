@@ -7,6 +7,7 @@ import { createMailer } from "./handoff/mailer.js";
 import { AnthropicLlm } from "./llm/anthropic.js";
 import { DemoLlm } from "./llm/demo.js";
 import { Alerter } from "./ops/alerter.js";
+import { sendDueWeeklyReports } from "./ops/weekly-report.js";
 import { createPmsClient, type PmsClient } from "./pms/index.js";
 import { Store } from "./store/store.js";
 
@@ -47,6 +48,7 @@ const app = buildApp({
     limits: limitsFromEnv(env),
     llm: env.LLM_MODE === "demo" ? new DemoLlm() : new AnthropicLlm(env),
     mailer,
+    salesLeadEmail: env.SALES_LEAD_EMAIL,
     pmsFor: (hotelId) => pmsClients.get(hotelId)!,
     log,
     alert: alerter.alert,
@@ -78,10 +80,18 @@ function purge(): void {
     if (removed > 0) log("retention_purge", { hotelId: id, sessions: removed });
   }
 }
-purge();
-setInterval(purge, 60 * 60 * 1000).unref();
+/** Saatlik işler: saklama süresi temizliği ve günü gelen haftalık raporlar. */
+function hourly(): void {
+  purge();
+  void sendDueWeeklyReports(hotels, store, mailer, log).then((n) => {
+    if (n > 0) log("weekly_reports_sent", { count: n });
+  });
+}
+hourly();
+setInterval(hourly, 60 * 60 * 1000).unref();
 
-await app.listen({ port: env.PORT, host: "0.0.0.0" });
+// iisnode PORT olarak bir adlandırılmış kanal (\\.\pipe\...) verir; normal çalıştırmada sayıdır.
+await (/^[0-9]+$/.test(env.PORT) ? app.listen({ port: Number(env.PORT), host: "0.0.0.0" }) : app.listen({ path: env.PORT }));
 log("listening", {
   port: env.PORT,
   hotels: [...hotels.keys()],

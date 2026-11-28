@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Oteller için yapay zekâ asistanı · YSNSOFT</title>
+    <meta name="description" content="Otelinizin web sitesinde ve WhatsApp'ında 7/24 çalışan, fiyatı rezervasyon sisteminizden alan, misafirin dilinde cevap veren yapay zekâ asistanı." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0b3b40" />
+    <style>
+      :root { --teal: #0f6e6e; --deep: #0b3b40; --ink: #18272a; --mut: #5b696c; --sand: #f7f1e7; --cream: #fffdf9; --coral: #df6b52; --gold: #c9a45c; --line: #e6ddce; --r: 20px; --shadow: 0 20px 60px rgba(11, 59, 64, .14); --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
+      body { margin: 0; font: 17px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--cream); overflow-x: hidden; }
+      h1, h2, h3 { font-family: var(--serif); font-weight: 500; line-height: 1.14; margin: 0; letter-spacing: -0.015em; }
+      h2 { font-size: clamp(29px, 4.2vw, 44px); }
+      p { margin: 0; } a { color: inherit; } img { max-width: 100%; display: block; }
+      .wrap { width: min(1140px, 100% - 48px); margin-inline: auto; }
+      .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--teal); font-weight: 650; margin-bottom: 14px; }
+      .eyebrow::before { content: ""; width: 28px; height: 1.5px; background: var(--gold); }
+      .lead { color: var(--mut); max-width: 62ch; margin-top: 16px; font-size: 18px; }
+      section { padding: clamp(60px, 8vw, 104px) 0; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 26px; border-radius: 999px; border: 0; cursor: pointer; font: inherit; font-weight: 600; text-decoration: none; background: var(--coral); color: #fff; transition: transform .18s, box-shadow .18s; white-space: nowrap; }
+      .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(223, 107, 82, .36); }
+      .btn.line { background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, .65); } .btn.line:hover { background: rgba(255, 255, 255, .12); box-shadow: none; }
+      .btn.teal { background: var(--teal); } .btn.small { min-height: 42px; padding: 0 18px; font-size: 15px; }
+      :focus-visible { outline: 3px solid #f2b705; outline-offset: 3px; border-radius: 6px; }
+
+      header { position: sticky; top: 0; z-index: 30; background: rgba(255, 253, 249, .88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(230, 221, 206, .7); }
+      header .wrap { display: flex; align-items: center; gap: 22px; height: 70px; }
+      .brand { font-weight: 800; letter-spacing: .04em; text-decoration: none; margin-inline-end: auto; font-size: 18px; }
+      .brand span { color: var(--teal); }
+      header nav { display: flex; gap: 24px; font-size: 15px; } header nav a { text-decoration: none; color: #314346; }
+
+      .hero { position: relative; color: #fff; isolation: isolate; padding: clamp(80px, 11vw, 150px) 0; }
+      .hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+      .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(100deg, rgba(7, 31, 34, .9) 0%, rgba(7, 31, 34, .68) 55%, rgba(7, 31, 34, .35) 100%); }
+      .hero .eyebrow { color: #ffe3b3; } .hero .eyebrow::before { background: #ffe3b3; }
+      .hero h1 { font-size: clamp(36px, 5.6vw, 66px); max-width: 17ch; text-wrap: balance; }
+      .hero p { font-size: clamp(17px, 2vw, 21px); max-width: 52ch; margin-top: 20px; opacity: .95; }
+      .hero .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+      .hero ul { list-style: none; padding: 0; margin: 30px 0 0; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 15px; opacity: .92; }
+      .hero li::before { content: "✓ "; color: #ffe3b3; }
+
+      .pain .grid, .feat .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 40px; }
+      .pain .card { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 28px 26px; }
+      .pain .card b { display: block; font-family: var(--serif); font-size: 23px; font-weight: 500; margin-bottom: 8px; }
+      .pain .card p { color: var(--mut); font-size: 16px; }
+      .feat { background: var(--sand); }
+      .feat .item { background: #fff; border-radius: var(--r); padding: 24px 24px 26px; border: 1px solid var(--line); }
+      .feat .item i { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: #e6f2f0; color: var(--teal); font-style: normal; font-size: 20px; margin-bottom: 14px; }
+      .feat h3 { font-size: 21px; margin-bottom: 6px; }
+      .feat p { color: var(--mut); font-size: 15.5px; }
+      .rules { margin-top: 26px; padding: 20px 24px; background: #fff; border-inline-start: 3px solid var(--gold); border-radius: 0 14px 14px 0; color: #3c4c4f; font-size: 16px; }
+
+      .demo .box { position: relative; overflow: hidden; border-radius: 30px; color: #fff; isolation: isolate; padding: clamp(40px, 6vw, 76px) clamp(24px, 5vw, 64px); display: grid; grid-template-columns: 1.2fr .8fr; gap: 32px; align-items: center; }
+      .demo .box > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+      .demo .box::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(7, 31, 34, .88), rgba(7, 31, 34, .5)); }
+      .demo p { opacity: .94; margin-top: 14px; max-width: 50ch; }
+      .demo ol { margin: 0; padding: 22px 24px 22px 44px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .25); border-radius: 18px; display: grid; gap: 8px; font-size: 15.5px; backdrop-filter: blur(6px); }
+
+      .calc .cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 64px); align-items: start; }
+      .calc form { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 28px; display: grid; gap: 20px; box-shadow: 0 6px 24px rgba(11, 59, 64, .06); }
+      .calc label { display: grid; gap: 8px; font-weight: 600; font-size: 15px; }
+      .calc label span { display: flex; justify-content: space-between; gap: 12px; }
+      .calc output { color: var(--teal); font-variant-numeric: tabular-nums; }
+      .calc input[type=range] { width: 100%; accent-color: var(--teal); height: 28px; }
+      .calc input[type=number] { font: inherit; font-size: 17px; padding: 11px 14px; border: 1px solid #cfc6b6; border-radius: 12px; width: 100%; background: var(--cream); }
+      .result { background: var(--deep); color: #fff; border-radius: var(--r); padding: 30px 28px; position: sticky; top: 96px; }
+      .result small { display: block; color: #a9c9c6; font-size: 13.5px; letter-spacing: .08em; text-transform: uppercase; }
+      .result .big { font-family: var(--serif); font-size: clamp(38px, 5vw, 56px); line-height: 1.1; margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+      .result dl { margin: 22px 0 0; display: grid; gap: 0; }
+      .result dl div { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid rgba(255, 255, 255, .14); font-size: 15.5px; }
+      .result dt { color: #c5d8d6; } .result dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .result p { margin-top: 18px; font-size: 13.5px; color: #a9c9c6; }
+
+      .steps .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 40px; counter-reset: s; }
+      .steps .step { counter-increment: s; padding-top: 18px; border-top: 2px solid var(--line); }
+      .steps .step::before { content: counter(s, decimal-leading-zero); font-family: var(--serif); font-size: 34px; color: var(--gold); display: block; margin-bottom: 6px; }
+      .steps h3 { font-size: 22px; margin-bottom: 6px; } .steps p { color: var(--mut); font-size: 16px; }
+
+      .faq { background: var(--sand); }
+      .faq .cols { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(28px, 6vw, 80px); }
+      details { border-bottom: 1px solid var(--line); }
+      summary { list-style: none; cursor: pointer; padding: 19px 0; font-size: 18px; font-weight: 550; display: flex; justify-content: space-between; gap: 16px; }
+      summary::-webkit-details-marker { display: none; }
+      summary::after { content: "+"; font-size: 26px; font-weight: 300; color: var(--teal); line-height: 1; transition: transform .2s; }
+      details[open] summary::after { transform: rotate(45deg); }
+      details p { padding: 0 0 20px; color: var(--mut); max-width: 68ch; }
+
+      .offer .cols { display: grid; grid-template-columns: .9fr 1.1fr; gap: clamp(28px, 6vw, 80px); }
+      form.lf { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: clamp(22px, 3vw, 34px); display: grid; gap: 16px; box-shadow: var(--shadow); position: relative; }
+      form.lf .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      form.lf label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: #314346; }
+      form.lf input[type=text], form.lf textarea { font: inherit; font-size: 16px; padding: 12px 14px; border: 1px solid #cfc6b6; border-radius: 12px; background: var(--cream); width: 100%; }
+      form.lf textarea { min-height: 110px; resize: vertical; }
+      form.lf .consent { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-weight: 400; color: var(--mut); align-items: start; }
+      form.lf .consent input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--teal); }
+      form.lf .hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      .note { padding: 12px 16px; border-radius: 12px; font-size: 15px; } .note.ok { background: #e6f4ee; color: #17553a; } .note.err { background: #fbe9e6; color: #8a2a1c; }
+      .ticks { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 12px; }
+      .ticks li { display: grid; grid-template-columns: 24px 1fr; gap: 12px; } .ticks li::before { content: "✓"; color: var(--teal); font-weight: 700; }
+
+      footer { background: #071f22; color: #a9c1bf; font-size: 14.5px; padding: 40px 0; }
+      footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; } footer a { color: #fff; }
+
+      @media (max-width: 920px) {
+        header nav { display: none; }
+        .pain .grid, .feat .grid, .steps .grid { grid-template-columns: 1fr; }
+        .demo .box, .calc .cols, .faq .cols, .offer .cols { grid-template-columns: 1fr; }
+        .result { position: static; }
+      }
+      @media (max-width: 560px) { body { font-size: 16.5px; } .wrap { width: min(1140px, 100% - 36px); } form.lf .two { grid-template-columns: 1fr; } .hero .cta .btn { flex: 1 1 100%; } header .btn { display: none; } }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <a class="brand" href="https://ysnsoft.com" rel="noopener">YSN<span>SOFT</span></a>
+        <nav><a href="#neler">Neler yapar</a><a href="#hesap">Hesaplayın</a><a href="#kurulum">Kurulum</a><a href="#sss">Sorular</a></nav>
+        <a class="btn small" href="#teklif">Teklif isteyin</a>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero">
+        <img src="/img/pati-koy/gal-sunset-1280.webp" srcset="/img/pati-koy/gal-sunset-640.webp 640w, /img/pati-koy/gal-sunset-1280.webp 1280w" sizes="100vw" alt="" fetchpriority="high" />
+        <div class="wrap">
+          <p class="eyebrow">Oteller için yapay zekâ asistanı</p>
+          <h1>Misafiriniz gece 23:40'ta fiyat soruyor. Kim cevap veriyor?</h1>
+          <p>Otelinizin web sitesinde ve WhatsApp'ında 7 gün 24 saat çalışan, fiyatı rezervasyon sisteminizden alan ve misafirin kendi dilinde cevap veren asistan.</p>
+          <div class="cta">
+            <a class="btn" href="/">Canlı demoyu deneyin</a>
+            <a class="btn line" href="#teklif">Oteliniz için teklif isteyin</a>
+          </div>
+          <ul><li>Fiyat uydurmaz</li><li>Kart bilgisi istemez</li><li>Bilmediğini ekibinize devreder</li></ul>
+        </div>
+      </div>
+
+      <section class="pain">
+        <div class="wrap">
+          <p class="eyebrow">Sorun</p>
+          <h2>Doğrudan rezervasyon neden kaçıyor?</h2>
+          <div class="grid">
+            <div class="card"><b>Cevap geç geliyor</b><p>Misafir sorusunu akşam ya da hafta sonu soruyor. Cevabı beklerken aynı odayı bir satış sitesinden, komisyonunu siz ödeyerek ayırtıyor.</p></div>
+            <div class="card"><b>Fiyat için form dolduruyor</b><p>"Fiyat teklifi alın" formu, misafirden sabır ister. Çoğu doldurmaz; dolduranın bir kısmı cevap gelene kadar vazgeçmiş olur.</p></div>
+            <div class="card"><b>Her dilde ekip yok</b><p>Almanca, Rusça ya da Arapça yazan misafire aynı hızda ve aynı özenle cevap vermek küçük bir ekip için zordur.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="feat" id="neler">
+        <div class="wrap">
+          <p class="eyebrow">Neler yapar</p>
+          <h2>Resepsiyonunuzun en sabırlı üyesi.</h2>
+          <p class="lead">Asistan, sizin verdiğiniz bilgilerle ve sizin rezervasyon sisteminizle çalışır.</p>
+          <div class="grid">
+            <div class="item"><i>💬</i><h3>Soruları yanıtlar</h3><p>Odalar, giriş-çıkış saatleri, evcil hayvan, transfer, iptal koşulları: yalnızca sizin onayladığınız bilgi bankasından.</p></div>
+            <div class="item"><i>📅</i><h3>Canlı fiyat verir</h3><p>Tarih ve kişi sayısını alır, müsaitliği ve fiyatı rezervasyon sisteminizden sorgular, oda kartlarıyla gösterir.</p></div>
+            <div class="item"><i>🔗</i><h3>Rezervasyona götürür</h3><p>Misafiri, tarihleri ve oda tipi önceden doldurulmuş rezervasyon sayfanıza yönlendirir. Ödeme sizin sisteminizde kalır.</p></div>
+            <div class="item"><i>🌍</i><h3>Misafirin dilinde konuşur</h3><p>Türkçe, İngilizce, Almanca, Rusça ve Arapça arayüz; misafir hangi dilde yazarsa o dilde cevap.</p></div>
+            <div class="item"><i>🤝</i><h3>Ekibinize devreder</h3><p>Cevaplayamadığında ya da misafir istediğinde, açık rızayla iletişim bilgisini alır ve talebi özetiyle resepsiyona iletir.</p></div>
+            <div class="item"><i>📊</i><h3>Size rapor verir</h3><p>Panelde sohbetler, verilen rezervasyon linkleri ve asistanın cevaplayamadığı sorular; her hafta e-postayla özet.</p></div>
+          </div>
+          <p class="rules"><b>Sınırları nettir:</b> Asistan fiyat ve müsaitliği kendisi uydurmaz, yalnızca rezervasyon sisteminizden aktarır. Rezervasyon oluşturmaz, kart ya da kimlik bilgisi istemez. Bilgi bankanızda olmayan bir soruya tahminle cevap vermez; bilmediğini söyler ve ekibinize yönlendirir.</p>
+        </div>
+      </section>
+
+      <section class="demo">
+        <div class="wrap">
+          <div class="box">
+            <img src="/img/pati-koy/band-1280.webp" srcset="/img/pati-koy/band-640.webp 640w, /img/pati-koy/band-1280.webp 1280w" sizes="100vw" alt="" loading="lazy" />
+            <div>
+              <h2>Anlatmak yerine gösterelim.</h2>
+              <p>Pati Koy, bu sistemle çalışan kurgusal bir örnek otel. Sitesini açın, asistana bir misafir gibi yazın.</p>
+              <a class="btn" href="/" style="margin-top:26px">Örnek oteli açın</a>
+            </div>
+            <ol>
+              <li>Tarih seçip "Müsaitlik ve fiyat sor"a basın.</li>
+              <li>"Köpeğimle gelebilir miyim?" diye sorun.</li>
+              <li>Dili Almanca'ya çevirip aynı soruyu sorun.</li>
+              <li>"Bir yetkiliyle görüşmek istiyorum" yazın.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="calc" id="hesap">
+        <div class="wrap">
+          <p class="eyebrow">Hesaplayın</p>
+          <h2>Komisyona giden paranın ne kadarı sizde kalabilir?</h2>
+          <p class="lead">Kendi rakamlarınızı girin. Hesap, satış sitelerinden gelen rezervasyonların bir kısmının doğrudan rezervasyona dönmesi halinde ödemeyeceğiniz komisyonu gösterir.</p>
+          <div class="cols" style="margin-top:40px">
+            <form id="calc">
+              <label><span>Satış sitelerinden gelen aylık rezervasyon</span><input type="number" name="count" min="0" max="100000" value="60" inputmode="numeric" /></label>
+              <label><span>Ortalama rezervasyon tutarı (TL)</span><input type="number" name="avg" min="0" max="10000000" step="100" value="15000" inputmode="numeric" /></label>
+              <label><span>Ödediğiniz komisyon oranı <output id="oCom"></output></span><input type="range" name="com" min="5" max="30" step="1" value="15" /></label>
+              <label><span>Doğrudan rezervasyona dönen pay <output id="oShift"></output></span><input type="range" name="shift" min="1" max="50" step="1" value="10" /></label>
+            </form>
+            <div class="result" aria-live="polite">
+              <small>Yılda ödemeyeceğiniz komisyon</small>
+              <div class="big" id="rYear"></div>
+              <dl>
+                <div><dt>Yılda ödediğiniz toplam komisyon</dt><dd id="rTotal"></dd></div>
+                <div><dt>Doğrudan rezervasyona dönen (aylık)</dt><dd id="rCount"></dd></div>
+                <div><dt>Ayda ödemeyeceğiniz komisyon</dt><dd id="rMonth"></dd></div>
+              </dl>
+              <p>Bu bir varsayım hesabıdır, taahhüt değildir. Dönen pay sizin girdiğiniz varsayımdır; gerçek sonuç otelinize, sezonunuza ve fiyatlarınıza göre değişir.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="steps" id="kurulum">
+        <div class="wrap">
+          <p class="eyebrow">Kurulum</p>
+          <h2>Üç adımda yayında.</h2>
+          <div class="grid">
+            <div class="step"><h3>Bilgilerinizi alırız</h3><p>Odalar, hizmetler ve kurallar için bilgi bankanızı birlikte hazırlarız. Asistan yalnızca burada yazanı bilir; siz panelden dilediğiniz zaman güncellersiniz.</p></div>
+            <div class="step"><h3>Rezervasyon sisteminize bağlarız</h3><p>Bağlantı Elektra Web'in resmi API dokümanına göre geliştirildi. Başka bir sistem kullanıyorsanız, o sistemin sunduğu erişime göre bağlantıyı kurulum sırasında hazırlarız.</p></div>
+            <div class="step"><h3>Sitenize ekleriz</h3><p>Mevcut sitenize tek satır kodla eklenir; sitenizi yeniden yapmanız gerekmez. İsterseniz WhatsApp hattınıza da bağlarız, isterseniz sitenizi de yenileriz.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="faq" id="sss">
+        <div class="wrap cols">
+          <div>
+            <p class="eyebrow">Sorular</p>
+            <h2>Sık sorulanlar.</h2>
+          </div>
+          <div>
+            <details open><summary>Asistan fiyatı nereden biliyor?</summary><p>Kendisi bilmez. Her sorguda tarih ve kişi sayısını rezervasyon sisteminize sorar ve gelen fiyatı olduğu gibi aktarır. Sisteme ulaşamazsa fiyat söylemez; durumu misafire bildirir ve ekibinize yönlendirir.</p></details>
+            <details><summary>Yanlış bilgi verir mi?</summary><p>Asistan yalnızca sizin onayladığınız bilgi bankasından cevap verecek şekilde kurulur ve bilgi bankasında olmayan konuda "bu bilgiye sahip değilim" der. Bir dil modeli kullandığı için hiç hata yapmayacağını söyleyemeyiz; bu yüzden her otel için bir soru listesiyle test eder, sohbet kayıtlarını panelde size açarız.</p></details>
+            <details><summary>Misafirlerin verisi ne oluyor?</summary><p>Sohbetin başında aydınlatma metni gösterilir. Ad ve iletişim bilgisi yalnızca misafir bir yetkiliyle görüşmek istediğinde, açık rızasıyla alınır. Kayıtlar sizin belirlediğiniz süre sonunda silinir; misafir kendi sohbetini dilediği an silebilir. Sohbet metinleri, cevap üretmek için yapay zekâ sağlayıcısına gönderilir; bunu aydınlatma metninizde belirtmeniz gerekir.</p></details>
+            <details><summary>Mevcut web siteme eklenebilir mi?</summary><p>Evet. Asistan, sitenize eklenen tek satırlık bir kodla çalışır ve sitenizin tasarımını etkilemez.</p></details>
+            <details><summary>Hangi rezervasyon sistemleriyle çalışır?</summary><p>Sistem, farklı rezervasyon sistemlerine bağlanabilecek şekilde tasarlandı. İlk bağlantı Elektra Web için hazırlandı. Sizin sisteminiz farklıysa, sağlayıcınızın sunduğu erişime bakarak ne yapılabileceğini size açıkça söyleriz.</p></details>
+            <details><summary>WhatsApp'ta da çalışıyor mu?</summary><p>Evet, WhatsApp Business hattınıza bağlanabilir; misafir orada da aynı asistanla konuşur. Bunun için otelinize ait bir WhatsApp Business hesabı gerekir.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="offer" id="teklif">
+        <div class="wrap cols">
+          <div>
+            <p class="eyebrow">Teklif</p>
+            <h2>Oteliniz için konuşalım.</h2>
+            <p class="lead">Kısa bir görüşmede otelinizin sitesine ve rezervasyon sistemine bakar, ne kadar sürede ve hangi koşullarla kurabileceğimizi söyleriz.</p>
+            <ul class="ticks">
+              <li>Önce kendi otelinizin bilgileriyle bir deneme görürsünüz.</li>
+              <li>Mevcut sitenizi ve rezervasyon sisteminizi değiştirmeniz gerekmez.</li>
+              <li>Uygun değilse bunu baştan söyleriz.</li>
+            </ul>
+          </div>
+          <form class="lf" id="lf" novalidate>
+            <div class="two">
+              <label>Adınız<input type="text" name="name" autocomplete="name" required minlength="2" maxlength="100" /></label>
+              <label>Otelinizin adı<input type="text" name="hotel" autocomplete="organization" required minlength="2" maxlength="120" /></label>
+            </div>
+            <label>Telefon ya da e-posta<input type="text" name="contact" required minlength="5" maxlength="120" /></label>
+            <label>Eklemek istedikleriniz (isteğe bağlı)<textarea name="message" maxlength="1500"></textarea></label>
+            <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+            <label class="consent"><input type="checkbox" name="consent" required /><span>Bilgilerimin, talebime dönüş yapılması amacıyla YSNSOFT tarafından işlenmesine açık rıza veriyorum.</span></label>
+            <div class="note" id="lfNote" hidden role="status"></div>
+            <button class="btn teal" type="submit">Teklif isteyin</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span>© YSNSOFT · <a href="https://ysnsoft.com" rel="noopener">ysnsoft.com</a></span>
+        <span>Örnek otel: <a href="/">Pati Koy</a> (kurgusal). Fotoğraflar: Unsplash.</span>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        "use strict";
+        var $ = function (id) { return document.getElementById(id); };
+        var tl = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 });
+
+        // Komisyon hesaplayıcı: tamamen tarayıcıda çalışır, hiçbir veri gönderilmez.
+        var calc = $("calc");
+        function num(name, max) { var v = Number(calc.elements[name].value); return isFinite(v) && v > 0 ? Math.min(v, max) : 0; }
+        function update() {
+          var count = num("count", 100000), avg = num("avg", 10000000), com = num("com", 30) / 100, shift = num("shift", 50) / 100;
+          var monthlyCommission = count * avg * com;
+          $("oCom").textContent = "%" + Math.round(com * 100);
+          $("oShift").textContent = "%" + Math.round(shift * 100);
+          $("rYear").textContent = tl.format(monthlyCommission * shift * 12) + " TL";
+          $("rMonth").textContent = tl.format(monthlyCommission * shift) + " TL";
+          $("rTotal").textContent = tl.format(monthlyCommission * 12) + " TL";
+          $("rCount").textContent = tl.format(count * shift) + " rezervasyon";
+        }
+        calc.addEventListener("input", update);
+        calc.addEventListener("submit", function (e) { e.preventDefault(); });
+        update();
+
+        // Teklif formu
+        var lf = $("lf"), note = $("lfNote");
+        lf.addEventListener("submit", function (e) {
+          e.preventDefault();
+          note.hidden = true;
+          if (!lf.checkValidity()) { lf.reportValidity(); return; }
+          var btn = lf.querySelector("button[type=submit]"); btn.disabled = true;
+          var f = lf.elements;
+          fetch("/api/lead", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: f.name.value, hotel: f.hotel.value, contact: f.contact.value, message: f.message.value || undefined, consent: f.consent.checked, website: f.website.value }) })
+            .then(function (res) {
+              note.className = "note " + (res.ok ? "ok" : "err");
+              note.textContent = res.ok ? "Talebiniz bize ulaştı. En kısa sürede size dönüş yapacağız." : res.status === 429 ? "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin." : "Talep gönderilemedi. Lütfen alanları kontrol edip tekrar deneyin.";
+              if (res.ok) lf.reset();
+            })
+            .catch(function () { note.className = "note err"; note.textContent = "Talep gönderilemedi. Lütfen tekrar deneyin."; })
+            .then(function () { note.hidden = false; btn.disabled = false; });
+        });
+      })();
+    </script>
+  </body>
+</html>

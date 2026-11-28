@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "demo": "npm run build:widget && tsx --env-file=demo.env src/server.ts",
-    "eval": "tsx --env-file-if-exists=.env src/eval/run.ts"
+    "eval": "tsx --env-file-if-exists=.env src/eval/run.ts",
+    "package:iis": "node scripts/package-iis.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",

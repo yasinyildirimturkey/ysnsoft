@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { ArrowRight, Play, TrendingUp, ChevronRight } from 'lucide-react';
+import { PORTFOLIO } from '@/data/products';
 
 interface HeroProps {
   onOpenContact: (productName?: string) => void;
@@ -148,7 +149,7 @@ export default function Hero({ onOpenContact, onScrollTo, onSelectProduct }: Her
             </span>
             Canlıda
           </span>
-          <span className="text-[13px] font-medium text-[#1D1D1F]">8 ürün gerçek alan adlarında yayında</span>
+          <span className="text-[13px] font-medium text-[#1D1D1F]">{PORTFOLIO.length} proje gerçek alan adlarında yayında</span>
           <ChevronRight className="w-3.5 h-3.5 text-[#6E6E73] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
         </button>
 

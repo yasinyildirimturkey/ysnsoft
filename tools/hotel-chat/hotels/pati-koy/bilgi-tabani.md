@@ -5,8 +5,8 @@
 > Oda fiyatları ve müsaitlik burada YAZMAZ; onlar rezervasyon sisteminden gelir.
 
 ## Genel
-- Pati Koy Butik Otel, Kaş (Antalya) merkezine 2,5 km uzaklıkta, deniz kenarında, yalnızca 5 odalı, evcil hayvan dostu bir butik oteldir.
-- Tüm odalar deniz manzaralıdır.
+- Pati Koy Butik Otel, Bodrum'un Turgutreis beldesinde (Muğla), Turgutreis merkezine 1,5 km uzaklıkta, deniz kenarında, yalnızca 5 odalı, evcil hayvan dostu bir butik oteldir.
+- Tüm odalar deniz manzaralıdır. Otel batıya bakar; gün batımı terastan ve odalardan izlenir.
 - Otel yıl boyu açıktır.
 - Aile işletmesidir; sakin ve dinlendirici bir ortam sunar. Yüksek sesli müzik ve organizasyon yapılmaz.
 
@@ -36,7 +36,7 @@ Bebek yatağı ücretsizdir, önceden talep edilmelidir (otelde 2 adet vardır).
 - Evcil hayvanlar odada yalnız bırakılacaksa resepsiyona haber verilmelidir; 4 saatten uzun süre yalnız bırakılmamalıdır.
 - Evcil hayvanın odaya verdiği hasar misafirden tahsil edilir.
 - Otelin 300 m ilerisinde köpeklerin denize girebildiği küçük bir koy vardır.
-- En yakın veteriner kliniği Kaş merkezdedir (2,5 km). Otelde veteriner yoktur.
+- En yakın veteriner kliniği Turgutreis merkezdedir (1,5 km). Otelde veteriner yoktur.
 - Otelin kendi iki kedisi (Zeytin ve Limon) bahçede yaşar.
 
 ## Kahvaltı ve yeme içme
@@ -44,7 +44,7 @@ Bebek yatağı ücretsizdir, önceden talep edilmelidir (otelde 2 adet vardır).
 - Vejetaryen ve glütensiz kahvaltı, bir gün önceden haber verilirse hazırlanır.
 - Otelde öğle ve akşam yemeği servisi yoktur. Gün boyu (11:00–22:00) terasta ücretli içecek ve atıştırmalık servisi vardır.
 - Alkollü içecek servisi vardır (bira ve şarap).
-- Kaş merkezdeki restoranlar 2,5 km uzaklıktadır.
+- Turgutreis merkezdeki restoranlar 1,5 km uzaklıktadır.
 
 ## Deniz ve olanaklar
 - Otelin kumsalı yoktur. Denize, otelin önündeki ahşap yüzme platformundan merdivenle girilir. Deniz hemen derinleşir; yüzme bilmeyenler ve küçük çocuklar için uygun değildir.
@@ -55,12 +55,19 @@ Bebek yatağı ücretsizdir, önceden talep edilmelidir (otelde 2 adet vardır).
 - Ücretsiz Wi-Fi tüm alanlarda vardır.
 
 ## Ulaşım, otopark, transfer
-- Adres bölgesi: Çukurbağ Yarımadası, Kaş / Antalya.
-- Kaş merkeze 2,5 km (arabayla yaklaşık 7 dakika).
-- Dalaman Havalimanı'na yaklaşık 150 km (arabayla yaklaşık 2 saat). Antalya Havalimanı'na yaklaşık 190 km (arabayla yaklaşık 3 saat).
+- Adres bölgesi: Turgutreis, Bodrum / Muğla.
+- Turgutreis merkeze 1,5 km (arabayla yaklaşık 5 dakika, yürüyerek yaklaşık 20 dakika). Bodrum merkeze yaklaşık 20 km (arabayla yaklaşık 30 dakika).
+- Milas–Bodrum Havalimanı'na yaklaşık 55 km (arabayla yaklaşık 1 saat).
 - Ücretsiz açık otopark vardır (5 araçlık); rezervasyon gerekmez.
 - Elektrikli araç şarj istasyonu yoktur.
 - Havalimanı transferi ücretlidir, anlaşmalı firma ile yapılır ve en az 48 saat önce talep edilmelidir. Fiyat tarihe ve kişi sayısına göre değişir; resepsiyon bildirir.
+
+## Çevre
+- Turgutreis marina (D-Marin) ve çarşı: 1,5 km.
+- Kos (İstanköy) adasına feribot iskelesi: 1,5 km. Seferler sezonluktur; güncel sefer saatleri ve bilet için feribot işletmesine ya da resepsiyona danışılmalıdır. Otel feribot bileti satmaz.
+- Gümüşlük: yaklaşık 6 km.
+- Bodrum Kalesi ve Bodrum merkez: yaklaşık 20 km.
+- Otel tur ya da gezi düzenlemez.
 
 ## Çocuklar
 - Her yaştan çocuk kabul edilir.
@@ -73,6 +80,9 @@ Bebek yatağı ücretsizdir, önceden talep edilmelidir (otelde 2 adet vardır).
 ## İptal ve ödeme
 - İade edilebilir fiyatta: girişten 7 gün öncesine kadar ücretsiz iptal. Son 7 gün içindeki iptallerde ilk gecenin ücreti alınır.
 - İade edilemez fiyatta: iptal ve tarih değişikliği yapılamaz, ücret iadesi olmaz.
+- İade edilemez fiyat, aynı oda ve tarih için iade edilebilir fiyattan %10 daha uygundur.
+- Yılın en uygun fiyatları sezon dışında (1 Kasım – 14 Nisan, yılbaşı haftası hariç) geçerlidir; bu dönemde asgari konaklama şartı yoktur.
+- En uygun fiyat, otelin kendi sitesinden yapılan doğrudan rezervasyonda sunulur.
 - Rezervasyon ve ödeme otelin online rezervasyon sayfasından yapılır.
 - Otelde yapılan harcamalar (evcil hayvan ücreti, içecekler vb.) nakit ya da kredi kartıyla ödenebilir.
 

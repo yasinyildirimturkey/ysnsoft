@@ -6,7 +6,8 @@ const bool = z
   .transform((v) => v === "true");
 
 const EnvSchema = z.object({
-  PORT: z.coerce.number().int().default(8787),
+  /** Port numarası ya da (iisnode altında) IIS'in verdiği adlandırılmış kanal yolu. */
+  PORT: z.string().default("8787"),
   TRUST_PROXY: bool,
   DATA_DIR: z.string().default("./data"),
   HOTELS_DIR: z.string().default("./hotels"),
@@ -37,6 +38,8 @@ const EnvSchema = z.object({
   /** Panelde tahmini maliyet göstermek için 1 milyon token başına USD fiyatlar. */
   LLM_PRICE_INPUT_PER_MTOK: z.coerce.number().min(0).optional(),
   LLM_PRICE_OUTPUT_PER_MTOK: z.coerce.number().min(0).optional(),
+  /** "Oteller için" sayfasındaki teklif formundan gelen talepler bu adrese de e-postalanır (panelde her zaman görünür). */
+  SALES_LEAD_EMAIL: z.string().email().optional(),
   /** PMS arızası gibi sorunlarda uyarı e-postası gidecek adres. */
   OPS_ALERT_EMAIL: z.string().email().optional(),
 

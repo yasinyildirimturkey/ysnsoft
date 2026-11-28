@@ -228,6 +228,32 @@ const DEFAULT_SITES: SiteItem[] = [
     features: ['QR Menü Motoru', 'Masa Rezervasyon', 'Özel Sipariş Portalı'],
     description: 'İstanbul gastronomisinin köklü lezzet durağı için geliştirilmiş dijital masa ve sipariş yönetim portalı.',
     bridgeEnabled: false
+  },
+  {
+    id: 'dmyacht',
+    name: 'DMyacht',
+    tagline: 'Yat Kiralama, Gulet ve Tekne Turu Pazaryeri',
+    category: 'Turizm & Pazaryeri',
+    domain: 'dmyacht.com',
+    liveUrl: 'https://dmyacht.com',
+    status: 'active',
+    stats: {},
+    features: ['Günlük & Haftalık Kiralama', 'Rotanı Yaz, Teklif Al', 'Haritada Arama', 'Firma Paneli'],
+    description: 'Bodrum, Göcek, Fethiye ve Marmaris’te yat kiralama, gulet ile mavi tur ve günlük tekne turları için beş dilli pazaryeri.',
+    bridgeEnabled: false
+  },
+  {
+    id: 'kenangumusten',
+    name: 'Av. Kenan Gümüşten',
+    tagline: 'Hukuk ve Danışmanlık Bürosu Web Sitesi',
+    category: 'Hukuk Bürosu',
+    domain: 'kenangumusten.com',
+    liveUrl: 'https://www.kenangumusten.com',
+    status: 'active',
+    stats: {},
+    features: ['Beş Dilli Site', 'Müvekkil Portalı', 'Danışmanlık Talep Formu'],
+    description: 'İstanbul’da ticaret, icra-iflas, iş, gayrimenkul ve ceza hukuku alanlarında çalışan avukatlık bürosu için beş dilli kurumsal site ve müvekkil portalı.',
+    bridgeEnabled: false
   }
 ];
 

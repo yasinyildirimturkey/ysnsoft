@@ -31,7 +31,11 @@ export async function GET(request: Request) {
       'samatya-mezecisi.com',
       'www.samatya-mezecisi.com',
       'dolphinbodrum.com',
-      'www.dolphinbodrum.com'
+      'www.dolphinbodrum.com',
+      'dmyacht.com',
+      'www.dmyacht.com',
+      'kenangumusten.com',
+      'www.kenangumusten.com'
     ];
 
     const isAllowed = allowedDomains.some(d => host === d || host.endsWith('.' + d));

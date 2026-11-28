@@ -67,6 +67,18 @@ export const HotelConfigSchema = z.object({
     notifyWebhookEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
   }),
 
+  /**
+   * Otele haftalık özet e-postası. Tanımlıysa her hafta belirtilen gün ve saatten sonra bir kez gönderilir.
+   * weekday: 0 = pazar … 6 = cumartesi (otelin saat diliminde). email verilmezse handoff.email kullanılır.
+   */
+  report: z
+    .object({
+      email: z.string().email().optional(),
+      weekday: z.number().int().min(0).max(6).default(1),
+      hour: z.number().int().min(0).max(23).default(9),
+    })
+    .optional(),
+
   /** Aylık toplam token sınırı (girdi + çıktı). Aşılırsa asistan yeni mesaj almaz, misafiri ekibe yönlendirir. */
   monthlyTokenLimit: z.number().int().positive().optional(),
 

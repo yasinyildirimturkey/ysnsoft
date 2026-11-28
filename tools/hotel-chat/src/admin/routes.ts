@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Hotel } from "../config/hotel.js";
-import { MINUTE, type RateLimiter } from "../guard/rate-limit.js";
+import { clientIp, MINUTE, type RateLimiter } from "../guard/rate-limit.js";
 import type { ChatMessage } from "../llm/types.js";
 import type { Store } from "../store/store.js";
 
@@ -50,7 +50,7 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
     const given = header.startsWith("Bearer ") ? header.slice(7) : "";
     if (given && timingSafeEqual(sha(given), expected)) return true;
     // Parola denemelerini yavaşlat.
-    if (!limiter.take(`admin:fail:${req.ip}`, 10, MINUTE)) void reply.code(429).send({ error: "rate_limited" });
+    if (!limiter.take(`admin:fail:${clientIp(req.ip)}`, 10, MINUTE)) void reply.code(429).send({ error: "rate_limited" });
     else void reply.code(401).send({ error: "unauthorized" });
     return false;
   };
@@ -64,6 +64,12 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
   app.get("/admin/api/hotels", async (req, reply) => {
     if (!authed(req, reply)) return;
     return [...hotels.values()].map((h) => ({ id: h.config.id, name: h.config.name }));
+  });
+
+  // "Oteller için" sayfasından gelen teklif talepleri (bir otele bağlı değildir).
+  app.get("/admin/api/leads", async (req, reply) => {
+    if (!authed(req, reply)) return;
+    return store.listEvents("_ysnsoft", "lead", 200).map((e) => ({ ...e.data, createdAt: e.createdAt }));
   });
 
   app.get<{ Querystring: { days?: string } }>("/admin/api/hotels/:hotelId/stats", async (req, reply) => {

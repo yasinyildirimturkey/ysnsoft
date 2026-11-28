@@ -191,6 +191,14 @@ export default function ProductBentoGrid({ onSelectProduct, onOpenContact }: Pro
                       <span>{prod.isDemo ? 'Demoyu Aç' : 'Siteyi Aç'}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
+                    {!prod.isDemo && (
+                    <a
+                      href={`/projeler/${prod.id}`}
+                      className="px-2 py-2 text-[13px] font-medium text-[#0071E3] hover:underline whitespace-nowrap"
+                    >
+                      Proje sayfası
+                    </a>
+                    )}
                     {prod.infoUrl ? (
                       <a
                         href={prod.infoUrl}

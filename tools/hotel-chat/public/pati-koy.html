@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="tr" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Pati Koy Butik Otel · Turgutreis, Bodrum</title>
+    <meta name="description" content="Bodrum Turgutreis'te deniz kenarında, yalnızca 5 odalı, evcil hayvan dostu butik otel. Örnek tanıtım sitesi." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0b3b40" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%230f6e6e'/%3E%3Cg fill='%23fff'%3E%3Ccircle cx='12' cy='14' r='4'/%3E%3Ccircle cx='20' cy='10' r='4'/%3E%3Ccircle cx='28' cy='14' r='4'/%3E%3Cpath d='M20 18c-6 0-10 5-10 10 0 3 2 5 5 5 2 0 3-1 5-1s3 1 5 1c3 0 5-2 5-5 0-5-4-10-10-10z'/%3E%3C/g%3E%3C/svg%3E" />
+    <style>
+      :root { --teal: #0f6e6e; --deep: #0b3b40; --ink: #18272a; --mut: #5b696c; --sand: #f7f1e7; --cream: #fffdf9; --coral: #df6b52; --gold: #c9a45c; --line: #e6ddce; --r: 20px; --shadow: 0 20px 60px rgba(11, 59, 64, .14); --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: 84px; }
+      body { margin: 0; font: 17px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Arabic", sans-serif; color: var(--ink); background: var(--cream); overflow-x: hidden; }
+      h1, h2, h3 { font-family: var(--serif); font-weight: 500; line-height: 1.12; margin: 0; letter-spacing: -0.015em; }
+      [lang="ar"] h1, [lang="ar"] h2, [lang="ar"] h3, [lang="ru"] h1, [lang="ru"] h2, [lang="ru"] h3 { letter-spacing: 0; }
+      [lang="ar"] { --serif: "Noto Naskh Arabic", "Geeza Pro", "Times New Roman", serif; }
+      h2 { font-size: clamp(30px, 4.4vw, 46px); }
+      p { margin: 0; }
+      img { max-width: 100%; display: block; }
+      a { color: inherit; }
+      .wrap { width: min(1180px, 100% - 48px); margin-inline: auto; }
+      .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--teal); font-weight: 650; margin-bottom: 14px; }
+      .eyebrow::before { content: ""; width: 28px; height: 1.5px; background: var(--gold); }
+      [lang="ar"] .eyebrow { letter-spacing: 0; font-size: 14px; }
+      .lead { color: var(--mut); max-width: 60ch; margin-top: 16px; font-size: 18px; }
+      section { padding: clamp(64px, 9vw, 120px) 0; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 0 26px; border-radius: 999px; border: 0; cursor: pointer; font: inherit; font-weight: 600; text-decoration: none; background: var(--coral); color: #fff; transition: transform .18s, box-shadow .18s, background .18s; white-space: nowrap; }
+      .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(223, 107, 82, .36); }
+      .btn.teal { background: var(--teal); } .btn.teal:hover { box-shadow: 0 12px 26px rgba(15, 110, 110, .32); }
+      .btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); } .btn.ghost:hover { box-shadow: none; border-color: var(--teal); color: var(--teal); }
+      .btn.small { min-height: 42px; padding: 0 18px; font-size: 15px; }
+      :focus-visible { outline: 3px solid #f2b705; outline-offset: 3px; border-radius: 6px; }
+      .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+      .reveal.in { opacity: 1; transform: none; }
+
+      .sample { background: #071f22; color: #c9dcdb; font-size: 13px; text-align: center; padding: 8px 16px; }
+      .sample a { color: #fff; font-weight: 600; }
+
+      header { position: sticky; top: 0; z-index: 40; background: rgba(255, 253, 249, .86); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid rgba(230, 221, 206, .7); }
+      header .wrap { display: flex; align-items: center; gap: 18px; height: 72px; }
+      .logo { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 22px; text-decoration: none; margin-inline-end: auto; }
+      .logo svg { width: 34px; height: 34px; }
+      nav { display: flex; gap: 26px; font-size: 15px; }
+      nav a { text-decoration: none; color: #314346; position: relative; padding: 6px 0; }
+      nav a::after { content: ""; position: absolute; inset-inline: 0; bottom: 0; height: 1.5px; background: var(--gold); transform: scaleX(0); transition: transform .2s; }
+      nav a:hover::after { transform: scaleX(1); }
+      .langs { position: relative; }
+      .langs button.cur { display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 0 14px; min-height: 42px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--ink); }
+      .langs ul { position: absolute; inset-inline-end: 0; top: calc(100% + 8px); margin: 0; padding: 6px; list-style: none; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); min-width: 170px; display: none; }
+      .langs.open ul { display: block; }
+      .langs li a { display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; border-radius: 9px; text-decoration: none; font-size: 15px; }
+      .langs li a:hover, .langs li a[aria-current="true"] { background: var(--sand); }
+      .langs li small { color: var(--mut); }
+
+      .hero { position: relative; min-height: min(820px, 94vh); display: flex; align-items: flex-end; color: #fff; isolation: isolate; }
+      .hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+      .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(7, 31, 34, .35) 0%, rgba(7, 31, 34, .1) 35%, rgba(7, 31, 34, .78) 100%); }
+      .hero .wrap { padding: 120px 0 150px; }
+      .hero .eyebrow { color: #ffe3b3; } .hero .eyebrow::before { background: #ffe3b3; }
+      .hero h1 { font-size: clamp(42px, 7vw, 86px); max-width: 14ch; text-wrap: balance; text-shadow: 0 2px 30px rgba(0, 0, 0, .25); }
+      .hero p { font-size: clamp(17px, 2vw, 21px); max-width: 46ch; margin-top: 20px; opacity: .96; }
+
+      .bookbar { margin-top: -74px; position: relative; z-index: 5; padding: 0; }
+      .bookbar form { display: grid; grid-template-columns: 1.2fr 1.2fr .8fr .8fr auto; gap: 0; background: #fff; border-radius: var(--r); box-shadow: var(--shadow); padding: 10px; align-items: stretch; }
+      .bookbar label { display: flex; flex-direction: column; gap: 2px; padding: 10px 18px; border-inline-end: 1px solid var(--line); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+      [lang="ar"] .bookbar label { letter-spacing: 0; font-size: 13px; }
+      .bookbar input, .bookbar select { border: 0; background: transparent; font: inherit; font-size: 17px; color: var(--ink); padding: 4px 0; width: 100%; min-height: 34px; text-transform: none; letter-spacing: 0; font-weight: 500; }
+      .bookbar .btn { margin-inline-start: 10px; align-self: center; min-height: 56px; }
+      .bookbar small { display: block; color: var(--mut); font-size: 13.5px; margin-top: 12px; text-align: center; }
+
+      .facts { padding: 44px 0 0; }
+      .facts .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+      .facts .item { padding: 6px 24px; border-inline-end: 1px solid var(--line); text-align: center; }
+      .facts .item:last-child { border: 0; }
+      .facts b { display: block; font-family: var(--serif); font-size: 27px; font-weight: 500; color: var(--deep); }
+      .facts span { font-size: 14.5px; color: var(--mut); }
+
+      .about .cols { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(32px, 6vw, 84px); align-items: center; }
+      .about .pics { position: relative; padding-bottom: 12%; }
+      .about .pics img { border-radius: var(--r); box-shadow: var(--shadow); object-fit: cover; }
+      .about .pics .a { width: 82%; aspect-ratio: 4 / 5; }
+      .about .pics .b { position: absolute; inset-inline-end: 0; bottom: 0; width: 52%; aspect-ratio: 1; border: 8px solid var(--cream); }
+      .about p + p { margin-top: 16px; }
+      .about p { color: #3c4c4f; }
+
+      .rooms { background: var(--sand); }
+      .rooms .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px; margin-top: 44px; }
+      .room { background: #fff; border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(11, 59, 64, .07); transition: transform .25s, box-shadow .25s; }
+      .room:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+      .room .pic { position: relative; aspect-ratio: 16 / 10; overflow: hidden; }
+      .room .pic img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s; }
+      .room:hover .pic img { transform: scale(1.04); }
+      .room .tag { position: absolute; inset-inline-start: 16px; top: 16px; background: rgba(255, 255, 255, .93); color: var(--deep); font-size: 12.5px; font-weight: 650; padding: 6px 12px; border-radius: 999px; }
+      .room .body { padding: 24px 26px 26px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+      .room h3 { font-size: 25px; }
+      .room ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+      .room li { font-size: 13.5px; background: var(--sand); padding: 5px 11px; border-radius: 999px; color: #46544f; }
+      .room p { color: var(--mut); font-size: 16px; }
+      .room .foot { margin-top: auto; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); }
+      .room .foot small { color: var(--mut); font-size: 14px; }
+      .all { margin-top: 26px; color: var(--mut); font-size: 15.5px; max-width: 80ch; }
+
+      .hero .badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 24px; padding: 8px 16px; border-radius: 999px; background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .38); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 14.5px; font-weight: 600; }
+      .hero .badge::before { content: ""; width: 18px; height: 18px; border-radius: 50%; background: #ffe3b3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b3b40' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4L18 8'/%3E%3C/svg%3E") center / 12px no-repeat; flex: none; }
+      .offers .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 40px; }
+      .offer { background: #fff; border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: var(--r); padding: 28px 26px; display: flex; flex-direction: column; gap: 10px; }
+      .offer .tagline { align-self: flex-start; font-size: 13px; font-weight: 700; color: var(--teal); background: #e6f2f0; padding: 5px 12px; border-radius: 999px; }
+      .offer h3 { font-size: 25px; }
+      .offer p { color: var(--mut); font-size: 16px; flex: 1; }
+      .offer .btn { align-self: flex-start; margin-top: 8px; }
+      .near { margin-top: 30px; }
+      .near h3 { font-size: 21px; margin-bottom: 10px; }
+      .near ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .near li { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; font-size: 15px; display: flex; flex-direction: column; }
+      .near li small { color: var(--mut); font-size: 13.5px; }
+      .wa { display: inline-flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 22px; border-radius: 999px; border: 0; cursor: pointer; font: inherit; font-weight: 600; color: #fff; background: #1faa59; margin-top: 22px; }
+      .wa svg { width: 22px; height: 22px; }
+      .wa:hover { background: #18934c; }
+      .pets .cols { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(32px, 6vw, 84px); align-items: center; }
+      .pets .collage { display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px; aspect-ratio: 5 / 4; }
+      .pets .collage img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--r); }
+      .pets .collage img:first-child { grid-row: span 2; }
+      .checks { list-style: none; padding: 0; margin: 24px 0 30px; display: grid; gap: 13px; }
+      .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: start; }
+      .checks li::before { content: ""; width: 22px; height: 22px; margin-top: 3px; border-radius: 50%; background: var(--teal) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4L18 8'/%3E%3C/svg%3E") center / 14px no-repeat; }
+
+      .exp { background: var(--deep); color: #e7f0ef; }
+      .exp .eyebrow { color: #8fd3c8; }
+      .exp .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 44px; }
+      .exp .card { border-radius: var(--r); overflow: hidden; background: rgba(255, 255, 255, .06); }
+      .exp .card img { aspect-ratio: 4 / 3; width: 100%; object-fit: cover; }
+      .exp .card div { padding: 22px 24px 26px; }
+      .exp h3 { font-size: 23px; margin-bottom: 8px; }
+      .exp .card p { color: #c5d8d6; font-size: 15.5px; }
+      .extras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 22px; }
+      .extras div { border: 1px solid rgba(255, 255, 255, .14); border-radius: 14px; padding: 16px 18px; font-size: 15px; color: #d4e3e2; }
+      .extras b { display: block; color: #fff; font-weight: 600; margin-bottom: 2px; }
+      .honest { margin-top: 26px; padding: 18px 22px; border-inline-start: 3px solid var(--gold); background: rgba(255, 255, 255, .05); border-radius: 0 14px 14px 0; color: #d4e3e2; font-size: 15.5px; }
+      [dir="rtl"] .honest { border-radius: 14px 0 0 14px; }
+
+      .gallery { padding-bottom: 0; }
+      .gallery .strip { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 220px; gap: 12px; margin-top: 36px; }
+      .gallery img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+      .gallery .w2 { grid-column: span 2; } .gallery .h2 { grid-row: span 2; }
+
+      .faq .cols { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(28px, 6vw, 80px); }
+      details { border-bottom: 1px solid var(--line); }
+      summary { list-style: none; cursor: pointer; padding: 20px 0; font-size: 18.5px; font-weight: 550; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+      summary::-webkit-details-marker { display: none; }
+      summary::after { content: "+"; font-size: 26px; font-weight: 300; color: var(--teal); transition: transform .2s; flex: none; }
+      details[open] summary::after { transform: rotate(45deg); }
+      details p { padding: 0 0 20px; color: var(--mut); max-width: 68ch; }
+
+      .where { background: var(--sand); }
+      .where .cols { display: grid; grid-template-columns: 1fr 1.15fr; gap: clamp(28px, 5vw, 64px); align-items: stretch; }
+      .where dl { margin: 26px 0 0; display: grid; gap: 0; }
+      .where dl div { display: flex; justify-content: space-between; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+      .where dt { color: var(--mut); } .where dd { margin: 0; font-weight: 600; text-align: end; }
+      .map { position: relative; border-radius: var(--r); overflow: hidden; min-height: 420px; background: #dfe9e6; box-shadow: var(--shadow); }
+      .map img, .map iframe { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border: 0; }
+      .map .cover { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; background: linear-gradient(180deg, rgba(11, 59, 64, .15), rgba(11, 59, 64, .62)); color: #fff; }
+      .map .cover small { display: block; margin-top: 12px; font-size: 13px; opacity: .92; max-width: 42ch; }
+
+      .contact .cols { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(28px, 6vw, 80px); }
+      .contact .info { display: grid; gap: 16px; margin-top: 28px; }
+      .contact .info div { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: center; }
+      .contact .info i { width: 44px; height: 44px; border-radius: 50%; background: var(--sand); display: grid; place-items: center; color: var(--teal); font-style: normal; }
+      .contact .info svg { width: 20px; height: 20px; }
+      .contact .info small { display: block; color: var(--mut); font-size: 13.5px; }
+      form.cf { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: clamp(22px, 3vw, 34px); display: grid; gap: 16px; box-shadow: 0 6px 24px rgba(11, 59, 64, .06); }
+      form.cf .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      form.cf label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: #314346; }
+      form.cf input[type=text], form.cf textarea { font: inherit; font-size: 16px; padding: 12px 14px; border: 1px solid #cfc6b6; border-radius: 12px; background: var(--cream); color: var(--ink); width: 100%; }
+      form.cf textarea { min-height: 130px; resize: vertical; }
+      form.cf .consent { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-weight: 400; color: var(--mut); font-size: 14px; align-items: start; }
+      form.cf .consent input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--teal); }
+      form.cf { position: relative; }
+      form.cf .hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      .note { padding: 12px 16px; border-radius: 12px; font-size: 15px; }
+      .note.ok { background: #e6f4ee; color: #17553a; } .note.err { background: #fbe9e6; color: #8a2a1c; }
+
+      .band { padding-top: 0; }
+      .band .box { position: relative; overflow: hidden; border-radius: 30px; color: #fff; padding: clamp(40px, 7vw, 84px) clamp(22px, 5vw, 64px); isolation: isolate; text-align: center; }
+      .band .box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+      .band .box::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7, 31, 34, .55), rgba(7, 31, 34, .78)); z-index: -1; }
+      .band p { opacity: .94; max-width: 54ch; margin: 16px auto 0; }
+      .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 28px; }
+      .chips button { font: inherit; font-size: 15.5px; background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .4); border-radius: 999px; padding: 10px 18px; cursor: pointer; min-height: 46px; backdrop-filter: blur(6px); }
+      .chips button:hover { background: rgba(255, 255, 255, .28); }
+
+      footer { background: #071f22; color: #a9c1bf; font-size: 14.5px; padding: 56px 0 120px; }
+      footer .cols { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 32px; }
+      footer .logo { color: #fff; margin-bottom: 12px; }
+      footer b { color: #fff; display: block; margin-bottom: 8px; font-weight: 600; }
+      footer a { color: #dbe9e8; }
+      footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, .12); font-size: 13px; }
+
+      .mcta { display: none; }
+
+      @media (max-width: 980px) {
+        nav { display: none; }
+        .bookbar form { grid-template-columns: 1fr 1fr; gap: 0; }
+        .bookbar label { border-inline-end: 0; border-bottom: 1px solid var(--line); }
+        .bookbar .btn { grid-column: 1 / -1; margin: 10px 0 0; }
+        .about .cols, .pets .cols, .faq .cols, .where .cols, .contact .cols { grid-template-columns: 1fr; }
+        .rooms .grid { grid-template-columns: 1fr; }
+        .offers .grid { grid-template-columns: 1fr; }
+        .exp .grid { grid-template-columns: 1fr; } .exp .card { display: grid; grid-template-columns: 42% 1fr; } .exp .card img { height: 100%; aspect-ratio: auto; }
+        .extras { grid-template-columns: 1fr 1fr; }
+        .gallery .strip { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 170px; }
+        .facts .grid { grid-template-columns: 1fr 1fr; row-gap: 22px; } .facts .item:nth-child(2) { border: 0; }
+        footer .cols { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 600px) {
+        body { font-size: 16.5px; }
+        .wrap { width: min(1180px, 100% - 36px); }
+        header .wrap { height: 62px; gap: 10px; }
+        header .btn { display: none; }
+        .logo { font-size: 20px; }
+        .hero { min-height: 640px; } .hero .wrap { padding: 90px 0 120px; }
+        .bookbar { margin-top: -60px; }
+        .bookbar label { padding: 10px 12px; }
+        .exp .card { display: block; } .exp .card img { aspect-ratio: 16 / 10; height: auto; }
+        .extras { grid-template-columns: 1fr; }
+        .near ul { grid-template-columns: 1fr; }
+        form.cf .two { grid-template-columns: 1fr; }
+        .where dl div { flex-direction: column; gap: 2px; } .where dd { text-align: start; }
+        .map { min-height: 320px; }
+        .room .foot .btn { flex: 1 1 100%; }
+        /* Telefonda altta sabit çağrı çubuğu; sohbet düğmesiyle üst üste binmemesi için solda durur. */
+        .mcta { display: flex; position: fixed; inset-inline-start: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 30; transition: opacity .2s, transform .2s; }
+        /* Rezervasyon çubuğu ya da iletişim formu ekrandayken düğme alanların üstünü örtmesin. */
+        .mcta.off { opacity: 0; transform: translateY(12px); pointer-events: none; }
+        .bookbar input, .bookbar select { min-height: 44px; }
+        .mcta .btn { min-height: 56px; box-shadow: 0 10px 26px rgba(0, 0, 0, .28); }
+        footer { padding-bottom: 130px; }
+      }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .reveal { opacity: 1; transform: none; transition: none; } .btn, .room, .room .pic img { transition: none; } }
+    </style>
+  </head>
+  <body data-whatsapp="">
+    <div class="sample" data-i18n-html="sample"></div>
+
+    <header>
+      <div class="wrap">
+        <a class="logo" href="#ust" aria-label="Pati Koy">
+          <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#0f6e6e"/><g fill="#fff"><circle cx="12" cy="14" r="4"/><circle cx="20" cy="10" r="4"/><circle cx="28" cy="14" r="4"/><path d="M20 18c-6 0-10 5-10 10 0 3 2 5 5 5 2 0 3-1 5-1s3 1 5 1c3 0 5-2 5-5 0-5-4-10-10-10z"/></g></svg>
+          Pati Koy
+        </a>
+        <nav>
+          <a href="#odalar" data-i18n="nav_rooms"></a><a href="#evcil" data-i18n="nav_pets"></a><a href="#deneyim" data-i18n="nav_exp"></a><a href="#konum" data-i18n="nav_loc"></a><a href="#iletisim" data-i18n="nav_contact"></a>
+        </nav>
+        <div class="langs" id="langs">
+          <button class="cur" type="button" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.500 0 18M12 3c-3 3.500-3 14.500 0 18"/></svg><span id="curLang"></span></button>
+          <ul></ul>
+        </div>
+        <button class="btn small" type="button" data-ask="askGeneral" data-i18n="cta_ask"></button>
+      </div>
+    </header>
+
+    <main id="ust">
+      <div class="hero">
+        <img src="/img/pati-koy/hero-1800.webp" srcset="/img/pati-koy/hero-900.webp 900w, /img/pati-koy/hero-1800.webp 1800w" sizes="100vw" alt="" fetchpriority="high" />
+        <div class="wrap">
+          <p class="eyebrow" data-i18n="hero_eyebrow"></p>
+          <h1 data-i18n="hero_h1"></h1>
+          <p data-i18n="hero_p"></p>
+          <div class="badge" data-i18n="badge"></div>
+        </div>
+      </div>
+
+      <section class="bookbar" aria-labelledby="bb">
+        <div class="wrap">
+          <form id="book">
+            <label><span id="bb" data-i18n="bar_in"></span><input type="date" name="in" required /></label>
+            <label><span data-i18n="bar_out"></span><input type="date" name="out" required /></label>
+            <label><span data-i18n="bar_adults"></span><select name="adults"><option>1</option><option selected>2</option><option>3</option></select></label>
+            <label><span data-i18n="bar_children"></span><select name="children"><option>0</option><option>1</option><option>2</option></select></label>
+            <button class="btn" type="submit" data-i18n="bar_btn"></button>
+          </form>
+          <small data-i18n="bar_note"></small>
+        </div>
+      </section>
+
+      <section class="facts" aria-label="Pati Koy">
+        <div class="wrap grid reveal">
+          <div class="item"><b data-i18n="f1b"></b><span data-i18n="f1s"></span></div>
+          <div class="item"><b data-i18n="f2b"></b><span data-i18n="f2s"></span></div>
+          <div class="item"><b data-i18n="f3b"></b><span data-i18n="f3s"></span></div>
+          <div class="item"><b data-i18n="f4b"></b><span data-i18n="f4s"></span></div>
+        </div>
+      </section>
+
+      <section class="about">
+        <div class="wrap cols">
+          <div class="pics reveal">
+            <img class="a" data-photo="sunset" alt="" />
+            <img class="b" data-photo="terrace" alt="" />
+          </div>
+          <div class="reveal">
+            <p class="eyebrow" data-i18n="about_eyebrow"></p>
+            <h2 data-i18n="about_h2"></h2>
+            <p class="lead" data-i18n="about_p1"></p>
+            <p data-i18n="about_p2" style="margin-top:16px"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="rooms" id="odalar">
+        <div class="wrap">
+          <p class="eyebrow" data-i18n="rooms_eyebrow"></p>
+          <h2 data-i18n="rooms_h2"></h2>
+          <p class="lead" data-i18n="rooms_lead"></p>
+          <div class="grid" id="roomGrid"></div>
+          <p class="all" data-i18n="rooms_all"></p>
+        </div>
+      </section>
+
+      <section class="offers" id="teklifler">
+        <div class="wrap">
+          <p class="eyebrow" data-i18n="off_eyebrow"></p>
+          <h2 data-i18n="off_h2"></h2>
+          <div class="grid" id="offerGrid"></div>
+        </div>
+      </section>
+
+      <section class="pets" id="evcil">
+        <div class="wrap cols">
+          <div class="reveal">
+            <p class="eyebrow" data-i18n="pets_eyebrow"></p>
+            <h2 data-i18n="pets_h2"></h2>
+            <p class="lead" data-i18n="pets_lead"></p>
+            <ul class="checks" id="petList"></ul>
+            <button class="btn teal" type="button" data-ask="askPets" data-i18n="pets_btn"></button>
+          </div>
+          <div class="collage reveal">
+            <img data-photo="pet-beach" alt="" />
+            <img data-photo="pet-patio" alt="" />
+            <img data-photo="pet-cat" alt="" />
+          </div>
+        </div>
+      </section>
+
+      <section class="exp" id="deneyim">
+        <div class="wrap">
+          <p class="eyebrow" data-i18n="exp_eyebrow"></p>
+          <h2 data-i18n="exp_h2"></h2>
+          <div class="grid">
+            <article class="card reveal"><img data-photo="breakfast" alt="" /><div><h3 data-i18n="e1t"></h3><p data-i18n="e1p"></p></div></article>
+            <article class="card reveal"><img data-photo="deck" alt="" /><div><h3 data-i18n="e2t"></h3><p data-i18n="e2p"></p></div></article>
+            <article class="card reveal"><img data-photo="sup" alt="" /><div><h3 data-i18n="e3t"></h3><p data-i18n="e3p"></p></div></article>
+          </div>
+          <div class="extras reveal">
+            <div><b data-i18n="x1t"></b><span data-i18n="x1p"></span></div>
+            <div><b data-i18n="x2t"></b><span data-i18n="x2p"></span></div>
+            <div><b data-i18n="x3t"></b><span data-i18n="x3p"></span></div>
+            <div><b data-i18n="x4t"></b><span data-i18n="x4p"></span></div>
+          </div>
+          <p class="honest reveal" data-i18n-html="honest"></p>
+        </div>
+      </section>
+
+      <section class="gallery">
+        <div class="wrap">
+          <p class="eyebrow" data-i18n="gal_eyebrow"></p>
+          <h2 data-i18n="gal_h2"></h2>
+          <div class="strip reveal">
+            <img class="w2 h2" data-photo="gal-coast" alt="" />
+            <img data-photo="gal-balcony" alt="" />
+            <img data-photo="lighthouse" alt="" />
+            <img class="w2" data-photo="gal-sunset" alt="" />
+          </div>
+        </div>
+      </section>
+
+      <section class="faq">
+        <div class="wrap cols">
+          <div>
+            <p class="eyebrow" data-i18n="faq_eyebrow"></p>
+            <h2 data-i18n="faq_h2"></h2>
+            <p class="lead" data-i18n="faq_lead"></p>
+            <button class="btn ghost" type="button" style="margin-top:22px" data-ask="open" data-i18n="faq_btn"></button>
+          </div>
+          <div id="faqList"></div>
+        </div>
+      </section>
+
+      <section class="where" id="konum">
+        <div class="wrap cols">
+          <div>
+            <p class="eyebrow" data-i18n="loc_eyebrow"></p>
+            <h2 data-i18n="loc_h2"></h2>
+            <p class="lead" data-i18n="loc_lead"></p>
+            <dl id="locList"></dl>
+            <div class="near"><h3 data-i18n="near_h"></h3><ul id="nearList"></ul></div>
+          </div>
+          <div class="map" id="map">
+            <img data-photo="lighthouse" alt="" />
+            <div class="cover"><div><button class="btn" type="button" id="mapBtn" data-i18n="map_btn"></button><small data-i18n="map_note"></small></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact" id="iletisim">
+        <div class="wrap cols">
+          <div>
+            <p class="eyebrow" data-i18n="ct_eyebrow"></p>
+            <h2 data-i18n="ct_h2"></h2>
+            <p class="lead" data-i18n="ct_lead"></p>
+            <div class="info">
+              <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11.500a7 7 0 10-14 0C5 14.800 12 21 12 21z"/><circle cx="12" cy="9.500" r="2.500"/></svg></i><span><span data-i18n="ct_addr"></span><small>Turgutreis, Bodrum / Muğla</small></span></div>
+              <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></i><span><span data-i18n="ct_mail"></span><small>rezervasyon@patikoy.example</small></span></div>
+              <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i><span><span data-i18n="ct_hours"></span><small>08:00 – 23:00</small></span></div>
+            </div>
+            <button class="wa" type="button" id="waBtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.600 15.100L2 22l5-1.300A10 10 0 1012 2zm0 18.200a8.200 8.200 0 01-4.200-1.150l-.300-.180-3 .790.800-2.900-.200-.300A8.200 8.200 0 1112 20.200zm4.500-6.100c-.250-.120-1.460-.720-1.690-.800-.230-.080-.390-.120-.560.120-.160.250-.640.800-.780.970-.140.160-.290.180-.540.060a6.700 6.700 0 01-1.980-1.220 7.400 7.400 0 01-1.370-1.700c-.140-.250 0-.380.110-.500.110-.110.250-.290.370-.430.120-.140.160-.250.250-.410.080-.160.040-.310-.020-.430-.060-.120-.560-1.340-.760-1.830-.200-.480-.400-.420-.560-.420h-.480a.920.920 0 00-.660.310 2.800 2.800 0 00-.870 2.070c0 1.220.890 2.400 1.010 2.570.120.160 1.750 2.670 4.240 3.740.590.260 1.050.410 1.410.520.590.190 1.130.160 1.560.100.480-.070 1.460-.600 1.670-1.170.210-.580.210-1.070.140-1.170-.060-.110-.220-.170-.470-.290z"/></svg><span data-i18n="wa_btn"></span></button>
+            <div class="note ok" id="waNote" hidden style="margin-top:14px"></div>
+          </div>
+          <form class="cf" id="cf" novalidate>
+            <div class="two">
+              <label><span data-i18n="cf_name"></span><input type="text" name="name" autocomplete="name" required minlength="2" maxlength="100" /></label>
+              <label><span data-i18n="cf_contact"></span><input type="text" name="contact" required minlength="5" maxlength="120" /></label>
+            </div>
+            <label><span data-i18n="cf_msg"></span><textarea name="message" required minlength="5" maxlength="1500"></textarea></label>
+            <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+            <label class="consent"><input type="checkbox" name="consent" required /><span data-i18n="cf_consent"></span></label>
+            <div class="note" id="cfNote" hidden role="status"></div>
+            <button class="btn teal" type="submit" data-i18n="cf_send"></button>
+          </form>
+        </div>
+      </section>
+
+      <section class="band">
+        <div class="wrap">
+          <div class="box reveal">
+            <img data-photo="band" alt="" />
+            <h2 data-i18n="band_h2"></h2>
+            <p data-i18n="band_p"></p>
+            <div class="chips" id="chips"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="cols">
+          <div>
+            <a class="logo" href="#ust"><svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#0f6e6e"/><g fill="#fff"><circle cx="12" cy="14" r="4"/><circle cx="20" cy="10" r="4"/><circle cx="28" cy="14" r="4"/><path d="M20 18c-6 0-10 5-10 10 0 3 2 5 5 5 2 0 3-1 5-1s3 1 5 1c3 0 5-2 5-5 0-5-4-10-10-10z"/></g></svg>Pati Koy</a>
+            <p data-i18n="ft_tag"></p>
+          </div>
+          <div><b data-i18n="nav_contact"></b>Turgutreis, Bodrum / Muğla<br />rezervasyon@patikoy.example</div>
+          <div><b>YSNSOFT</b><span data-i18n-html="ft_ysn"></span></div>
+        </div>
+        <p class="fine" data-i18n-html="ft_fine"></p>
+      </div>
+    </footer>
+
+    <div class="mcta"><button class="btn" type="button" data-ask="askGeneral" data-i18n="cta_ask"></button></div>
+
+    <script>
+      (function () {
+        "use strict";
+        var LANGS = { tr: "Türkçe", en: "English", de: "Deutsch", ru: "Русский", ar: "العربية" };
+        var YSN = '<a href="https://ysnsoft.com" rel="noopener">YSNSOFT</a>';
+        var T = {
+          tr: {
+            sample: "Bu, kurgusal bir otel için hazırlanmış <b>örnek tanıtım sitesidir</b>. Tasarım, yazılım ve yapay zekâ asistanı: " + YSN,
+            nav_rooms: "Odalar", nav_pets: "Evcil hayvanlar", nav_exp: "Deneyim", nav_loc: "Konum", nav_contact: "İletişim", cta_ask: "Müsaitlik sor",
+            hero_eyebrow: "Turgutreis · Bodrum", hero_h1: "Gün batımına karşı, patilerle birlikte.", hero_p: "Yalnızca 5 odalı, tüm odaları deniz manzaralı, kedinizi ve köpeğinizi de misafir eden sakin bir butik otel.",
+            bar_in: "Giriş", bar_out: "Çıkış", bar_adults: "Yetişkin", bar_children: "Çocuk", bar_btn: "Müsaitlik ve fiyat sor", bar_note: "Fiyatı asistanımız rezervasyon sistemimizden anında öğrenir; kart bilgisi istenmez.",
+            f1b: "5 oda", f1s: "Hepsi deniz manzaralı", f2b: "Kedi & köpek", f2s: "Irk ve kilo sınırı yok", f3b: "Köy kahvaltısı", f3s: "Fiyata dahil", f4b: "Yıl boyu açık", f4s: "Turgutreis merkeze 1,5 km",
+            about_eyebrow: "Otelimiz", about_h2: "Küçük, sakin ve gerçekten kişisel.", about_p1: "Pati Koy bir aile işletmesi. Beş odamız var; her misafirimizi adıyla tanırız. Otelimiz batıya bakar: gün batımını teras ve odalardan izlersiniz.", about_p2: "Yüksek sesli müzik ve organizasyon yok. Sabah serpme köy kahvaltısı, gündüz deniz, akşam terasta bir kadeh; gerisi dinlenmek.",
+            rooms_eyebrow: "Odalar", rooms_h2: "Dört oda tipi, beş oda.", rooms_lead: "Fiyatlar tarihe göre değişir. Güncel fiyat ve müsaitliği asistanımız anında söyler.", rooms_incl: "Kahvaltı dahil", rooms_ask: "Fiyat sor",
+            rooms_all: "Tüm odalarda: deniz manzarası, klima, ücretsiz Wi-Fi, mini buzdolabı, çay-kahve seti, kasa, saç kurutma makinesi ve duşlu banyo. Odalarda televizyon yoktur.",
+            r1: ["Deniz Manzaralı Standart Oda", "2 adet · 22 m²", "İki kişilik sakin bir kaçamak için. 0–2 yaş için bebek yatağı konulabilir.", ["En fazla 2 yetişkin", "1. kat", "Fransız balkon", "Çift kişilik yatak"]],
+            r2: ["Balkonlu Deluxe Oda", "1 adet · 28 m²", "Denize bakan kendi balkonunuzda kahve ve gün batımı.", ["2 yetişkin + 1 çocuk", "2. kat", "Özel balkon", "Çift yatak + çekyat"]],
+            r3: ["Bahçe Katı Pati Odası", "1 adet · 30 m² · köpekliler için", "Çitle çevrili kendi bahçesiyle köpekli misafirlerimizin gözdesi.", ["2 yetişkin + 1 çocuk", "Zemin kat", "20 m² özel bahçe", "Merdivensiz giriş"]],
+            r4: ["Teras Süit", "1 adet · 45 m²", "Aileler ve uzun konaklamalar için. En çok 3 yetişkin; örneğin 2 yetişkin + 2 çocuk.", ["En fazla 4 kişi", "En üst kat", "25 m² özel teras", "Ayrı oturma alanı"]],
+            pets_eyebrow: "Evcil hayvanlar", pets_h2: "Onlar da ailenin üyesi.", pets_lead: "Kediniz ve köpeğiniz otelimizde sizinle birlikte misafirimizdir.", pets_btn: "Evcil hayvan kurallarını sor",
+            pets: ["Oda başına en fazla 2 evcil hayvan; ırk ve kilo sınırı yok.", "Odanızda mama-su kabı ve evcil hayvan yatağı hazır bekler.", "300 m ileride köpeklerin denize girebildiği küçük bir koy var.", "Girişte güncel aşı karnesi (kuduz aşısı dahil) gösterilir.", "Ücret hayvan başına gecelik 400 TL'dir ve otelde ödenir."],
+            exp_eyebrow: "Deneyim", exp_h2: "Az ama özenli.",
+            e1t: "Serpme köy kahvaltısı", e1p: "Deniz manzaralı terasta, 08:30–11:00 arası. Vejetaryen ve glütensiz seçenek için bir gün önceden haber verin.",
+            e2t: "Yüzme platformu", e2p: "Denize otelin önündeki ahşap platformdan girilir. Şezlong, şemsiye ve plaj havlusu ücretsizdir.",
+            e3t: "Kano ve SUP", e3p: "İki kano ve iki SUP misafirlerimize ücretsizdir; resepsiyona haber vermeniz yeterli.",
+            x1t: "Teras servisi", x1p: "11:00–22:00 içecek ve atıştırmalık", x2t: "Otopark", x2p: "Ücretsiz, 5 araçlık", x3t: "Wi-Fi", x3p: "Tüm alanlarda ücretsiz", x4t: "Bebek yatağı", x4p: "Ücretsiz, önceden talep edin",
+            honest: "<b>Bilmenizi isteriz:</b> Otelimizde havuz, spa, spor salonu, asansör ve akşam yemeği servisi yoktur. Kumsalımız yok; deniz platformdan hemen derinleşir ve yüzme bilmeyenler ile küçük çocuklar için uygun değildir.",
+            gal_eyebrow: "Galeri", gal_h2: "Turgutreis'ten kareler.",
+            faq_eyebrow: "Sık sorulanlar", faq_h2: "Merak edilenler.", faq_lead: "Aradığınızı bulamadıysanız asistanımıza sorun; 7 gün 24 saat yanıt verir.", faq_btn: "Asistana sor",
+            faq: [["Giriş ve çıkış saatleri nedir?", "Giriş 14:00'ten itibaren, çıkış 11:00'e kadardır. Resepsiyon 08:00–23:00 arası açıktır; 23:00'ten sonra gelecekseniz önceden haber verin."], ["Çocuklar için ücret alınıyor mu?", "0–6 yaş çocuklar ücretsizdir. 7–12 yaş için çocuk fiyatı uygulanır; 13 yaş ve üzeri yetişkin sayılır."], ["En az kaç gece kalabiliriz?", "15 Haziran – 15 Eylül arasında en az 3 gece. Diğer dönemlerde asgari konaklama süresi yoktur."], ["İptal koşulları nedir?", "İade edilebilir fiyatta girişten 7 gün öncesine kadar ücretsiz iptal; sonrasında ilk gecenin ücreti alınır. İade edilemez fiyatta iptal ve değişiklik yapılamaz."], ["Tekerlekli sandalye ile kalınabilir mi?", "Asansörümüz yok. Yalnızca Bahçe Katı Pati Odası'na merdivensiz girilir; banyosu engelli kullanımına göre düzenlenmemiştir."], ["Havalimanı transferi var mı?", "Evet, ücretlidir ve en az 48 saat önce talep edilmelidir. Fiyatı tarihe ve kişi sayısına göre resepsiyon bildirir."]],
+            loc_eyebrow: "Konum", loc_h2: "Bodrum'un gün batımı yakası.", loc_lead: "Turgutreis'te, denizin hemen kıyısındayız.",
+            loc: [["Turgutreis merkez", "1,5 km · 5 dk"], ["Bodrum merkez", "≈ 20 km · 30 dk"], ["Milas–Bodrum Havalimanı", "≈ 55 km · 1 saat"], ["Havalimanı transferi", "Ücretli · 48 saat önce"]],
+            map_btn: "Haritayı göster", map_note: "Harita OpenStreetMap'ten yüklenir. Otel kurgusal olduğu için işaret Turgutreis'i gösterir.",
+            ct_eyebrow: "İletişim", ct_h2: "Bize yazın.", ct_lead: "Özel istekleriniz, grup konaklamaları ya da aklınıza takılan her şey için. Mesai saatlerinde aynı gün dönüş yaparız.", ct_addr: "Adres", ct_mail: "E-posta", ct_hours: "Resepsiyon",
+            cf_name: "Adınız", cf_contact: "Telefon ya da e-posta", cf_msg: "Mesajınız", cf_consent: "Ad ve iletişim bilgilerimin, talebime dönüş yapılması amacıyla otelle paylaşılmasına açık rıza veriyorum.", cf_send: "Gönder", cf_ok: "Mesajınız otel ekibine iletildi. En kısa sürede size döneceğiz.", cf_err: "Mesaj gönderilemedi. Lütfen alanları kontrol edip tekrar deneyin.", cf_rate: "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin.",
+            band_h2: "Aklınıza takılan bir şey mi var?", band_p: "Asistanımız sorularınızı yanıtlar, tarihlerinize göre fiyat verir ve rezervasyon sayfasına yönlendirir.",
+            chips: ["Bu hafta sonu için 2 kişilik oda var mı?", "İki kedimle gelebilir miyim, ücreti ne olur?", "Havalimanından otele nasıl ulaşırım?", "Bir yetkiliyle görüşmek istiyorum."],
+            ft_tag: "Turgutreis'te deniz kenarında, evcil hayvan dostu butik otel.", ft_ysn: "Bu site, içindeki asistan ve yönetim paneli " + YSN + " tarafından hazırlanmıştır. Oteliniz için benzerini yapalım.", ft_fine: "Bu site ve içindeki otel kurgusaldır; fiyat ve müsaitlik örnek veridir. Fotoğraflar temsilidir: Unsplash.",
+            badge: "Resmi site · Doğrudan rezervasyonda en iyi fiyat",
+            off_eyebrow: "Teklifler", off_h2: "Size uygun olanı seçin.", off_cta: "Tarihlerim için fiyat sor",
+            offers: [["İadesiz fiyat", "%10 indirim", "Planınız kesinse en uygun seçenek. İptal ve tarih değişikliği yapılamaz.", "İadesiz fiyatla müsaitlik ve fiyat öğrenmek istiyorum."], ["Esnek fiyat", "Ücretsiz iptal", "Girişten 7 gün öncesine kadar ücretsiz iptal. Planı değişebilenler için.", "İade edilebilir (esnek) fiyatla müsaitlik ve fiyat öğrenmek istiyorum."], ["Sezon dışı kaçamak", "Kasım – nisan ortası", "Yılın en uygun fiyatları, asgari konaklama şartı yok; sahil ve gün batımı size kalır.", "Sezon dışında, kasım–nisan arası bir tarih için fiyat öğrenmek istiyorum."]],
+            near_h: "Yakında ne var?", near: [["Turgutreis marina ve çarşı", "1,5 km"], ["Kos (İstanköy) feribot iskelesi", "1,5 km · sezonluk"], ["Gümüşlük", "≈ 6 km"], ["Bodrum Kalesi", "≈ 20 km"]],
+            wa_label: "WhatsApp", wa_btn: "WhatsApp'tan yazın", wa_text: "Merhaba, Pati Koy hakkında bilgi almak istiyorum.", wa_note: "Örnek sitede WhatsApp numarası tanımlı değil. Gerçek kurulumda bu düğme misafiri otelin WhatsApp hattına götürür; orada da aynı asistan yanıt verir.",
+            askGeneral: "Müsaitlik ve fiyat öğrenmek istiyorum.", askPets: "Evcil hayvan politikanız hakkında bilgi alabilir miyim?", askRoom: "{room} için müsaitlik ve fiyat öğrenmek istiyorum.",
+            askDates: function (a, b, n, c) { return a + " giriş, " + b + " çıkış, " + n + " yetişkin" + (c > 0 ? " ve " + c + " çocuk" : "") + " için müsaitlik ve fiyat nedir?"; }
+          },
+          en: {
+            sample: "This is a <b>sample website</b> for a fictional hotel. Design, software and AI assistant by " + YSN,
+            nav_rooms: "Rooms", nav_pets: "Pets", nav_exp: "Experience", nav_loc: "Location", nav_contact: "Contact", cta_ask: "Check availability",
+            hero_eyebrow: "Turgutreis · Bodrum", hero_h1: "Sunsets by the sea, paws welcome.", hero_p: "A quiet boutique hotel with just 5 sea-view rooms, where your cat and dog are guests too.",
+            bar_in: "Check-in", bar_out: "Check-out", bar_adults: "Adults", bar_children: "Children", bar_btn: "Ask availability & price", bar_note: "Our assistant gets live prices from our reservation system. No card details needed.",
+            f1b: "5 rooms", f1s: "All with sea view", f2b: "Cats & dogs", f2s: "No breed or weight limit", f3b: "Village breakfast", f3s: "Included", f4b: "Open all year", f4s: "1.5 km to Turgutreis centre",
+            about_eyebrow: "Our hotel", about_h2: "Small, calm and truly personal.", about_p1: "Pati Koy is family-run. We have five rooms and know every guest by name. The hotel faces west, so you watch the sunset from the terrace and from your room.", about_p2: "No loud music, no events. A village breakfast in the morning, the sea by day, a glass on the terrace at dusk; the rest is rest.",
+            rooms_eyebrow: "Rooms", rooms_h2: "Four room types, five rooms.", rooms_lead: "Prices vary by date. Our assistant tells you the current price and availability instantly.", rooms_incl: "Breakfast included", rooms_ask: "Ask price",
+            rooms_all: "In every room: sea view, air conditioning, free Wi-Fi, mini fridge, tea and coffee set, safe, hairdryer and a bathroom with shower. There are no televisions in the rooms.",
+            r1: ["Sea View Standard Room", "2 rooms · 22 m²", "For a quiet getaway for two. A cot can be added for ages 0–2.", ["Up to 2 adults", "1st floor", "French balcony", "Double bed"]],
+            r2: ["Deluxe Room with Balcony", "1 room · 28 m²", "Coffee and sunset on your own balcony facing the sea.", ["2 adults + 1 child", "2nd floor", "Private balcony", "Double bed + sofa bed"]],
+            r3: ["Garden Floor Paws Room", "1 room · 30 m² · ideal with dogs", "A fenced private garden makes it the favourite of our guests with dogs.", ["2 adults + 1 child", "Ground floor", "20 m² private garden", "Step-free entrance"]],
+            r4: ["Terrace Suite", "1 room · 45 m²", "For families and longer stays. Up to 3 adults; for example 2 adults + 2 children.", ["Up to 4 guests", "Top floor", "25 m² private terrace", "Separate living area"]],
+            pets_eyebrow: "Pets", pets_h2: "They're family too.", pets_lead: "Your cat and dog stay with us as guests, right alongside you.", pets_btn: "Ask about pet rules",
+            pets: ["Up to 2 pets per room; no breed or weight limit.", "Food and water bowls and a pet bed are waiting in your room.", "A small cove where dogs can swim is 300 m away.", "A current vaccination record (including rabies) is shown at check-in.", "The fee is 400 TL per pet per night, paid at the hotel."],
+            exp_eyebrow: "Experience", exp_h2: "Few things, done with care.",
+            e1t: "Village breakfast", e1p: "On the sea-view terrace, 08:30–11:00. Tell us a day ahead for vegetarian or gluten-free options.",
+            e2t: "Swimming platform", e2p: "You enter the sea from the wooden platform in front of the hotel. Sunbeds, umbrellas and beach towels are free.",
+            e3t: "Kayaks & SUP", e3p: "Two kayaks and two paddle boards are free for guests; just let reception know.",
+            x1t: "Terrace service", x1p: "Drinks and snacks 11:00–22:00", x2t: "Parking", x2p: "Free, 5 spaces", x3t: "Wi-Fi", x3p: "Free everywhere", x4t: "Baby cot", x4p: "Free, request in advance",
+            honest: "<b>Good to know:</b> We have no pool, spa, gym, lift or dinner service. There is no sandy beach; the sea gets deep right off the platform and is not suitable for non-swimmers or small children.",
+            gal_eyebrow: "Gallery", gal_h2: "Scenes from Turgutreis.",
+            faq_eyebrow: "FAQ", faq_h2: "Good questions.", faq_lead: "Can't find it here? Ask our assistant; it answers around the clock.", faq_btn: "Ask the assistant",
+            faq: [["What are the check-in and check-out times?", "Check-in from 14:00, check-out by 11:00. Reception is open 08:00–23:00; please let us know in advance if you arrive after 23:00."], ["Do children pay?", "Children aged 0–6 stay free. A child rate applies for ages 7–12; ages 13 and over count as adults."], ["Is there a minimum stay?", "At least 3 nights between 15 June and 15 September. No minimum stay at other times."], ["What is the cancellation policy?", "On the refundable rate, free cancellation up to 7 days before arrival; after that the first night is charged. The non-refundable rate cannot be cancelled or changed."], ["Is the hotel wheelchair accessible?", "We have no lift. Only the Garden Floor Paws Room has step-free access; its bathroom is not adapted."], ["Do you offer airport transfers?", "Yes, for a fee, requested at least 48 hours ahead. Reception will quote the price for your date and party size."]],
+            loc_eyebrow: "Location", loc_h2: "Bodrum's sunset side.", loc_lead: "We are in Turgutreis, right at the water's edge.",
+            loc: [["Turgutreis centre", "1.5 km · 5 min"], ["Bodrum centre", "≈ 20 km · 30 min"], ["Milas–Bodrum Airport", "≈ 55 km · 1 hour"], ["Airport transfer", "Paid · 48 h notice"]],
+            map_btn: "Show map", map_note: "The map loads from OpenStreetMap. As the hotel is fictional, the marker shows Turgutreis.",
+            ct_eyebrow: "Contact", ct_h2: "Write to us.", ct_lead: "Special requests, group stays or anything on your mind. During working hours we reply the same day.", ct_addr: "Address", ct_mail: "E-mail", ct_hours: "Reception",
+            cf_name: "Your name", cf_contact: "Phone or e-mail", cf_msg: "Your message", cf_consent: "I explicitly consent to my name and contact details being shared with the hotel so they can respond to my request.", cf_send: "Send", cf_ok: "Your message has been sent to the hotel team. We will get back to you shortly.", cf_err: "The message could not be sent. Please check the fields and try again.", cf_rate: "Too many attempts. Please try again later.",
+            band_h2: "Something on your mind?", band_p: "Our assistant answers your questions, quotes prices for your dates and takes you to the booking page.",
+            chips: ["Do you have a room for 2 this weekend?", "Can I bring my two cats, and what is the fee?", "How do I get to the hotel from the airport?", "I would like to speak to a member of staff."],
+            ft_tag: "A pet-friendly boutique hotel by the sea in Turgutreis.", ft_ysn: "This website, its assistant and admin panel were built by " + YSN + ". Let us build one for your hotel.", ft_fine: "This website and the hotel are fictional; prices and availability are sample data. Photos are illustrative: Unsplash.",
+            badge: "Official site · Best price when you book direct",
+            off_eyebrow: "Offers", off_h2: "Pick what suits you.", off_cta: "Ask price for my dates",
+            offers: [["Non-refundable rate", "10% off", "The best value if your plans are fixed. Cannot be cancelled or changed.", "I would like availability and price on the non-refundable rate."], ["Flexible rate", "Free cancellation", "Cancel free of charge up to 7 days before arrival. For plans that may change.", "I would like availability and price on the refundable (flexible) rate."], ["Off-season escape", "November – mid-April", "The lowest prices of the year and no minimum stay; the shore and the sunset are all yours.", "I would like a price for a date in the off-season, between November and April."]],
+            near_h: "What's nearby?", near: [["Turgutreis marina and town", "1.5 km"], ["Ferry pier to Kos", "1.5 km · seasonal"], ["Gümüşlük", "≈ 6 km"], ["Bodrum Castle", "≈ 20 km"]],
+            wa_label: "WhatsApp", wa_btn: "Message us on WhatsApp", wa_text: "Hello, I would like some information about Pati Koy.", wa_note: "No WhatsApp number is set on this sample site. On a real site this button takes the guest to the hotel's WhatsApp line, where the same assistant replies.",
+            askGeneral: "I would like to check availability and prices.", askPets: "Could you tell me about your pet policy?", askRoom: "I would like to check availability and price for the {room}.",
+            askDates: function (a, b, n, c) { return "What is the availability and price for check-in " + a + ", check-out " + b + ", " + n + " adult(s)" + (c > 0 ? " and " + c + " child(ren)" : "") + "?"; }
+          },
+          de: {
+            sample: "Dies ist eine <b>Beispiel-Website</b> für ein fiktives Hotel. Design, Software und KI-Assistent: " + YSN,
+            nav_rooms: "Zimmer", nav_pets: "Haustiere", nav_exp: "Erlebnis", nav_loc: "Lage", nav_contact: "Kontakt", cta_ask: "Verfügbarkeit anfragen",
+            hero_eyebrow: "Turgutreis · Bodrum", hero_h1: "Sonnenuntergang am Meer, Pfoten willkommen.", hero_p: "Ein ruhiges Boutique-Hotel mit nur 5 Zimmern mit Meerblick, in dem auch Ihre Katze und Ihr Hund zu Gast sind.",
+            bar_in: "Anreise", bar_out: "Abreise", bar_adults: "Erwachsene", bar_children: "Kinder", bar_btn: "Verfügbarkeit & Preis anfragen", bar_note: "Unser Assistent ruft die Preise live aus dem Reservierungssystem ab. Keine Kartendaten nötig.",
+            f1b: "5 Zimmer", f1s: "Alle mit Meerblick", f2b: "Katzen & Hunde", f2s: "Keine Rassen- oder Gewichtsgrenze", f3b: "Dorffrühstück", f3s: "Inklusive", f4b: "Ganzjährig geöffnet", f4s: "1,5 km bis Turgutreis Zentrum",
+            about_eyebrow: "Unser Hotel", about_h2: "Klein, ruhig und wirklich persönlich.", about_p1: "Pati Koy ist ein Familienbetrieb. Wir haben fünf Zimmer und kennen jeden Gast beim Namen. Das Hotel liegt nach Westen: Den Sonnenuntergang sehen Sie von der Terrasse und vom Zimmer aus.", about_p2: "Keine laute Musik, keine Veranstaltungen. Morgens ein Dorffrühstück, tagsüber das Meer, abends ein Glas auf der Terrasse; der Rest ist Erholung.",
+            rooms_eyebrow: "Zimmer", rooms_h2: "Vier Zimmertypen, fünf Zimmer.", rooms_lead: "Die Preise variieren je nach Datum. Unser Assistent nennt Ihnen sofort den aktuellen Preis und die Verfügbarkeit.", rooms_incl: "Frühstück inklusive", rooms_ask: "Preis anfragen",
+            rooms_all: "In allen Zimmern: Meerblick, Klimaanlage, kostenloses WLAN, Minikühlschrank, Tee- und Kaffeeset, Safe, Haartrockner und Bad mit Dusche. Die Zimmer haben keinen Fernseher.",
+            r1: ["Standardzimmer mit Meerblick", "2 Zimmer · 22 m²", "Für eine ruhige Auszeit zu zweit. Für Kinder von 0–2 Jahren ist ein Babybett möglich.", ["Bis zu 2 Erwachsene", "1. Stock", "Französischer Balkon", "Doppelbett"]],
+            r2: ["Deluxe-Zimmer mit Balkon", "1 Zimmer · 28 m²", "Kaffee und Sonnenuntergang auf Ihrem eigenen Balkon zum Meer.", ["2 Erwachsene + 1 Kind", "2. Stock", "Eigener Balkon", "Doppelbett + Schlafsofa"]],
+            r3: ["Gartenzimmer „Pati“", "1 Zimmer · 30 m² · ideal mit Hund", "Mit eigenem, eingezäuntem Garten der Liebling unserer Gäste mit Hund.", ["2 Erwachsene + 1 Kind", "Erdgeschoss", "20 m² eigener Garten", "Stufenloser Zugang"]],
+            r4: ["Terrassen-Suite", "1 Zimmer · 45 m²", "Für Familien und längere Aufenthalte. Höchstens 3 Erwachsene; zum Beispiel 2 Erwachsene + 2 Kinder.", ["Bis zu 4 Personen", "Oberstes Stockwerk", "25 m² eigene Terrasse", "Separater Wohnbereich"]],
+            pets_eyebrow: "Haustiere", pets_h2: "Sie gehören zur Familie.", pets_lead: "Ihre Katze und Ihr Hund sind bei uns gemeinsam mit Ihnen zu Gast.", pets_btn: "Haustierregeln erfragen",
+            pets: ["Bis zu 2 Haustiere pro Zimmer; keine Rassen- oder Gewichtsgrenze.", "Futter- und Wassernapf sowie ein Tierbett stehen im Zimmer bereit.", "300 m entfernt liegt eine kleine Bucht, in der Hunde baden dürfen.", "Beim Check-in wird der aktuelle Impfpass (inkl. Tollwut) vorgezeigt.", "Die Gebühr beträgt 400 TL pro Tier und Nacht und wird im Hotel bezahlt."],
+            exp_eyebrow: "Erlebnis", exp_h2: "Wenig, aber mit Sorgfalt.",
+            e1t: "Türkisches Dorffrühstück", e1p: "Auf der Terrasse mit Meerblick, 08:30–11:00 Uhr. Vegetarisch oder glutenfrei bitte einen Tag vorher anmelden.",
+            e2t: "Badeplattform", e2p: "Ins Meer geht es über die Holzplattform vor dem Hotel. Liegen, Sonnenschirme und Strandtücher sind kostenlos.",
+            e3t: "Kajaks & SUP", e3p: "Zwei Kajaks und zwei SUP-Boards stehen Gästen kostenlos zur Verfügung; einfach an der Rezeption Bescheid geben.",
+            x1t: "Terrassenservice", x1p: "Getränke und Snacks 11:00–22:00", x2t: "Parkplatz", x2p: "Kostenlos, 5 Plätze", x3t: "WLAN", x3p: "Überall kostenlos", x4t: "Babybett", x4p: "Kostenlos, bitte vorab anfragen",
+            honest: "<b>Gut zu wissen:</b> Wir haben keinen Pool, kein Spa, keinen Fitnessraum, keinen Aufzug und kein Abendessen. Es gibt keinen Sandstrand; das Meer wird direkt an der Plattform tief und ist für Nichtschwimmer und kleine Kinder nicht geeignet.",
+            gal_eyebrow: "Galerie", gal_h2: "Eindrücke aus Turgutreis.",
+            faq_eyebrow: "Häufige Fragen", faq_h2: "Gut zu wissen.", faq_lead: "Nicht gefunden? Fragen Sie unseren Assistenten; er antwortet rund um die Uhr.", faq_btn: "Assistenten fragen",
+            faq: [["Wann sind Check-in und Check-out?", "Check-in ab 14:00 Uhr, Check-out bis 11:00 Uhr. Die Rezeption ist von 08:00 bis 23:00 Uhr besetzt; bei Ankunft nach 23:00 Uhr bitte vorab Bescheid geben."], ["Zahlen Kinder?", "Kinder von 0–6 Jahren sind kostenlos. Für 7–12 Jahre gilt ein Kinderpreis; ab 13 Jahren gilt der Erwachsenenpreis."], ["Gibt es einen Mindestaufenthalt?", "Vom 15. Juni bis 15. September mindestens 3 Nächte. In der übrigen Zeit gibt es keinen Mindestaufenthalt."], ["Wie sind die Stornobedingungen?", "Im erstattbaren Tarif kostenlose Stornierung bis 7 Tage vor Anreise; danach wird die erste Nacht berechnet. Der nicht erstattbare Tarif kann weder storniert noch geändert werden."], ["Ist das Hotel rollstuhlgerecht?", "Wir haben keinen Aufzug. Nur das Gartenzimmer ist stufenlos erreichbar; das Bad ist nicht barrierefrei ausgestattet."], ["Gibt es einen Flughafentransfer?", "Ja, gegen Gebühr und mit mindestens 48 Stunden Vorlauf. Den Preis nennt die Rezeption je nach Datum und Personenzahl."]],
+            loc_eyebrow: "Lage", loc_h2: "Bodrums Sonnenuntergangsseite.", loc_lead: "Wir liegen in Turgutreis, direkt am Wasser.",
+            loc: [["Turgutreis Zentrum", "1,5 km · 5 Min."], ["Bodrum Zentrum", "≈ 20 km · 30 Min."], ["Flughafen Milas–Bodrum", "≈ 55 km · 1 Std."], ["Flughafentransfer", "Gegen Gebühr · 48 Std. vorher"]],
+            map_btn: "Karte anzeigen", map_note: "Die Karte wird von OpenStreetMap geladen. Da das Hotel fiktiv ist, zeigt die Markierung Turgutreis.",
+            ct_eyebrow: "Kontakt", ct_h2: "Schreiben Sie uns.", ct_lead: "Sonderwünsche, Gruppenaufenthalte oder alles, was Sie wissen möchten. Während der Geschäftszeiten antworten wir am selben Tag.", ct_addr: "Adresse", ct_mail: "E-Mail", ct_hours: "Rezeption",
+            cf_name: "Ihr Name", cf_contact: "Telefon oder E-Mail", cf_msg: "Ihre Nachricht", cf_consent: "Ich willige ausdrücklich ein, dass mein Name und meine Kontaktdaten an das Hotel weitergegeben werden, damit es auf meine Anfrage antworten kann.", cf_send: "Senden", cf_ok: "Ihre Nachricht wurde an das Hotelteam gesendet. Wir melden uns in Kürze.", cf_err: "Die Nachricht konnte nicht gesendet werden. Bitte prüfen Sie die Felder und versuchen Sie es erneut.", cf_rate: "Zu viele Versuche. Bitte versuchen Sie es später erneut.",
+            band_h2: "Noch eine Frage?", band_p: "Unser Assistent beantwortet Ihre Fragen, nennt Preise für Ihre Daten und führt Sie zur Buchungsseite.",
+            chips: ["Haben Sie dieses Wochenende ein Zimmer für 2 Personen?", "Kann ich meine zwei Katzen mitbringen, und was kostet das?", "Wie komme ich vom Flughafen zum Hotel?", "Ich möchte mit einem Mitarbeiter sprechen."],
+            ft_tag: "Ein haustierfreundliches Boutique-Hotel am Meer in Turgutreis.", ft_ysn: "Diese Website, der Assistent und das Verwaltungspanel wurden von " + YSN + " entwickelt. Wir bauen das auch für Ihr Hotel.", ft_fine: "Diese Website und das Hotel sind fiktiv; Preise und Verfügbarkeit sind Beispieldaten. Fotos dienen der Illustration: Unsplash.",
+            badge: "Offizielle Website · Bester Preis bei Direktbuchung",
+            off_eyebrow: "Angebote", off_h2: "Wählen Sie, was zu Ihnen passt.", off_cta: "Preis für meine Daten anfragen",
+            offers: [["Nicht erstattbarer Tarif", "10 % Rabatt", "Am günstigsten, wenn Ihre Pläne feststehen. Stornierung und Umbuchung sind nicht möglich.", "Ich möchte Verfügbarkeit und Preis im nicht erstattbaren Tarif erfragen."], ["Flexibler Tarif", "Kostenlose Stornierung", "Bis 7 Tage vor Anreise kostenlos stornierbar. Für Pläne, die sich ändern können.", "Ich möchte Verfügbarkeit und Preis im erstattbaren (flexiblen) Tarif erfragen."], ["Auszeit in der Nebensaison", "November – Mitte April", "Die günstigsten Preise des Jahres und kein Mindestaufenthalt; Küste und Sonnenuntergang gehören Ihnen.", "Ich möchte einen Preis für einen Termin in der Nebensaison, zwischen November und April."]],
+            near_h: "Was ist in der Nähe?", near: [["Marina und Zentrum von Turgutreis", "1,5 km"], ["Fähranleger nach Kos", "1,5 km · saisonal"], ["Gümüşlük", "≈ 6 km"], ["Burg von Bodrum", "≈ 20 km"]],
+            wa_label: "WhatsApp", wa_btn: "Per WhatsApp schreiben", wa_text: "Hallo, ich hätte gern Informationen zum Pati Koy.", wa_note: "Auf dieser Beispiel-Website ist keine WhatsApp-Nummer hinterlegt. Auf einer echten Website führt dieser Button zur WhatsApp-Nummer des Hotels; dort antwortet derselbe Assistent.",
+            askGeneral: "Ich möchte Verfügbarkeit und Preise erfragen.", askPets: "Können Sie mir Ihre Haustierregeln erklären?", askRoom: "Ich möchte Verfügbarkeit und Preis für „{room}“ erfragen.",
+            askDates: function (a, b, n, c) { return "Wie sind Verfügbarkeit und Preis für Anreise " + a + ", Abreise " + b + ", " + n + " Erwachsene" + (c > 0 ? " und " + c + " Kind(er)" : "") + "?"; }
+          },
+          ru: {
+            sample: "Это <b>демонстрационный сайт</b> вымышленного отеля. Дизайн, разработка и ИИ-ассистент: " + YSN,
+            nav_rooms: "Номера", nav_pets: "Питомцы", nav_exp: "Отдых", nav_loc: "Расположение", nav_contact: "Контакты", cta_ask: "Узнать наличие",
+            hero_eyebrow: "Тургутреис · Бодрум", hero_h1: "Закаты у моря. С питомцами — можно.", hero_p: "Тихий бутик-отель всего на 5 номеров с видом на море, где рады и вашей кошке, и вашей собаке.",
+            bar_in: "Заезд", bar_out: "Выезд", bar_adults: "Взрослые", bar_children: "Дети", bar_btn: "Узнать наличие и цену", bar_note: "Ассистент получает актуальные цены из системы бронирования. Данные карты не нужны.",
+            f1b: "5 номеров", f1s: "Все с видом на море", f2b: "Кошки и собаки", f2s: "Без ограничений по породе и весу", f3b: "Деревенский завтрак", f3s: "Включён", f4b: "Открыто круглый год", f4s: "1,5 км до центра Тургутреиса",
+            about_eyebrow: "Наш отель", about_h2: "Маленький, тихий и по-настоящему домашний.", about_p1: "Pati Koy — семейный отель. У нас пять номеров, и каждого гостя мы знаем по имени. Отель обращён на запад: закат виден с террасы и из номеров.", about_p2: "Никакой громкой музыки и мероприятий. Утром — деревенский завтрак, днём — море, вечером — бокал на террасе; остальное время для отдыха.",
+            rooms_eyebrow: "Номера", rooms_h2: "Четыре типа номеров, пять номеров.", rooms_lead: "Цены зависят от дат. Ассистент сразу назовёт актуальную цену и наличие.", rooms_incl: "Завтрак включён", rooms_ask: "Узнать цену",
+            rooms_all: "В каждом номере: вид на море, кондиционер, бесплатный Wi-Fi, мини-холодильник, набор для чая и кофе, сейф, фен и ванная с душем. Телевизоров в номерах нет.",
+            r1: ["Стандартный номер с видом на море", "2 номера · 22 м²", "Для спокойного отдыха вдвоём. Для детей 0–2 лет можно поставить кроватку.", ["До 2 взрослых", "2-й этаж", "Французский балкон", "Двуспальная кровать"]],
+            r2: ["Делюкс с балконом", "1 номер · 28 м²", "Кофе и закат на собственном балконе с видом на море.", ["2 взрослых + 1 ребёнок", "3-й этаж", "Собственный балкон", "Двуспальная кровать + диван"]],
+            r3: ["Номер с садом «Пати»", "1 номер · 30 м² · для гостей с собакой", "Собственный огороженный сад — любимый номер гостей с собаками.", ["2 взрослых + 1 ребёнок", "1-й этаж", "Собственный сад 20 м²", "Вход без ступеней"]],
+            r4: ["Люкс с террасой", "1 номер · 45 м²", "Для семей и долгого отдыха. Не более 3 взрослых; например, 2 взрослых + 2 детей.", ["До 4 гостей", "Верхний этаж", "Собственная терраса 25 м²", "Отдельная гостиная зона"]],
+            pets_eyebrow: "Питомцы", pets_h2: "Они тоже члены семьи.", pets_lead: "Ваша кошка и ваша собака — наши гости вместе с вами.", pets_btn: "Узнать правила для питомцев",
+            pets: ["До 2 питомцев в номере; без ограничений по породе и весу.", "В номере вас ждут миски для корма и воды и лежанка.", "В 300 м есть небольшая бухта, где собакам можно купаться.", "При заселении предъявляется действующий ветпаспорт (включая прививку от бешенства).", "Плата — 400 TL за питомца в сутки, оплачивается в отеле."],
+            exp_eyebrow: "Отдых", exp_h2: "Немного, но с душой.",
+            e1t: "Деревенский завтрак", e1p: "На террасе с видом на море, 08:30–11:00. О вегетарианском или безглютеновом завтраке сообщите за день.",
+            e2t: "Платформа для купания", e2p: "В море спускаются с деревянной платформы перед отелем. Шезлонги, зонты и пляжные полотенца бесплатны.",
+            e3t: "Каяки и SUP", e3p: "Два каяка и две SUP-доски бесплатны для гостей; достаточно сообщить на ресепшен.",
+            x1t: "Сервис на террасе", x1p: "Напитки и закуски 11:00–22:00", x2t: "Парковка", x2p: "Бесплатно, 5 мест", x3t: "Wi-Fi", x3p: "Бесплатно везде", x4t: "Детская кроватка", x4p: "Бесплатно, по запросу заранее",
+            honest: "<b>Важно знать:</b> у нас нет бассейна, спа, тренажёрного зала, лифта и ужинов. Песчаного пляжа нет; у платформы сразу глубоко, поэтому место не подходит для не умеющих плавать и маленьких детей.",
+            gal_eyebrow: "Галерея", gal_h2: "Кадры из Тургутреиса.",
+            faq_eyebrow: "Частые вопросы", faq_h2: "Что стоит знать.", faq_lead: "Не нашли ответ? Спросите ассистента — он отвечает круглосуточно.", faq_btn: "Спросить ассистента",
+            faq: [["Во сколько заезд и выезд?", "Заезд с 14:00, выезд до 11:00. Ресепшен работает с 08:00 до 23:00; если вы приезжаете после 23:00, сообщите заранее."], ["Платят ли дети?", "Дети 0–6 лет размещаются бесплатно. Для 7–12 лет действует детский тариф; с 13 лет — как взрослые."], ["Есть ли минимальный срок проживания?", "С 15 июня по 15 сентября — минимум 3 ночи. В остальное время ограничений нет."], ["Каковы условия отмены?", "По возвратному тарифу бесплатная отмена за 7 дней до заезда; позже удерживается стоимость первой ночи. Невозвратный тариф нельзя отменить или изменить."], ["Подходит ли отель для гостей на коляске?", "Лифта нет. Без ступеней доступен только номер с садом; его ванная не оборудована для маломобильных гостей."], ["Есть ли трансфер из аэропорта?", "Да, платный, заказывается минимум за 48 часов. Стоимость сообщит ресепшен в зависимости от даты и числа гостей."]],
+            loc_eyebrow: "Расположение", loc_h2: "Закатная сторона Бодрума.", loc_lead: "Мы находимся в Тургутреисе, у самой воды.",
+            loc: [["Центр Тургутреиса", "1,5 км · 5 мин"], ["Центр Бодрума", "≈ 20 км · 30 мин"], ["Аэропорт Милас–Бодрум", "≈ 55 км · 1 час"], ["Трансфер из аэропорта", "Платно · за 48 часов"]],
+            map_btn: "Показать карту", map_note: "Карта загружается с OpenStreetMap. Отель вымышленный, поэтому отметка показывает Тургутреис.",
+            ct_eyebrow: "Контакты", ct_h2: "Напишите нам.", ct_lead: "Особые пожелания, групповые заезды и любые вопросы. В рабочее время отвечаем в тот же день.", ct_addr: "Адрес", ct_mail: "E-mail", ct_hours: "Ресепшен",
+            cf_name: "Ваше имя", cf_contact: "Телефон или e-mail", cf_msg: "Сообщение", cf_consent: "Я даю явное согласие на передачу моего имени и контактных данных отелю для ответа на мой запрос.", cf_send: "Отправить", cf_ok: "Ваше сообщение передано команде отеля. Мы скоро свяжемся с вами.", cf_err: "Не удалось отправить сообщение. Проверьте поля и попробуйте ещё раз.", cf_rate: "Слишком много попыток. Пожалуйста, попробуйте позже.",
+            band_h2: "Остались вопросы?", band_p: "Ассистент ответит на вопросы, назовёт цену на ваши даты и направит на страницу бронирования.",
+            chips: ["Есть ли номер на двоих на эти выходные?", "Можно ли приехать с двумя кошками и сколько это стоит?", "Как добраться до отеля из аэропорта?", "Хочу поговорить с сотрудником."],
+            ft_tag: "Бутик-отель у моря в Тургутреисе, где рады питомцам.", ft_ysn: "Сайт, ассистент и панель управления разработаны " + YSN + ". Сделаем такой же для вашего отеля.", ft_fine: "Сайт и отель вымышлены; цены и наличие — демонстрационные данные. Фотографии иллюстративные: Unsplash.",
+            badge: "Официальный сайт · Лучшая цена при прямом бронировании",
+            off_eyebrow: "Предложения", off_h2: "Выберите то, что подходит вам.", off_cta: "Узнать цену на мои даты",
+            offers: [["Невозвратный тариф", "Скидка 10 %", "Самый выгодный вариант, если планы точные. Отмена и изменение дат невозможны.", "Хочу узнать наличие и цену по невозвратному тарифу."], ["Гибкий тариф", "Бесплатная отмена", "Бесплатная отмена за 7 дней до заезда. Для тех, чьи планы могут измениться.", "Хочу узнать наличие и цену по возвратному (гибкому) тарифу."], ["Отдых вне сезона", "Ноябрь – середина апреля", "Самые низкие цены года и никакого минимального срока; берег и закаты — только для вас.", "Хочу узнать цену на даты вне сезона, с ноября по апрель."]],
+            near_h: "Что рядом?", near: [["Марина и центр Тургутреиса", "1,5 км"], ["Паромный причал на Кос", "1,5 км · сезонно"], ["Гюмюшлюк", "≈ 6 км"], ["Замок Бодрума", "≈ 20 км"]],
+            wa_label: "WhatsApp", wa_btn: "Написать в WhatsApp", wa_text: "Здравствуйте, хочу узнать подробнее о Pati Koy.", wa_note: "На демонстрационном сайте номер WhatsApp не задан. На реальном сайте эта кнопка ведёт в WhatsApp отеля, где отвечает тот же ассистент.",
+            askGeneral: "Хочу узнать наличие и цены.", askPets: "Расскажите, пожалуйста, о правилах проживания с питомцами.", askRoom: "Хочу узнать наличие и цену: «{room}».",
+            askDates: function (a, b, n, c) { return "Какие наличие и цена: заезд " + a + ", выезд " + b + ", взрослых: " + n + (c > 0 ? ", детей: " + c : "") + "?"; }
+          },
+          ar: {
+            sample: "هذا <b>موقع تجريبي</b> لفندق خيالي. التصميم والبرمجة ومساعد الذكاء الاصطناعي: " + YSN,
+            nav_rooms: "الغرف", nav_pets: "الحيوانات الأليفة", nav_exp: "التجربة", nav_loc: "الموقع", nav_contact: "اتصل بنا", cta_ask: "اسأل عن التوفر",
+            hero_eyebrow: "تورغوت رئيس · بودروم", hero_h1: "غروب على البحر، ومرحبًا بحيواناتكم الأليفة.", hero_p: "فندق بوتيك هادئ من 5 غرف فقط، جميعها مطلة على البحر، نستضيف فيه قطتكم وكلبكم أيضًا.",
+            bar_in: "الوصول", bar_out: "المغادرة", bar_adults: "البالغون", bar_children: "الأطفال", bar_btn: "اسأل عن التوفر والسعر", bar_note: "يحصل مساعدنا على الأسعار مباشرة من نظام الحجز. لا حاجة لبيانات البطاقة.",
+            f1b: "5 غرف", f1s: "جميعها مطلة على البحر", f2b: "قطط وكلاب", f2s: "بلا قيود على السلالة أو الوزن", f3b: "فطور قروي", f3s: "مشمول في السعر", f4b: "مفتوح طوال العام", f4s: "1.5 كم عن مركز تورغوت رئيس",
+            about_eyebrow: "فندقنا", about_h2: "صغير، هادئ وشخصي حقًا.", about_p1: "باتي كوي فندق عائلي. لدينا خمس غرف ونعرف كل ضيف باسمه. الفندق يواجه الغرب، فتشاهدون الغروب من الشرفة ومن الغرف.", about_p2: "لا موسيقى صاخبة ولا حفلات. فطور قروي في الصباح، والبحر نهارًا، وكأس على الشرفة عند الغروب؛ والباقي راحة.",
+            rooms_eyebrow: "الغرف", rooms_h2: "أربعة أنواع، خمس غرف.", rooms_lead: "تختلف الأسعار حسب التاريخ. مساعدنا يخبركم بالسعر الحالي والتوفر فورًا.", rooms_incl: "الفطور مشمول", rooms_ask: "اسأل عن السعر",
+            rooms_all: "في جميع الغرف: إطلالة على البحر، تكييف، واي فاي مجاني، ثلاجة صغيرة، عدّة شاي وقهوة، خزنة، مجفف شعر وحمّام بدش. لا يوجد تلفاز في الغرف.",
+            r1: ["غرفة قياسية بإطلالة بحرية", "غرفتان · 22 م²", "لعطلة هادئة لشخصين. يمكن إضافة سرير أطفال لعمر 0–2 سنة.", ["حتى بالغَين", "الطابق الأول", "شرفة فرنسية", "سرير مزدوج"]],
+            r2: ["غرفة ديلوكس مع شرفة", "غرفة واحدة · 28 م²", "قهوة وغروب على شرفتكم الخاصة المطلة على البحر.", ["بالغان + طفل", "الطابق الثاني", "شرفة خاصة", "سرير مزدوج + أريكة سرير"]],
+            r3: ["غرفة الحديقة «باتي»", "غرفة واحدة · 30 م² · لمرافقي الكلاب", "بحديقتها الخاصة المسوّرة هي المفضلة لدى ضيوفنا أصحاب الكلاب.", ["بالغان + طفل", "الطابق الأرضي", "حديقة خاصة 20 م²", "دخول بلا درج"]],
+            r4: ["جناح الشرفة", "غرفة واحدة · 45 م²", "للعائلات والإقامات الطويلة. 3 بالغين كحد أقصى؛ مثلًا بالغان + طفلان.", ["حتى 4 ضيوف", "الطابق العلوي", "شرفة خاصة 25 م²", "منطقة جلوس منفصلة"]],
+            pets_eyebrow: "الحيوانات الأليفة", pets_h2: "هم من العائلة أيضًا.", pets_lead: "قطتكم وكلبكم ضيوف لدينا معكم.", pets_btn: "اسأل عن قواعد الحيوانات الأليفة",
+            pets: ["حتى حيوانين أليفين في الغرفة؛ بلا قيود على السلالة أو الوزن.", "أوعية الطعام والماء وسرير للحيوان بانتظاركم في الغرفة.", "على بعد 300 م خليج صغير يُسمح فيه للكلاب بالسباحة.", "يُعرض دفتر التطعيم الحالي (بما فيه داء الكلب) عند الوصول.", "الرسوم 400 ليرة تركية لكل حيوان في الليلة، وتُدفع في الفندق."],
+            exp_eyebrow: "التجربة", exp_h2: "القليل، لكن بعناية.",
+            e1t: "فطور قروي تركي", e1p: "على الشرفة المطلة على البحر، 08:30–11:00. أخبرونا قبل يوم للخيارات النباتية أو الخالية من الغلوتين.",
+            e2t: "منصة السباحة", e2p: "تنزلون إلى البحر من المنصة الخشبية أمام الفندق. الكراسي والمظلات ومناشف الشاطئ مجانية.",
+            e3t: "كاياك وألواح التجديف", e3p: "قاربا كاياك ولوحا تجديف متاحة للضيوف مجانًا؛ يكفي إبلاغ الاستقبال.",
+            x1t: "خدمة الشرفة", x1p: "مشروبات ووجبات خفيفة 11:00–22:00", x2t: "موقف سيارات", x2p: "مجاني، 5 أماكن", x3t: "واي فاي", x3p: "مجاني في كل مكان", x4t: "سرير أطفال", x4p: "مجاني، يُطلب مسبقًا",
+            honest: "<b>يهمّنا أن تعرفوا:</b> لا يوجد لدينا مسبح أو سبا أو صالة رياضية أو مصعد أو خدمة عشاء. لا يوجد شاطئ رملي؛ البحر عميق مباشرة عند المنصة وغير مناسب لمن لا يجيدون السباحة وللأطفال الصغار.",
+            gal_eyebrow: "المعرض", gal_h2: "لقطات من تورغوت رئيس.",
+            faq_eyebrow: "الأسئلة الشائعة", faq_h2: "ما يهمّكم معرفته.", faq_lead: "لم تجدوا الإجابة؟ اسألوا مساعدنا؛ يجيب على مدار الساعة.", faq_btn: "اسأل المساعد",
+            faq: [["ما مواعيد الوصول والمغادرة؟", "الوصول من الساعة 14:00 والمغادرة حتى 11:00. الاستقبال مفتوح من 08:00 إلى 23:00؛ يُرجى إبلاغنا مسبقًا إن كان وصولكم بعد 23:00."], ["هل يدفع الأطفال؟", "الأطفال من 0 إلى 6 سنوات مجانًا. يُطبّق سعر الطفل من 7 إلى 12 سنة؛ ومن 13 سنة فأكثر يُعدّون بالغين."], ["هل هناك حد أدنى للإقامة؟", "3 ليالٍ على الأقل بين 15 يونيو و15 سبتمبر. لا حد أدنى في باقي الفترات."], ["ما شروط الإلغاء؟", "في السعر القابل للاسترداد: إلغاء مجاني حتى 7 أيام قبل الوصول؛ بعدها تُحتسب الليلة الأولى. السعر غير القابل للاسترداد لا يمكن إلغاؤه أو تعديله."], ["هل الفندق مناسب للكراسي المتحركة؟", "لا يوجد مصعد. غرفة الحديقة فقط يمكن دخولها بلا درج؛ وحمّامها غير مجهّز لذوي الاحتياجات الخاصة."], ["هل تتوفر خدمة نقل من المطار؟", "نعم، برسوم، وتُطلب قبل 48 ساعة على الأقل. يحدد الاستقبال السعر حسب التاريخ وعدد الأشخاص."]],
+            loc_eyebrow: "الموقع", loc_h2: "جهة الغروب في بودروم.", loc_lead: "نحن في تورغوت رئيس، على حافة البحر مباشرة.",
+            loc: [["مركز تورغوت رئيس", "1.5 كم · 5 دقائق"], ["مركز بودروم", "≈ 20 كم · 30 دقيقة"], ["مطار ميلاس–بودروم", "≈ 55 كم · ساعة"], ["النقل من المطار", "برسوم · قبل 48 ساعة"]],
+            map_btn: "عرض الخريطة", map_note: "تُحمَّل الخريطة من OpenStreetMap. بما أن الفندق خيالي، تشير العلامة إلى تورغوت رئيس.",
+            ct_eyebrow: "اتصل بنا", ct_h2: "راسلونا.", ct_lead: "للطلبات الخاصة وإقامات المجموعات وأي استفسار. نرد في اليوم نفسه خلال ساعات العمل.", ct_addr: "العنوان", ct_mail: "البريد الإلكتروني", ct_hours: "الاستقبال",
+            cf_name: "الاسم", cf_contact: "الهاتف أو البريد الإلكتروني", cf_msg: "رسالتكم", cf_consent: "أوافق صراحةً على مشاركة اسمي وبيانات الاتصال بي مع الفندق للرد على طلبي.", cf_send: "إرسال", cf_ok: "تم إرسال رسالتكم إلى فريق الفندق. سنتواصل معكم قريبًا.", cf_err: "تعذّر إرسال الرسالة. يُرجى مراجعة الحقول والمحاولة مجددًا.", cf_rate: "محاولات كثيرة. يُرجى المحاولة لاحقًا.",
+            band_h2: "هل لديكم سؤال؟", band_p: "مساعدنا يجيب عن أسئلتكم، يعطيكم السعر حسب تواريخكم ويوجّهكم إلى صفحة الحجز.",
+            chips: ["هل لديكم غرفة لشخصين في نهاية هذا الأسبوع؟", "هل يمكنني إحضار قطتَيّ، وكم الرسوم؟", "كيف أصل إلى الفندق من المطار؟", "أرغب في التحدث مع أحد الموظفين."],
+            ft_tag: "فندق بوتيك على البحر في تورغوت رئيس يرحّب بالحيوانات الأليفة.", ft_ysn: "هذا الموقع ومساعده ولوحة الإدارة من تطوير " + YSN + ". لنصنع مثله لفندقكم.", ft_fine: "هذا الموقع والفندق خياليان؛ الأسعار والتوفر بيانات تجريبية. الصور توضيحية: Unsplash.",
+            badge: "الموقع الرسمي · أفضل سعر عند الحجز المباشر",
+            off_eyebrow: "العروض", off_h2: "اختاروا ما يناسبكم.", off_cta: "اسأل عن السعر لتواريخي",
+            offers: [["سعر غير قابل للاسترداد", "خصم 10%", "الخيار الأوفر إذا كانت خطتكم مؤكدة. لا يمكن الإلغاء أو تغيير التاريخ.", "أرغب في معرفة التوفر والسعر بالسعر غير القابل للاسترداد."], ["سعر مرن", "إلغاء مجاني", "إلغاء مجاني حتى 7 أيام قبل الوصول. لمن قد تتغير خططهم.", "أرغب في معرفة التوفر والسعر بالسعر القابل للاسترداد (المرن)."], ["عطلة خارج الموسم", "نوفمبر – منتصف أبريل", "أقل أسعار السنة وبلا حد أدنى للإقامة؛ الشاطئ والغروب لكم وحدكم.", "أرغب في معرفة السعر لتاريخ خارج الموسم، بين نوفمبر وأبريل."]],
+            near_h: "ماذا يوجد بالقرب؟", near: [["مارينا ومركز تورغوت رئيس", "1.5 كم"], ["رصيف العبّارات إلى كوس", "1.5 كم · موسمي"], ["غوموشلوك", "≈ 6 كم"], ["قلعة بودروم", "≈ 20 كم"]],
+            wa_label: "واتساب", wa_btn: "راسلونا على واتساب", wa_text: "مرحبًا، أرغب في الحصول على معلومات عن باتي كوي.", wa_note: "لم يُحدَّد رقم واتساب في هذا الموقع التجريبي. في الموقع الفعلي ينقل هذا الزر الضيف إلى واتساب الفندق، حيث يجيب المساعد نفسه.",
+            askGeneral: "أرغب في معرفة التوفر والأسعار.", askPets: "هل يمكنكم إخباري بقواعد الحيوانات الأليفة؟", askRoom: "أرغب في معرفة التوفر والسعر لـ«{room}».",
+            askDates: function (a, b, n, c) { return "ما التوفر والسعر: الوصول " + a + "، المغادرة " + b + "، عدد البالغين " + n + (c > 0 ? "، عدد الأطفال " + c : "") + "؟"; }
+          }
+        };
+
+        // --- Dil seçimi: ?lang → kayıtlı tercih → tarayıcı dili → Türkçe -----------------
+        var qs = new URLSearchParams(location.search);
+        var stored = null;
+        try { stored = localStorage.getItem("patikoy-lang"); } catch (e) {}
+        var lang = [qs.get("lang"), stored, (navigator.language || "").slice(0, 2)].filter(function (l) { return l && T[l]; })[0] || "tr";
+        var t = T[lang];
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+
+        function $(sel, root) { return (root || document).querySelector(sel); }
+        function all(sel, root) { return [].slice.call((root || document).querySelectorAll(sel)); }
+        function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+        // Fotoğraflar kendi sunucumuzdan, iki boyutta (640 ve 1280 px) sunulur.
+        function photo(name, w) { return "/img/pati-koy/" + name + "-" + w + ".webp"; }
+        function setPhoto(img, name) {
+          img.loading = "lazy"; img.decoding = "async";
+          img.srcset = photo(name, 640) + " 640w, " + photo(name, 1280) + " 1280w";
+          img.sizes = "(max-width: 980px) 100vw, 50vw";
+          img.src = photo(name, 1280);
+        }
+
+        all("[data-i18n]").forEach(function (n) { n.textContent = t[n.getAttribute("data-i18n")]; });
+        all("[data-i18n-html]").forEach(function (n) { n.innerHTML = t[n.getAttribute("data-i18n-html")]; }); // metinler bu dosyadan gelir
+        // Üstteki örnek site notuna satış sayfasının linki eklenir.
+        var forHotels = { tr: "Oteliniz için", en: "For your hotel", de: "Für Ihr Hotel", ru: "Для вашего отеля", ar: "لفندقكم" };
+        var more = el("a", null, forHotels[lang] + " →"); more.href = "/oteller-icin";
+        $(".sample").append(" · ", more);
+
+        all("img[data-photo]").forEach(function (img) { setPhoto(img, img.getAttribute("data-photo")); });
+
+        // Dil menüsü
+        var langs = $("#langs"), cur = $(".cur", langs), ul = $("ul", langs);
+        $("#curLang").textContent = lang.toUpperCase();
+        Object.keys(LANGS).forEach(function (code) {
+          var a = el("a", null, LANGS[code]);
+          a.href = "?lang=" + code; a.lang = code; a.append(el("small", null, code.toUpperCase()));
+          if (code === lang) a.setAttribute("aria-current", "true");
+          a.addEventListener("click", function () { try { localStorage.setItem("patikoy-lang", code); } catch (e) {} });
+          var li = el("li"); li.append(a); ul.append(li);
+        });
+        cur.addEventListener("click", function () { var open = langs.classList.toggle("open"); cur.setAttribute("aria-expanded", String(open)); });
+        document.addEventListener("click", function (e) { if (!langs.contains(e.target)) { langs.classList.remove("open"); cur.setAttribute("aria-expanded", "false"); } });
+
+        // Odalar
+        var ROOM_PHOTOS = ["room-std", "room-dlx", "room-garden", "room-suite"];
+        ["r1", "r2", "r3", "r4"].forEach(function (key, i) {
+          var r = t[key], card = el("article", "room reveal");
+          var pic = el("div", "pic"), img = el("img");
+          img.alt = r[0]; setPhoto(img, ROOM_PHOTOS[i]);
+          pic.append(img, el("span", "tag", r[1]));
+          var body = el("div", "body"), list = el("ul");
+          r[3].forEach(function (f) { list.append(el("li", null, f)); });
+          var foot = el("div", "foot"), btn = el("button", "btn teal small", t.rooms_ask);
+          btn.type = "button"; btn.setAttribute("data-ask-text", t.askRoom.replace("{room}", r[0]));
+          foot.append(el("small", null, t.rooms_incl), btn);
+          body.append(el("h3", null, r[0]), list, el("p", null, r[2]), foot);
+          card.append(pic, body); $("#roomGrid").append(card);
+        });
+
+        t.pets.forEach(function (p) { var li = el("li"); li.append(el("span", null, p)); $("#petList").append(li); });
+        t.faq.forEach(function (qa, i) { var d = el("details"); if (i === 0) d.open = true; d.append(el("summary", null, qa[0]), el("p", null, qa[1])); $("#faqList").append(d); });
+        t.loc.forEach(function (row) { var d = el("div"); d.append(el("dt", null, row[0]), el("dd", null, row[1])); $("#locList").append(d); });
+        t.offers.forEach(function (o) {
+          var card = el("article", "offer reveal"), btn = el("button", "btn ghost small", t.off_cta);
+          btn.type = "button"; btn.setAttribute("data-ask-text", o[3]);
+          card.append(el("span", "tagline", o[1]), el("h3", null, o[0]), el("p", null, o[2]), btn);
+          $("#offerGrid").append(card);
+        });
+        t.near.forEach(function (n) { var li = el("li"); li.append(el("span", null, n[0]), el("small", null, n[1])); $("#nearList").append(li); });
+
+        // WhatsApp: numara <body data-whatsapp="905..."> ile verilir. Örnek sitede boştur;
+        // boşken düğme, gerçek kurulumda ne olacağını açıklar (başkasının numarasına yönlendirmez).
+        var waNumber = (document.body.getAttribute("data-whatsapp") || "").replace(/[^0-9]/g, "");
+        $("#waBtn").addEventListener("click", function () {
+          if (waNumber) { window.open("https://wa.me/" + waNumber + "?text=" + encodeURIComponent(t.wa_text), "_blank", "noopener"); return; }
+          var n = $("#waNote"); n.textContent = t.wa_note; n.hidden = false;
+        });
+
+        t.chips.forEach(function (c) { var b = el("button", null, c); b.type = "button"; b.setAttribute("data-ask-text", c); $("#chips").append(b); });
+
+        // --- Asistanla bağlantı ---------------------------------------------------------
+        function ask(question, tries) {
+          if (window.HotelChat) return question ? window.HotelChat.ask(question) : window.HotelChat.open();
+          if ((tries || 0) < 40) setTimeout(function () { ask(question, (tries || 0) + 1); }, 150);
+        }
+        document.addEventListener("click", function (e) {
+          var b = e.target.closest("[data-ask],[data-ask-text]");
+          if (!b) return;
+          var key = b.getAttribute("data-ask");
+          ask(b.getAttribute("data-ask-text") || (key === "open" ? "" : t[key]));
+        });
+
+        // Rezervasyon çubuğu: tarihleri asistana sorar; fiyatı asistan rezervasyon sisteminden getirir.
+        var book = $("#book"), inp = book.elements;
+        function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+        var d1 = new Date(); d1.setDate(d1.getDate() + 14); var d2 = new Date(d1); d2.setDate(d2.getDate() + 3);
+        inp["in"].min = iso(new Date()); inp["in"].value = iso(d1); inp.out.value = iso(d2);
+        inp["in"].addEventListener("change", function () {
+          var n = new Date(inp["in"].value + "T00:00:00"); n.setDate(n.getDate() + 1); inp.out.min = iso(n);
+          if (inp.out.value <= inp["in"].value) inp.out.value = iso(n);
+        });
+        book.addEventListener("submit", function (e) {
+          e.preventDefault();
+          if (!book.reportValidity() || inp.out.value <= inp["in"].value) return;
+          ask(t.askDates(inp["in"].value, inp.out.value, inp.adults.value, Number(inp.children.value)));
+        });
+
+        // Harita: ziyaretçi isteyince yüklenir (istemeden üçüncü tarafa istek gitmez).
+        $("#mapBtn").addEventListener("click", function () {
+          var f = el("iframe");
+          f.title = t.loc_eyebrow; f.loading = "lazy"; f.referrerPolicy = "no-referrer";
+          f.src = "https://www.openstreetmap.org/export/embed.html?bbox=27.2250%2C36.9950%2C27.2900%2C37.0350&layer=mapnik&marker=37.0125%2C27.2560";
+          var map = $("#map"); map.textContent = ""; map.append(f);
+        });
+
+        // İletişim formu
+        var cf = $("#cf"), note = $("#cfNote");
+        cf.addEventListener("submit", function (e) {
+          e.preventDefault();
+          note.hidden = true;
+          if (!cf.checkValidity()) { cf.reportValidity(); return; }
+          var btn = $("button[type=submit]", cf); btn.disabled = true;
+          fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hotelId: "pati-koy", name: cf.elements.name.value, contact: cf.elements.contact.value, message: cf.elements.message.value, consent: cf.elements.consent.checked, website: cf.elements.website.value }) })
+            .then(function (res) {
+              note.className = "note " + (res.ok ? "ok" : "err");
+              note.textContent = res.ok ? t.cf_ok : res.status === 429 ? t.cf_rate : t.cf_err;
+              if (res.ok) cf.reset();
+            })
+            .catch(function () { note.className = "note err"; note.textContent = t.cf_err; })
+            .then(function () { note.hidden = false; btn.disabled = false; });
+        });
+
+        // Telefondaki sabit "Müsaitlik sor" düğmesi, form alanları ekrandayken gizlenir.
+        var mcta = $(".mcta");
+        function inView(n) { var r = n.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; }
+        function placeCta() { mcta.classList.toggle("off", inView(book) || inView(cf)); }
+        window.addEventListener("scroll", placeCta, { passive: true });
+        window.addEventListener("resize", placeCta);
+        placeCta();
+
+        // Kaydırınca beliren bölümler
+        var io = "IntersectionObserver" in window ? new IntersectionObserver(function (entries) { entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } }); }, { threshold: 0.12 }) : null;
+        all(".reveal").forEach(function (n) { if (io) io.observe(n); else n.classList.add("in"); });
+        // Güvence: gözlemci herhangi bir nedenle tetiklenmezse içerik gizli kalmasın.
+        setTimeout(function () { all(".reveal:not(.in)").forEach(function (n) { if (inView(n)) n.classList.add("in"); }); }, 1200);
+        window.addEventListener("scroll", function () { all(".reveal:not(.in)").forEach(function (n) { if (inView(n)) n.classList.add("in"); }); }, { passive: true });
+
+        // Sohbet asistanı sayfanın diliyle yüklenir.
+        var s = document.createElement("script");
+        s.src = "/widget.js"; s.async = true;
+        s.dataset.hotel = "pati-koy"; s.dataset.lang = lang; s.dataset.color = "#0f6e6e";
+        document.body.appendChild(s);
+      })();
+    </script>
+  </body>
+</html>
