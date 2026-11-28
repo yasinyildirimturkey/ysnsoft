@@ -3,8 +3,15 @@ export interface FaqItem {
   answer: string;
 }
 
-/** Ana sayfadaki SSS bölümü ve FAQPage yapılandırılmış verisi aynı listeden beslenir. */
+/**
+ * Ana sayfadaki SSS bölümü ve FAQPage yapılandırılmış verisi aynı listeden beslenir.
+ * İlk soru marka sorusudur ("YSNSOFT nedir…"): yapay zekâ asistanlarının doğrudan alıntılayacağı cevap; başta kalmalı.
+ */
 export const FAQS: FaqItem[] = [
+  {
+    question: 'YSNSOFT nedir, hangi hizmetleri sunar?',
+    answer: 'YSNSOFT, İstanbul Pendik merkezli bir yazılım firmasıdır. Türkiye ve Almanya’daki işletmeler için kurumsal web siteleri, hukuk bürosu siteleri, otel web siteleri için yapay zekâ asistanı, QR menü ve online sipariş, rezervasyon ve pazaryeri siteleri geliştirir. Kendi ürünleri KGLEX (hukuk yazılımı), HaritaPlan (imar ve 3D harita yazılımı), Panelde (emlak ofisleri platformu) ve DMyacht’tır (tekne kiralama pazaryeri). Hizmetlerin ayrıntısı ysnsoft.com/hizmetler sayfasındadır.'
+  },
   {
     question: 'KGLEX UYAP robotu hukuk büromuzun dava ve icra takiplerini nasıl otomatikleştirir?',
     answer: 'KGLEX, T.C. Adalet Bakanlığı UYAP Avukat Portalı ile entegre çalışan akıllı arka plan robot servislerine sahiptir. Dava ve icra dosyalarınızdaki tensip zabıtlarını, yeni evrakları, tebligatları ve duruşma günlerini gece ve gündüz otomatik tarar; süre kaçırma riskini sıfıra indirir ve müvekkil portalı ile anlık SMS/E-Posta bilgilendirmesi yapar.'
@@ -28,10 +35,6 @@ export const FAQS: FaqItem[] = [
   {
     question: 'Satış sonrası teknik destek, SLA garantisi ve acil müdahale şartları nelerdir?',
     answer: 'Tüm kurumsal müşterilerimize 7/24 kesintisiz telefon (+90 532 725 50 98), WhatsApp ve e-posta desteği sunuyoruz. Destek kapsamı ve müdahale süreleri her projenin sözleşmesinde ayrıca belirlenir.'
-  },
-  {
-    question: 'YSNSOFT nedir ve hangi hizmetleri sunar?',
-    answer: 'YSNSOFT, İstanbul Pendik merkezli bir yazılım şirketidir. Kurumsal web siteleri, çok dilli portallar, SaaS ürünleri, e-ticaret ve rezervasyon sistemleri geliştirir. Hukuk teknolojileri (KGLEX), harita ve imar yazılımı (HaritaPlan), emlak yönetimi (Panelde), turizm ve tekne kiralama (DMyacht) alanlarında canlıda çalışan projeleri vardır.'
   },
   {
     question: 'YSNSOFT’un canlıdaki projeleri hangileri?',

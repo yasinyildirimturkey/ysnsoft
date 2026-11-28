@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProduct, PORTFOLIO } from '@/data/products';
-import { ogBase, projectFaqs, projectGraph, projectPath } from '@/lib/seo';
+import { ogBase, projectFaqs, projectGraph, projectOutcome, projectPath, projectServices } from '@/lib/seo';
 import { Breadcrumbs, ContactCta, JsonLd, SiteFooter, SiteHeader } from '@/components/SiteChrome';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -83,7 +83,7 @@ export default async function ProjectPage({ params }: Props) {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold tracking-tight">Özellikler</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Ne yapıldı?</h2>
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
               {p.features.map((f) => (
                 <li key={f} className="bg-white rounded-2xl border border-black/[0.07] p-4 text-sm leading-relaxed">
@@ -102,6 +102,22 @@ export default async function ProjectPage({ params }: Props) {
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold tracking-tight">Sonuç</h2>
+            <p className="text-base text-[#333] mt-3 leading-relaxed">{projectOutcome(p)}</p>
+            {projectServices(p).length > 0 && (
+              <p className="text-sm text-[#515154] mt-3">
+                İlgili hizmetler:{' '}
+                {projectServices(p).map((s, i) => (
+                  <span key={s.href}>
+                    {i > 0 && ' · '}
+                    <Link href={s.href} className="font-semibold text-[#0071E3] hover:underline">{s.name}</Link>
+                  </span>
+                ))}
+              </p>
+            )}
           </section>
 
           <section>

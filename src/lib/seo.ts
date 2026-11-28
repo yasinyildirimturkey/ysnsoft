@@ -1,7 +1,7 @@
 import { PORTFOLIO, type Product } from '@/data/products';
 import { FAQS } from '@/data/faq';
 import type { BlogPost } from '@/data/blog';
-import { BASE, intentPath, LANGS, type IntentPage, type Lang } from '@/data/intent';
+import { BASE, intentPath, INTENT_PAGES, LANGS, type IntentPage, type Lang } from '@/data/intent';
 import { landingIndexable } from '@/lib/landing';
 
 /** Arama motorları ve yapay zekâ asistanları için tek kaynak: adres, kimlik ve yapılandırılmış veri üreticileri. */
@@ -140,12 +140,27 @@ export function productSchema(p: Product) {
       author: { '@id': ORG_ID },
     };
   }
+  // Müşteri için yapılan site: CreativeWork (alt türü WebSite), yapan YSNSOFT
   return {
-    '@type': 'WebSite',
+    '@type': ['CreativeWork', 'WebSite'],
     ...base,
     creator: { '@id': ORG_ID },
+    creativeWorkStatus: 'Published',
   };
 }
+
+/** Proje sayfasındaki "Sonuç": yalnız doğrulanabilir bilgi (canlı adres, diller, kapsam); rakam yazılmaz. */
+export function projectOutcome(p: Product): string {
+  const langs = p.metrics.find((m) => m.label === 'Diller')?.value;
+  const parts = [`${p.name}, YSNSOFT tarafından geliştirildi ve ${p.displayDomain} adresinde yayında${p.secondaryDomain ? ` (ayrıca ${p.secondaryDomain})` : ''}.`];
+  if (langs) parts.push(`Site ${langs.split(' / ').join(', ')} dillerinde çalışıyor.`);
+  parts.push(`Kullanılan teknolojiler: ${p.techStack.join(', ')}.`);
+  return parts.join(' ');
+}
+
+/** Bu projeyi kanıt olarak gösteren hizmet sayfaları (Türkçe) */
+export const projectServices = (p: Product) =>
+  INTENT_PAGES.filter((i) => i.projects.includes(p.id) && i.content.tr).map((i) => ({ name: i.content.tr!.h1, href: intentPath('tr', i.content.tr!.slug) }));
 
 const breadcrumb = (items: { name: string; url: string }[]) => ({
   '@type': 'BreadcrumbList',
