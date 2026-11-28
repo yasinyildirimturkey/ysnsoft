@@ -1,0 +1,4 @@
+raporlar/*.json
+raporlar/son-calisma.log
+.izle*.lock
+.env

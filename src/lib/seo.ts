@@ -1,6 +1,8 @@
 import { PORTFOLIO, type Product } from '@/data/products';
 import { FAQS } from '@/data/faq';
 import type { BlogPost } from '@/data/blog';
+import { BASE, intentPath, LANGS, type IntentPage, type Lang } from '@/data/intent';
+import { landingIndexable } from '@/lib/landing';
 
 /** Arama motorları ve yapay zekâ asistanları için tek kaynak: adres, kimlik ve yapılandırılmış veri üreticileri. */
 export const SITE_URL = 'https://ysnsoft.com';
@@ -8,7 +10,9 @@ export const SITE_NAME = 'YSNSOFT';
 export const ORG_ID = `${SITE_URL}/#organization`;
 export const WEBSITE_ID = `${SITE_URL}/#website`;
 /** Proje ve genel sayfaların son içerik güncellemesi (sitemap lastmod) */
-export const CONTENT_UPDATED = '2026-11-27';
+export const CONTENT_UPDATED = '2026-11-28';
+/** IndexNow anahtarı: /indexnow-key.txt ve public/<anahtar>.txt aynı değeri verir (scripts/indexnow.mjs) */
+export const INDEXNOW_KEY = 'd44c3105fd3f2509efff977ae1519b9d';
 
 export const CONTACT = {
   phone: '+90-532-725-5098',
@@ -50,9 +54,10 @@ export function organizationGraph() {
         '@type': ['Organization', 'ProfessionalService'],
         '@id': ORG_ID,
         name: SITE_NAME,
-        alternateName: ['YSNSOFT Bilişim', 'YSN Soft'],
+        // Marka her yerde "YSNSOFT"; farklı yazımlar yalnız burada
+        alternateName: ['YSN Soft', 'YSN SOFT', 'Ysnsoft', 'YSNSOFT Bilişim', 'ysnsoft.com'],
         url: SITE_URL,
-        logo: `${SITE_URL}/favicon.ico`,
+        logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.png`, width: 512, height: 512 },
         image: `${SITE_URL}/opengraph-image.png`,
         description:
           'İstanbul Pendik merkezli yazılım şirketi. Kurumsal web siteleri, çok dilli portallar, SaaS ürünleri, e-ticaret ve rezervasyon sistemleri geliştirir.',
@@ -284,6 +289,103 @@ export function postGraph(p: BlogPost) {
         { name: 'Ana Sayfa', url: SITE_URL },
         { name: 'Blog', url: `${SITE_URL}/blog` },
         { name: p.title, url: postUrl(p) },
+      ]),
+    ],
+  };
+}
+
+// ── Arama niyeti (hizmet) sayfaları: hreflang + Service/FAQPage/BreadcrumbList ─────────────────────────────
+
+const LOCALE: Record<Lang, string> = { tr: 'tr-TR', en: 'en', de: 'de-DE' };
+const HOME_NAME: Record<Lang, string> = { tr: 'Ana Sayfa', en: 'Home', de: 'Startseite' };
+const SERVICES_NAME: Record<Lang, string> = { tr: 'Hizmetler', en: 'Services', de: 'Leistungen' };
+
+/** Almanca sayfalar Impressum/Datenschutz tanımlanana kadar indekslenmez (/de/webdesign ile aynı kural). */
+export const langIndexable = (lang: Lang) => lang !== 'de' || landingIndexable();
+
+/** Sayfanın var olan ve indekslenebilir dil sürümleri: hreflang ve site haritası için */
+export function intentLanguages(page: IntentPage): Partial<Record<Lang, string>> {
+  const out: Partial<Record<Lang, string>> = {};
+  for (const l of LANGS) {
+    const c = page.content[l];
+    if (c && langIndexable(l)) out[l] = `${SITE_URL}${intentPath(l, c.slug)}`;
+  }
+  return out;
+}
+
+export function hreflangMap(urls: Partial<Record<Lang, string>>) {
+  const m: Record<string, string> = {};
+  for (const [l, u] of Object.entries(urls)) m[l] = u as string;
+  if (urls.tr) m['x-default'] = urls.tr;
+  return m;
+}
+
+export const hubLanguages = (): Partial<Record<Lang, string>> =>
+  Object.fromEntries(LANGS.filter(langIndexable).map((l) => [l, `${SITE_URL}${BASE[l]}`]));
+
+export function intentGraph(page: IntentPage, lang: Lang) {
+  const c = page.content[lang]!;
+  const url = `${SITE_URL}${intentPath(lang, c.slug)}`;
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${url}#page`,
+        url,
+        name: c.h1,
+        description: c.description,
+        inLanguage: LOCALE[lang],
+        isPartOf: { '@id': WEBSITE_ID },
+        about: { '@id': `${url}#service` },
+        dateModified: CONTENT_UPDATED,
+        mainEntity: { '@id': `${url}#faq` },
+      },
+      {
+        '@type': 'Service',
+        '@id': `${url}#service`,
+        name: c.h1,
+        description: c.answer,
+        provider: { '@id': ORG_ID },
+        areaServed: [{ '@type': 'Country', name: 'Türkiye' }, { '@type': 'Country', name: 'Deutschland' }],
+        url,
+      },
+      faqPage(`${url}#faq`, c.faqs),
+      breadcrumb([
+        { name: HOME_NAME[lang], url: SITE_URL },
+        { name: SERVICES_NAME[lang], url: `${SITE_URL}${BASE[lang]}` },
+        { name: c.h1, url },
+      ]),
+    ],
+  };
+}
+
+export function hubGraph(lang: Lang, pages: IntentPage[], name: string) {
+  const url = `${SITE_URL}${BASE[lang]}`;
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': `${url}#page`,
+        url,
+        name,
+        inLanguage: LOCALE[lang],
+        isPartOf: { '@id': WEBSITE_ID },
+        about: { '@id': ORG_ID },
+      },
+      {
+        '@type': 'ItemList',
+        itemListElement: pages.map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: p.content[lang]!.h1,
+          url: `${SITE_URL}${intentPath(lang, p.content[lang]!.slug)}`,
+        })),
+      },
+      breadcrumb([
+        { name: HOME_NAME[lang], url: SITE_URL },
+        { name: SERVICES_NAME[lang], url },
       ]),
     ],
   };
